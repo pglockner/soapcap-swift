@@ -41,7 +41,7 @@ honor that convention skip it.
 |---|---|
 | Full Xcode (not just Command Line Tools) | To build |
 | soapcap itself, installed with its `install.sh` | The app runs the `soapcap` in Homebrew's `bin`; set `SOAPCAP_BIN` to use another |
-| soapcap's de-identify helper (optional) | The de-identify toggle only appears if it's built |
+| soapcap's de-identification (optional) | The de-identify toggle only appears if it's set up (`tools/deidentify/install.sh` in soapcap) |
 
 ### Build and run
 

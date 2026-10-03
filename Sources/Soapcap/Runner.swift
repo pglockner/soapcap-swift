@@ -12,11 +12,13 @@ enum Runner {
         return URL(fileURLWithPath: found).resolvingSymlinksInPath()
     }
 
+    /// soapcap's de-identify helper, where its tools/deidentify/install.sh puts it.
     static var deidentifyAvailable: Bool {
         let env = ProcessInfo.processInfo.environment
-        let path = env["SOAPCAP_DEIDENTIFY_BIN"]
-            ?? bin.deletingLastPathComponent().deletingLastPathComponent()
-                .appendingPathComponent("tools/deidentify-helper/.build/release/soapcap-deidentify-helper").path
+        let dir = env["SOAPCAP_DEIDENTIFY_DIR"]
+            ?? FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent(".local/share/soapcap/deidentify").path
+        let path = env["SOAPCAP_DEIDENTIFY_BIN"] ?? dir + "/soapcap-deidentify-helper"
         return FileManager.default.isExecutableFile(atPath: path)
     }
 
