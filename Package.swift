@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "soapcap-session-app",
+    name: "soapcap-swift",
     platforms: [.macOS(.v14)],
     targets: [
         .executableTarget(name: "Soapcap", path: "Sources/Soapcap"),

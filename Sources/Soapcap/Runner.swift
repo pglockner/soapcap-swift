@@ -2,13 +2,14 @@ import Foundation
 
 /// Drives the soapcap CLI as child processes. Nothing here touches disk.
 enum Runner {
-    /// SOAPCAP_BIN overrides; otherwise <repo>/bin/soapcap, found relative to
-    /// the bundle at <repo>/tools/session-app/build/Soapcap.app.
+    /// SOAPCAP_BIN overrides; otherwise the installed `soapcap` (install.sh
+    /// symlinks it into Homebrew's bin), resolved to the real script so the
+    /// soapcap checkout it lives in can be found.
     static var bin: URL {
         if let p = ProcessInfo.processInfo.environment["SOAPCAP_BIN"] { return URL(fileURLWithPath: p) }
-        var u = Bundle.main.bundleURL
-        for _ in 0..<4 { u.deleteLastPathComponent() }
-        return u.appendingPathComponent("bin/soapcap")
+        let candidates = ["/opt/homebrew/bin/soapcap", "/usr/local/bin/soapcap"]
+        let found = candidates.first { FileManager.default.isExecutableFile(atPath: $0) } ?? candidates[0]
+        return URL(fileURLWithPath: found).resolvingSymlinksInPath()
     }
 
     static var deidentifyAvailable: Bool {

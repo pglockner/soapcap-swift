@@ -1,0 +1,11 @@
+.DS_Store
+.build/
+.swiftpm/
+build/
+*.xcodeproj/
+xcuserdata/
+
+# Never commit captured PHI.
+*.transcript
+*.m4a
+*.wav

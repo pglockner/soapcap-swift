@@ -1,31 +1,58 @@
-# Soapcap.app (experimental)
+# soapcap-swift
 
-A SwiftUI window front end for the `soapcap session` flow. It reimplements
-nothing: it runs `soapcap live`, `soapcap deidentify`, and `soapcap note` as
-child processes over pipes.
+A native Swift rewrite of [soapcap](https://github.com/pglockner/soapcap):
+on-device capture of a speaker-attributed telehealth transcript on a Mac,
+and a locally drafted SOAP/DAP/BIRP note, with nothing leaving the machine.
+
+**Status: in development.** Today this repo holds only the seed: Soapcap.app,
+a SwiftUI window that runs the `soapcap session` flow by calling the existing
+`soapcap` command-line tool as child processes. It reimplements nothing yet,
+so it needs a working soapcap install. The shell version of soapcap remains
+the supported tool until this one replaces it.
+
+## Rewrite plan
+
+Each step replaces one child-process call with Swift code behind the same
+interface, so the app keeps working throughout.
+
+- [x] Window front end for the session flow (record, pause/resume, optional
+      de-identify, draft, keep and copy)
+- [ ] Show `structured`/`combined` note reviews (the CLI prints them to
+      stderr, which the window hides on success)
+- [ ] Capture and transcription in-process (Apple SpeechAnalyzer), replacing
+      `soapcap live` and the `yap` dependency
+- [ ] Transcript rendering and echo de-duplication
+- [ ] Note drafting against the local model servers, replacing `soapcap note`
+      (prompts and the structured schema stay as data files)
+- [ ] De-identification in-process
+- [ ] `doctor` checks and model selection
+- [ ] A signed, notarized build that needs no Xcode to install
+
+## The seed: Soapcap.app
+
 Because it isn't a terminal program, nothing it shows can end up in terminal
 scrollback or a terminal's window-restore snapshot. Data stays in memory; the
 note is copied to the clipboard marked as concealed so clipboard managers that
 honor that convention skip it.
 
-## Requirements
+### Requirements
 
 | Requirement | Notes |
 |---|---|
-| Full Xcode (not just Command Line Tools) | Same as `../deidentify-helper` |
-| soapcap itself | The app runs `<repo>/bin/soapcap` |
-| De-identify helper (optional) | The de-identify toggle only appears if it's built |
+| Full Xcode (not just Command Line Tools) | To build |
+| soapcap itself, installed with its `install.sh` | The app runs the `soapcap` in Homebrew's `bin`; set `SOAPCAP_BIN` to use another |
+| soapcap's de-identify helper (optional) | The de-identify toggle only appears if it's built |
 
-## Build and run
+### Build and run
 
 ```sh
-tools/session-app/build.sh && open tools/session-app/build/Soapcap.app
+./build.sh && open build/Soapcap.app
 ```
 
 `build.sh` signs ad hoc. To keep macOS privacy grants across rebuilds, set
 `SOAPCAP_SIGN_IDENTITY` to a stable local code-signing identity.
 
-## Signing
+### Signing
 
 `build.sh` signs ad hoc unless `SOAPCAP_SIGN_IDENTITY` names a code-signing
 identity, e.g. an Apple Development certificate (Xcode creates one for a
@@ -35,17 +62,17 @@ reset a stuck grant: `tccutil reset ScreenCapture local.soapcap.session` and
 `tccutil reset Microphone local.soapcap.session`.
 
 ```sh
-SOAPCAP_SIGN_IDENTITY="Apple Development: you@example.com (TEAMID)" tools/session-app/build.sh
+SOAPCAP_SIGN_IDENTITY="Apple Development: you@example.com (TEAMID)" ./build.sh
 ```
 
 Grant Microphone and Screen Recording to "Soapcap" the first time (quit and
 reopen the app after granting). The **Check permissions** button runs
 `soapcap doctor` as the app, so it reports what macOS lets the app do.
 
-## Tests
+### Tests
 
 ```sh
-cd tools/session-app && swift test
+swift test
 ```
 
 15 XCTest cases (about 25 seconds) cover the session logic against a stub
@@ -55,7 +82,7 @@ script, so `yap` gets SIGINT and not SIGTERM). Microphone/Screen Recording
 permissions, signing, and the window itself are not covered; they need a
 person.
 
-## Limitations
+### Limitations
 
 - Pause ends the current `soapcap live` and Resume starts a new one, so each
   leg needs about 3 seconds to start before it can be paused or stopped.
