@@ -39,6 +39,7 @@ honor that convention skip it.
 
 | Requirement | Notes |
 |---|---|
+| macOS 26 (Tahoe) or newer, Apple silicon | Same as soapcap |
 | Full Xcode (not just Command Line Tools) | To build |
 | soapcap itself, installed with its `install.sh` | The app runs the `soapcap` in Homebrew's `bin`; set `SOAPCAP_BIN` to use another |
 | soapcap's de-identification (optional) | The de-identify toggle only appears if it's set up (`tools/deidentify/install.sh` in soapcap) |
@@ -75,7 +76,11 @@ reopen the app after granting). The **Check permissions** button runs
 swift test
 ```
 
-15 XCTest cases (about 25 seconds) cover the session logic against a stub
+`SoapcapCoreTests` covers the ported logic (transcript rendering, echo
+de-duplication, joining pause/resume legs) with the same cases as soapcap's
+own fixture tests; the app does not use that code yet.
+
+15 more XCTest cases (about 25 seconds) cover the session logic against a stub
 `soapcap`: pause/resume joining, de-identify order, failure screens, the
 3-second stop guard, and the stop-signal regression (signalling only the
 script, so `yap` gets SIGINT and not SIGTERM). Microphone/Screen Recording
