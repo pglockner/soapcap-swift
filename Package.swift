@@ -17,6 +17,7 @@ let package = Package(
         // Note drafting: prompts, the model backends, and the checks on what comes back.
         .target(name: "SoapcapNote", dependencies: ["SoapcapCore"], path: "Sources/SoapcapNote",
                 resources: [.copy("Resources/prompts")]),
+        .executableTarget(name: "NoteProbe", dependencies: ["SoapcapNote"], path: "Sources/NoteProbe"),
         .executableTarget(name: "CaptureProbe", dependencies: ["SoapcapCapture"], path: "Sources/CaptureProbe"),
         // The window and session flow. A library so Xcode can render its previews.
         .target(name: "SoapcapUI", dependencies: ["SoapcapCore", "SoapcapCapture"], path: "Sources/SoapcapUI",

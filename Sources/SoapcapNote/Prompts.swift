@@ -28,11 +28,14 @@ public enum Prompts {
         try read("objective.md").trimmingTrailingNewlines + "\n\nTRANSCRIPT:\n" + transcript + "\n"
     }
 
+    static let objectiveFields = ["mental_status", "risk", "risk_kind"]
+
     /// The JSON schema the Objective pass's reply must match.
-    public static func objectiveSchema() throws -> [String: Any] {
-        let fields = ["mental_status", "risk", "risk_kind"]
+    public static func objectiveSchema() throws -> Data {
         let all = try JSONSerialization.jsonObject(with: Data(try read("structured/schema.json").utf8)) as? [String: Any] ?? [:]
-        return ["type": "object", "properties": all.filter { fields.contains($0.key) }, "required": fields]
+        let schema: [String: Any] = ["type": "object", "properties": all.filter { objectiveFields.contains($0.key) },
+                                     "required": objectiveFields]
+        return try JSONSerialization.data(withJSONObject: schema, options: [.sortedKeys])
     }
 }
 

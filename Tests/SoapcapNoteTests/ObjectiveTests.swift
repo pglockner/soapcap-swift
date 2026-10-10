@@ -100,7 +100,7 @@ final class PromptsTests: XCTestCase {
     }
 
     func testTheObjectiveSchemaHasItsThreeFields() throws {
-        let schema = try Prompts.objectiveSchema()
+        let schema = try JSONSerialization.jsonObject(with: try Prompts.objectiveSchema()) as? [String: Any] ?? [:]
         XCTAssertEqual(schema["required"] as? [String], ["mental_status", "risk", "risk_kind"])
         XCTAssertEqual((schema["properties"] as? [String: Any])?.keys.sorted(), ["mental_status", "risk", "risk_kind"])
     }
