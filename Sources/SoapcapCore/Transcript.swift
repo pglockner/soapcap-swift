@@ -73,7 +73,16 @@ public enum Transcript {
     /// order, each leg's timestamps shifted to follow the previous leg's last
     /// segment. The shift only preserves ORDERING across legs; it doesn't
     /// reflect how long a pause lasted.
-    public static func merge(_ legs: [[Segment]]) -> [Segment] {
+/// A warning when the microphone was heard but the other side never was,
+    /// which is what a FaceTime call looks like; nil otherwise.
+    public static func oneSidedNotice(_ segments: [Segment], mic: String, system: String) -> String? {
+        guard segments.contains(where: { $0.speaker == mic }),
+              !segments.contains(where: { $0.speaker == system }) else { return nil }
+        return "Heard your side (\(mic)) but nothing from the other party (\(system)). "
+            + "FaceTime calls can't be captured; Zoom, Meet, Teams and Doxy.me can."
+    }
+
+        public static func merge(_ legs: [[Segment]]) -> [Segment] {
         var merged: [Segment] = [], offset = 0.0
         for leg in legs {
             merged += leg.map { s in var s = s; s.start += offset; s.end += offset; return s }

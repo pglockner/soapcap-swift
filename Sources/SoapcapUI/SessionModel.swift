@@ -1,14 +1,36 @@
 import AppKit
+import SoapcapCapture
+import SoapcapCore
 import SwiftUI
+
+/// What the session needs from audio capture; `CaptureSession` in the app,
+/// a scripted stand-in in tests and previews.
+protocol Capturing: AnyObject {
+    var live: AsyncStream<LiveLine> { get }
+    func start(micLabel: String, systemLabel: String) async throws
+    func pause()
+    func resume()
+    func stop() async -> [Segment]
+}
+
+extension CaptureSession: Capturing {
+    func start(micLabel: String, systemLabel: String) async throws {
+        try await start(micLabel: micLabel, systemLabel: systemLabel,
+                        locale: Locale(identifier: Locale.current.identifier))
+    }
+}
 
 @MainActor
 final class SessionModel: ObservableObject {
     enum Phase: Equatable {
         case idle, recording, paused, working(String), transcript, note, error(String)
     }
-    private enum StopReason { case pause, finish }
 
     static let formats = ["soap", "dap", "birp"]
+    static let micLabel = "Therapist"
+    static let systemLabel = "Client"
+    /// How many lines the recording screen's live strip keeps.
+    static let liveLimit = 12
 
     @Published var phase: Phase = .idle
     @Published var deidentify = true
@@ -16,91 +38,118 @@ final class SessionModel: ObservableObject {
     @Published var transcript = ""
     @Published var note = ""
     @Published var notice = ""
-    @Published var elapsed = 0      // seconds recorded, across all legs
-    @Published var legElapsed = 0   // seconds in the current leg
+    @Published var elapsed = 0      // seconds recorded; stands still while paused
+    @Published var liveLines: [LiveLine] = []
     @Published var copied = false
 
     let canDeidentify = Runner.deidentifyAvailable
-    private var live: Runner.Live?
-    private var legStart = Date()
-    private var priorElapsed = 0
-    private var pieces: [String] = []
-    private var lastErr = ""
-    private var stopReason: StopReason?
+    private let makeCapture: () -> Capturing
+    private let now: () -> Date
+    private var capture: Capturing?
+    private var recordedBefore: TimeInterval = 0
+    private var runStart: Date?
     private var timer: Timer?
-    /// Bumped by newSession() so a leg that finishes afterwards is ignored.
+    /// Bumped by newSession() so work that finishes afterwards is ignored.
     private var generation = 0
 
-    /// yap needs about 3s to start; stopping or pausing earlier loses the
-    /// leg (soapcap doctor's own probe runs for 3s too).
-    var canStop: Bool { legElapsed >= 3 }
+    init(makeCapture: @escaping () -> Capturing = { CaptureSession() }, now: @escaping () -> Date = Date.init) {
+        self.makeCapture = makeCapture
+        self.now = now
+    }
 
     func start() {
-        pieces = []; priorElapsed = 0; lastErr = ""; notice = ""; copied = false
-        beginLeg()
+        guard phase == .idle else { return }
+        notice = ""; copied = false; liveLines = []; recordedBefore = 0; elapsed = 0
+        phase = .working("Starting…")
+        let capture = makeCapture()
+        self.capture = capture
+        let gen = generation
+        Task {
+            do { try await capture.start(micLabel: Self.micLabel, systemLabel: Self.systemLabel) } catch {
+                guard gen == generation else { return }
+                self.capture = nil
+                phase = .error(error.localizedDescription); return
+            }
+            guard gen == generation else { _ = await capture.stop(); return }
+            run()
+            for await line in capture.live where gen == generation { heard(line) }
+        }
     }
 
-    /// Each pause ends the current `soapcap live` and each resume starts a
-    /// new one, so nothing is captured while paused. Legs are joined at the end.
-    private func beginLeg() {
-        let leg: Runner.Live
-        do { leg = try Runner.Live() } catch {
-            phase = .error("could not start soapcap: \(error)"); return
-        }
-        live = leg
-        stopReason = nil
-        legStart = Date(); legElapsed = 0; elapsed = priorElapsed
+    private func run() {
+        runStart = now()
         phase = .recording
         timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                guard let self else { return }
-                self.legElapsed = Int(Date().timeIntervalSince(self.legStart))
-                self.elapsed = self.priorElapsed + self.legElapsed
-            }
+            Task { @MainActor in self?.tick() }
         }
-        let gen = generation
-        Task { let r = await leg.finish(); await self.legFinished(r, generation: gen) }
     }
 
-    func pause() { requestStop(.pause) }
+    private func halt() {
+        if let runStart { recordedBefore += now().timeIntervalSince(runStart) }
+        runStart = nil
+        timer?.invalidate(); timer = nil
+        elapsed = Int(recordedBefore)
+    }
 
-    func resume() { if phase == .paused { beginLeg() } }
+    func tick() {
+        elapsed = Int(recordedBefore + (runStart.map { now().timeIntervalSince($0) } ?? 0))
+    }
+
+    /// Nothing is heard while paused, and the clock stands still.
+    func pause() {
+        guard phase == .recording else { return }
+        capture?.pause()
+        halt()
+        phase = .paused
+    }
+
+    func resume() {
+        guard phase == .paused else { return }
+        capture?.resume()
+        run()
+    }
 
     func stop() {
-        if phase == .paused { Task { await finalize() } } else { requestStop(.finish) }
-    }
-
-    private func requestStop(_ reason: StopReason) {
-        guard phase == .recording, canStop else { return }
-        stopReason = reason
-        live?.stop()
-        phase = .working(reason == .pause ? "Pausing…" : "Finishing transcription…")
-    }
-
-    private func legFinished(_ r: (transcript: String, err: String, status: Int32), generation gen: Int) async {
-        guard gen == generation else { return }
-        timer?.invalidate(); timer = nil
-        live = nil
-        priorElapsed = elapsed
-        if !r.transcript.isEmpty { pieces.append(r.transcript) }
-        if !r.err.isEmpty { lastErr = r.err }
-        if notice.isEmpty { notice = Self.cleanNotice(r.err) }
-        if stopReason == .pause { phase = .paused } else { await finalize() }
-    }
-
-    private func finalize() async {
-        guard !pieces.isEmpty else {
-            phase = .error("No transcript captured.\n\n\(lastErr)"); return
+        guard phase == .recording || phase == .paused, let capture else { return }
+        halt()
+        phase = .working("Finishing transcription…")
+        let gen = generation
+        Task {
+            let segments = await capture.stop()
+            guard gen == generation else { return }
+            self.capture = nil
+            await finalize(segments)
         }
-        transcript = Self.joinPieces(pieces)
+    }
+
+    /// Folds a line into the live strip: a speaker's in-progress line is
+    /// replaced by each newer one until it is final.
+    func heard(_ line: LiveLine) {
+        if let i = liveLines.lastIndex(where: { $0.speaker == line.speaker && !$0.isFinal }) {
+            liveLines[i] = line
+        } else {
+            liveLines.append(line)
+        }
+        if liveLines.count > Self.liveLimit { liveLines.removeFirst(liveLines.count - Self.liveLimit) }
+    }
+
+    private func finalize(_ segments: [Segment]) async {
+        transcript = Transcript.render(segments, mic: Self.micLabel, system: Self.systemLabel)
+        guard !transcript.isEmpty else {
+            phase = .error("No speech was captured.\n\nUse Check permissions to see whether Soapcap can use the microphone and hear the call.")
+            return
+        }
+        let oneSided = Transcript.oneSidedNotice(segments, mic: Self.micLabel, system: Self.systemLabel) ?? ""
+        notice = oneSided
         if deidentify && canDeidentify {
             phase = .working("De-identifying the transcript…")
             let d = await Runner.pipe(["deidentify"], input: transcript)
             if d.status == 0 {
                 transcript = d.out.trimmingCharacters(in: .newlines)
-                notice = "transcript: \(d.err)"
+                notice = [oneSided, "transcript: \(d.err)"].filter { !$0.isEmpty }.joined(separator: "\n")
             } else {
-                notice = "transcript de-identify failed; continuing with the original"
+                notice = [oneSided, "transcript de-identify failed; continuing with the original"]
+                    .filter { !$0.isEmpty }.joined(separator: "\n")
             }
         }
         phase = .transcript
@@ -150,35 +199,10 @@ final class SessionModel: ObservableObject {
 
     func newSession() {
         generation += 1
-        stopReason = .finish
-        live?.stop()
         timer?.invalidate(); timer = nil
-        pieces = []; transcript = ""; note = ""; notice = ""; copied = false; phase = .idle
-    }
-
-    static func cleanNotice(_ stderr: String) -> String {
-        stderr.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { !$0.isEmpty && !$0.hasPrefix("soapcap live") && !$0.hasPrefix("•") }
-            .prefix(1).joined(separator: "\n")
-    }
-
-    /// Joins the legs' transcripts, merging a speaker's last line of one leg
-    /// with their first line of the next so a pause doesn't split a turn.
-    static func joinPieces(_ pieces: [String]) -> String {
-        var lines: [String] = []
-        for piece in pieces {
-            for line in piece.split(separator: "\n").map(String.init) {
-                if let last = lines.last, let a = label(last), let b = label(line), a == b {
-                    lines[lines.count - 1] = last + " " + String(line.dropFirst(b.count + 2))
-                } else {
-                    lines.append(line)
-                }
-            }
-        }
-        return lines.joined(separator: "\n")
-    }
-
-    static func label(_ line: String) -> String? {
-        line.range(of: ": ").map { String(line[..<$0.lowerBound]) }
+        runStart = nil
+        if let capture { Task { _ = await capture.stop() } }
+        capture = nil
+        liveLines = []; transcript = ""; note = ""; notice = ""; copied = false; phase = .idle
     }
 }

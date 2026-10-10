@@ -1,3 +1,4 @@
+import SoapcapCapture
 import SwiftUI
 
 public struct SoapcapApp: App {
@@ -53,10 +54,11 @@ struct ContentView: View {
                 Text(String(format: "recording  %02d:%02d", m.elapsed / 60, m.elapsed % 60))
                     .font(.system(.title2, design: .monospaced)) }
             HStack {
-                Button("Pause") { m.pause() }.disabled(!m.canStop)
-                Button("Stop") { m.stop() }.disabled(!m.canStop).keyboardShortcut(.defaultAction)
+                Button("Pause") { m.pause() }
+                Button("Stop") { m.stop() }.keyboardShortcut(.defaultAction)
             }
             Spacer()
+            LiveStrip(lines: m.liveLines)
         }.frame(maxWidth: .infinity)
     }
 
@@ -72,6 +74,7 @@ struct ContentView: View {
                 Button("Stop") { m.stop() }
             }
             Spacer()
+            LiveStrip(lines: m.liveLines).opacity(0.5)
         }.frame(maxWidth: .infinity)
     }
 
@@ -122,7 +125,59 @@ struct ContentView: View {
     }
 }
 
-#Preview {
-    ContentView().environmentObject(SessionModel())
-        .frame(width: 560, height: 420)
+/// The last few lines heard, to show that both sides are coming through.
+/// The full transcript is shown once the session ends.
+struct LiveStrip: View {
+    let lines: [LiveLine]
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 4) {
+                if lines.isEmpty {
+                    Text("Listening…").foregroundStyle(.tertiary)
+                }
+                ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
+                    (Text(line.speaker + "  ").fontWeight(.medium) + Text(line.text))
+                        .foregroundStyle(line.isFinal ? .secondary : .tertiary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .font(.callout)
+            .padding(8)
+        }
+        .defaultScrollAnchor(.bottom)
+        .frame(height: 96)
+        .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 6))
+    }
+}
+
+@MainActor private func sampleScreen(_ set: (SessionModel) -> Void) -> some View {
+    let m = SessionModel()
+    set(m)
+    return ContentView().environmentObject(m).frame(width: 560, height: 420)
+}
+
+private let previewLines = [
+    LiveLine(speaker: "Therapist", text: "How has your sleep been since we last spoke?", isFinal: true),
+    LiveLine(speaker: "Client", text: "Better, mostly. The breathing exercises helped the first few nights.", isFinal: true),
+    LiveLine(speaker: "Therapist", text: "That's good to hear.", isFinal: true),
+    LiveLine(speaker: "Client", text: "Then on Thursday I had the argument with my", isFinal: false),
+]
+
+#Preview("Ready") { sampleScreen { _ in } }
+
+#Preview("Recording") {
+    sampleScreen { $0.phase = .recording; $0.elapsed = 754; $0.liveLines = previewLines }
+}
+
+#Preview("Paused") {
+    sampleScreen { $0.phase = .paused; $0.elapsed = 754; $0.liveLines = previewLines }
+}
+
+#Preview("Transcript") {
+    sampleScreen {
+        $0.phase = .transcript
+        $0.transcript = previewLines.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n")
+        $0.notice = "transcript: redacted 2 span(s): FIRST_NAME x1, DATE x1"
+    }
 }

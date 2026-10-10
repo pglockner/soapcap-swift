@@ -1,33 +1,40 @@
+import SoapcapCapture
+import SoapcapCore
 import XCTest
 @testable import SoapcapUI
 
-/// A stand-in for the `soapcap` CLI, selected with SOAPCAP_BIN. STUB_MODE:
-/// normal (default), relay (models yap under a script that relays SIGINT),
-/// empty (a capture that fails), bob (live prints a name to redact).
-/// STUB_DIR holds a per-leg counter so successive `live` runs differ.
+/// Scripted capture: returns `segments` on stop and records what it was asked to do.
+private final class FakeCapture: Capturing {
+    let live: AsyncStream<LiveLine>
+    private let continuation: AsyncStream<LiveLine>.Continuation
+    var segments: [Segment]
+    var startError: Error?
+    var calls: [String] = []
+
+    init(_ segments: [Segment] = [], startError: Error? = nil) {
+        (live, continuation) = AsyncStream.makeStream(of: LiveLine.self)
+        self.segments = segments
+        self.startError = startError
+    }
+
+    func start(micLabel: String, systemLabel: String) async throws {
+        calls.append("start")
+        if let startError { throw startError }
+    }
+    func pause() { calls.append("pause") }
+    func resume() { calls.append("resume") }
+    func stop() async -> [Segment] { calls.append("stop"); continuation.finish(); return segments }
+    func hear(_ line: LiveLine) { continuation.yield(line) }
+}
+
+private let hello = [Segment(speaker: "Therapist", start: 0, end: 1, id: 1, text: "hi Bob"),
+                     Segment(speaker: "Client", start: 2, end: 3, id: 1, text: "hello")]
+
+/// A stand-in for the `soapcap` CLI, selected with SOAPCAP_BIN, for the steps
+/// the app still hands to it.
 private let stubScript = #"""
 #!/usr/bin/env bash
-mode="${STUB_MODE:-normal}"
 case "$1" in
-  live)
-    echo "soapcap live — banner" >&2
-    echo "  • one" >&2
-    echo "NOTE: one-sided" >&2
-    if [ "$mode" = relay ]; then
-      perl -e '$|=1; $SIG{INT}=sub{print "INT\n"; exit 0}; $SIG{TERM}=sub{print "TERM\n"; exit 143}; select(undef,undef,undef,0.05) while 1' &
-      p=$!
-      trap 'kill -INT $p 2>/dev/null' TERM
-      while kill -0 $p 2>/dev/null; do wait $p 2>/dev/null; done
-      exit 0
-    fi
-    n=$(cat "$STUB_DIR/count" 2>/dev/null || echo 0); n=$((n + 1)); echo $n > "$STUB_DIR/count"
-    case "$mode" in
-      empty) trap 'echo "soapcap: no audio captured." >&2; exit 1' TERM ;;
-      bob)   trap 'echo "Therapist: hi Bob"; exit 0' TERM ;;
-      *)     if [ "$n" = 1 ]; then trap 'echo "Therapist: hello"; exit 0' TERM
-             else trap 'printf "Therapist: again\nClient: fine\n"; exit 0' TERM; fi ;;
-    esac
-    while :; do sleep 0.05; done ;;
   deidentify)
     sed 's/Bob/[FIRST_NAME_1]/g'
     echo "redacted 1 span(s): FIRST_NAME x1" >&2 ;;
@@ -52,12 +59,10 @@ final class SessionModelTests: XCTestCase {
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: stub.path)
         setenv("SOAPCAP_BIN", stub.path, 1)
         setenv("SOAPCAP_DEIDENTIFY_BIN", stub.path, 1) // any executable: enables the toggle
-        setenv("STUB_DIR", dir.path, 1)
-        setenv("STUB_MODE", "normal", 1)
     }
 
     override func tearDown() async throws {
-        for k in ["SOAPCAP_BIN", "SOAPCAP_DEIDENTIFY_BIN", "STUB_DIR", "STUB_MODE"] { unsetenv(k) }
+        for k in ["SOAPCAP_BIN", "SOAPCAP_DEIDENTIFY_BIN"] { unsetenv(k) }
         try? FileManager.default.removeItem(at: dir)
     }
 
@@ -72,34 +77,14 @@ final class SessionModelTests: XCTestCase {
         }
     }
 
+    private func recording(_ capture: FakeCapture, now: @escaping () -> Date = Date.init) async -> SessionModel {
+        let m = SessionModel(makeCapture: { capture }, now: now)
+        m.start()
+        await waitFor("recording") { m.phase == .recording }
+        return m
+    }
+
     // MARK: pure logic
-
-    func testJoinPiecesMergesASpeakersTurnAcrossAPause() {
-        XCTAssertEqual(
-            SessionModel.joinPieces(["Therapist: hello\nClient: hi\nTherapist: so", "Therapist: how are you\nClient: fine"]),
-            "Therapist: hello\nClient: hi\nTherapist: so how are you\nClient: fine")
-    }
-
-    func testJoinPiecesKeepsDifferentSpeakersSeparate() {
-        XCTAssertEqual(SessionModel.joinPieces(["Therapist: a", "Client: b"]), "Therapist: a\nClient: b")
-    }
-
-    func testJoinPiecesSinglePieceIsUnchanged() {
-        XCTAssertEqual(SessionModel.joinPieces(["Therapist: only"]), "Therapist: only")
-        XCTAssertEqual(SessionModel.joinPieces([]), "")
-    }
-
-    func testLabelSplitsAtTheFirstColonSpace() {
-        XCTAssertEqual(SessionModel.label("Therapist: note: this"), "Therapist")
-        XCTAssertNil(SessionModel.label("no label here"))
-    }
-
-    func testCleanNoticeDropsTheBannerAndKeepsTheFirstWarning() {
-        let stderr = "soapcap live — on-device capture\n  • Use headphones\n\nNOTE: captured your side\nmore detail"
-        XCTAssertEqual(SessionModel.cleanNotice(stderr), "NOTE: captured your side")
-    }
-
-    // MARK: Runner
 
     func testDeidentifyAvailabilityFollowsTheHelperBinary() {
         XCTAssertTrue(Runner.deidentifyAvailable)
@@ -110,109 +95,125 @@ final class SessionModelTests: XCTestCase {
     func testPipeRunsTheCLIWithInputOnStdin() async {
         let r = await Runner.pipe(["deidentify"], input: "hi Bob")
         XCTAssertEqual(r.status, 0)
-        XCTAssertEqual(r.out.trimmingCharacters(in: .newlines), "hi [FIRST_NAME_1]")
-        XCTAssertTrue(r.err.hasPrefix("redacted 1"))
+        XCTAssertEqual(r.out, "hi [FIRST_NAME_1]")
     }
 
-    /// The bug that lost recordings: stopping must signal only the script,
-    /// which relays SIGINT. If yap also got SIGTERM directly it would print TERM.
-    func testStopSignalsOnlyTheScriptSoTheChildGetsSIGINT() async throws {
-        setenv("STUB_MODE", "relay", 1)
-        let live = try Runner.Live()
-        try await Task.sleep(nanoseconds: 700_000_000) // let the script install its trap
-        live.stop()
-        let r = await live.finish()
-        XCTAssertEqual(r.transcript, "INT")
-        XCTAssertEqual(r.status, 0)
+    func testAnInProgressLineIsReplacedUntilItIsFinal() {
+        let m = SessionModel(makeCapture: { FakeCapture() })
+        m.heard(LiveLine(speaker: "Client", text: "I", isFinal: false))
+        m.heard(LiveLine(speaker: "Therapist", text: "mm", isFinal: false))
+        m.heard(LiveLine(speaker: "Client", text: "I slept", isFinal: false))
+        m.heard(LiveLine(speaker: "Client", text: "I slept well.", isFinal: true))
+        m.heard(LiveLine(speaker: "Client", text: "Then", isFinal: false))
+        XCTAssertEqual(m.liveLines.map(\.text), ["I slept well.", "mm", "Then"])
     }
 
-    // MARK: session flow (each leg needs 3s before it can be stopped)
-
-    func testStopIsIgnoredDuringTheFirstThreeSeconds() async {
-        let m = SessionModel()
-        m.start()
-        m.stop()
-        m.pause()
-        XCTAssertEqual(m.phase, .recording)
-        m.newSession()
-        XCTAssertEqual(m.phase, .idle)
+    func testTheLiveStripKeepsOnlyTheLastLines() {
+        let m = SessionModel(makeCapture: { FakeCapture() })
+        for i in 1...40 { m.heard(LiveLine(speaker: "Client", text: "line \(i)", isFinal: true)) }
+        XCTAssertEqual(m.liveLines.count, SessionModel.liveLimit)
+        XCTAssertEqual(m.liveLines.last?.text, "line 40")
     }
 
-    func testPauseResumeStopJoinsTheLegs() async {
-        let m = SessionModel()
+    // MARK: session flow
+
+    func testStopRendersBothSidesInOrder() async {
+        let capture = FakeCapture(hello)
+        let m = await recording(capture)
         m.deidentify = false
-        m.start()
-        await waitFor("first leg to be stoppable") { m.canStop }
+        m.stop()
+        await waitFor("transcript") { m.phase == .transcript }
+        XCTAssertEqual(m.transcript, "Therapist: hi Bob\nClient: hello")
+        XCTAssertEqual(m.notice, "")
+        XCTAssertEqual(capture.calls, ["start", "stop"])
+    }
+
+    func testLiveLinesReachTheStripWhileRecording() async {
+        let capture = FakeCapture(hello)
+        let m = await recording(capture)
+        capture.hear(LiveLine(speaker: "Client", text: "hello", isFinal: true))
+        await waitFor("live line") { m.liveLines.count == 1 }
+    }
+
+    func testPauseStopsTheClockAndResumeContinuesTheSameCapture() async {
+        var clock = Date(timeIntervalSince1970: 0)
+        let capture = FakeCapture(hello)
+        let m = await recording(capture, now: { clock })
+        clock += 10; m.tick()
+        XCTAssertEqual(m.elapsed, 10)
         m.pause()
-        await waitFor("paused") { m.phase == .paused }
+        XCTAssertEqual(m.phase, .paused)
+        clock += 60; m.tick()
+        XCTAssertEqual(m.elapsed, 10)
         m.resume()
-        await waitFor("second leg to be stoppable") { m.phase == .recording && m.canStop }
+        XCTAssertEqual(m.phase, .recording)
+        clock += 5; m.tick()
+        XCTAssertEqual(m.elapsed, 15)
         m.stop()
         await waitFor("transcript") { m.phase == .transcript }
-        XCTAssertEqual(m.transcript, "Therapist: hello again\nClient: fine")
-        XCTAssertEqual(m.notice, "NOTE: one-sided")
-        XCTAssertGreaterThanOrEqual(m.elapsed, 6)
+        XCTAssertEqual(capture.calls, ["start", "pause", "resume", "stop"])
     }
 
-    func testStoppingWhilePausedFinishesWithoutAnotherLeg() async {
-        let m = SessionModel()
-        m.deidentify = false
-        m.start()
-        await waitFor("stoppable") { m.canStop }
+    func testStoppingWhilePausedFinishes() async {
+        let capture = FakeCapture(hello)
+        let m = await recording(capture)
         m.pause()
-        await waitFor("paused") { m.phase == .paused }
         m.stop()
         await waitFor("transcript") { m.phase == .transcript }
-        XCTAssertEqual(m.transcript, "Therapist: hello")
+        XCTAssertEqual(capture.calls, ["start", "pause", "stop"])
     }
 
     func testDeidentifyRunsOnTheTranscriptAndThenTheNote() async {
-        setenv("STUB_MODE", "bob", 1)
-        let m = SessionModel()
-        m.deidentify = true
-        m.start()
-        await waitFor("stoppable") { m.canStop }
+        let m = await recording(FakeCapture(hello))
         m.stop()
         await waitFor("transcript") { m.phase == .transcript }
-        XCTAssertEqual(m.transcript, "Therapist: hi [FIRST_NAME_1]")
-        XCTAssertTrue(m.notice.hasPrefix("transcript: "))
-
-        m.format = "dap"
+        XCTAssertEqual(m.transcript, "Therapist: hi [FIRST_NAME_1]\nClient: hello")
+        XCTAssertEqual(m.notice, "transcript: redacted 1 span(s): FIRST_NAME x1")
         m.draft()
         await waitFor("note") { m.phase == .note }
-        XCTAssertEqual(m.note, "SUBJECTIVE:\nformat dap\nNote about [FIRST_NAME_1]")
-        XCTAssertTrue(m.notice.hasPrefix("note: "))
+        XCTAssertEqual(m.note, "SUBJECTIVE:\nformat soap\nNote about [FIRST_NAME_1]")
+        XCTAssertEqual(m.notice, "note: redacted 1 span(s): FIRST_NAME x1")
     }
 
     func testWithoutDeidentifyNothingIsRedacted() async {
-        setenv("STUB_MODE", "bob", 1)
-        let m = SessionModel()
+        let m = await recording(FakeCapture(hello))
         m.deidentify = false
-        m.start()
-        await waitFor("stoppable") { m.canStop }
         m.stop()
         await waitFor("transcript") { m.phase == .transcript }
-        XCTAssertEqual(m.transcript, "Therapist: hi Bob")
+        m.draft()
+        await waitFor("note") { m.phase == .note }
+        XCTAssertTrue(m.transcript.contains("Bob"))
+        XCTAssertTrue(m.note.contains("Bob"))
     }
 
-    func testAFailedCaptureShowsTheErrorAndTheCLIsMessage() async {
-        setenv("STUB_MODE", "empty", 1)
-        let m = SessionModel()
-        m.start()
-        await waitFor("stoppable") { m.canStop }
+    func testHearingOnlyTheMicrophoneWarns() async {
+        let m = await recording(FakeCapture([hello[0]]))
+        m.deidentify = false
         m.stop()
-        await waitFor("error screen") { if case .error = m.phase { return true } else { return false } }
-        guard case .error(let msg) = m.phase else { return }
-        XCTAssertTrue(msg.contains("No transcript captured"))
-        XCTAssertTrue(msg.contains("no audio captured"))
+        await waitFor("transcript") { m.phase == .transcript }
+        XCTAssertTrue(m.notice.contains("nothing from the other party"), m.notice)
     }
 
-    func testNewSessionDuringARecordingIgnoresTheLateResult() async {
-        let m = SessionModel()
+    func testACaptureThatCannotStartShowsWhy() async {
+        let m = SessionModel(makeCapture: { FakeCapture(startError: CaptureError.microphoneDenied) })
         m.start()
-        await waitFor("stoppable") { m.canStop }
+        await waitFor("error") { if case .error = m.phase { true } else { false } }
+        guard case .error(let message) = m.phase else { return }
+        XCTAssertTrue(message.contains("Privacy & Security > Microphone"), message)
+    }
+
+    func testACaptureThatHeardNothingIsAnError() async {
+        let m = await recording(FakeCapture([]))
+        m.stop()
+        await waitFor("error") { if case .error = m.phase { true } else { false } }
+    }
+
+    func testNewSessionDuringARecordingStopsCaptureAndStaysIdle() async {
+        let capture = FakeCapture(hello)
+        let m = await recording(capture)
         m.newSession()
-        try? await Task.sleep(nanoseconds: 1_000_000_000) // the old leg finishes in the background
+        await waitFor("capture stopped") { capture.calls.contains("stop") }
+        try? await Task.sleep(nanoseconds: 200_000_000)
         XCTAssertEqual(m.phase, .idle)
         XCTAssertEqual(m.transcript, "")
     }

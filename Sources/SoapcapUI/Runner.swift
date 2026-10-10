@@ -22,7 +22,7 @@ enum Runner {
         return FileManager.default.isExecutableFile(atPath: path)
     }
 
-    /// GUI apps get a minimal PATH; soapcap needs Homebrew's yap, jq, ollama, etc.
+    /// GUI apps get a minimal PATH; soapcap needs Homebrew's jq, ollama, etc.
     static func makeProcess(_ args: [String]) -> Process {
         let p = Process()
         p.executableURL = bin
@@ -57,37 +57,6 @@ enum Runner {
                 try? i.fileHandleForWriting.close()
                 let (out, err) = drain(p, out: o, err: e)
                 cont.resume(returning: (out, err.trimmingCharacters(in: .whitespacesAndNewlines), p.terminationStatus))
-            }
-        }
-    }
-
-    /// A running `soapcap live`. With stdin not a tty it uses its signal-only
-    /// stop path: SIGTERM ends capture cleanly and prints the transcript.
-    final class Live {
-        let process: Process
-        private let out = Pipe(), err = Pipe()
-
-        init() throws {
-            process = Runner.makeProcess(["live"])
-            process.standardInput = FileHandle.nullDevice
-            process.standardOutput = out
-            process.standardError = err
-            try process.run()
-        }
-
-        /// Signals only the script's own pid. Process.terminate() also reaches
-        /// the child yap (same process group), which then dies on SIGTERM
-        /// without writing its output; the script must relay SIGINT instead.
-        func stop() { if process.isRunning { kill(process.processIdentifier, SIGTERM) } }
-
-        func finish() async -> (transcript: String, err: String, status: Int32) {
-            await withCheckedContinuation { cont in
-                DispatchQueue.global().async {
-                    let (o, e) = Runner.drain(self.process, out: self.out, err: self.err)
-                    cont.resume(returning: (o.trimmingCharacters(in: .newlines),
-                                            e.trimmingCharacters(in: .whitespacesAndNewlines),
-                                            self.process.terminationStatus))
-                }
             }
         }
     }

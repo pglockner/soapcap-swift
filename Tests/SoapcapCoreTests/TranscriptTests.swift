@@ -75,4 +75,13 @@ final class TranscriptTests: XCTestCase {
     func testWordsAreLowercasedASCIIAndDistinct() {
         XCTAssertEqual(Transcript.words("Yeah, yeah — it's 9am!"), ["yeah", "it", "s", "9am"])
     }
+
+    func testOneSidedNoticeOnlyWhenTheOtherPartyIsMissing() {
+        let mic = Segment(speaker: "Therapist", text: "hello")
+        let sys = Segment(speaker: "Client", text: "hi")
+        XCTAssertNotNil(Transcript.oneSidedNotice([mic], mic: "Therapist", system: "Client"))
+        XCTAssertNil(Transcript.oneSidedNotice([mic, sys], mic: "Therapist", system: "Client"))
+        XCTAssertNil(Transcript.oneSidedNotice([sys], mic: "Therapist", system: "Client"))
+        XCTAssertNil(Transcript.oneSidedNotice([], mic: "Therapist", system: "Client"))
+    }
 }
