@@ -17,6 +17,8 @@ let package = Package(
         // Note drafting: prompts, the model backends, and the checks on what comes back.
         .target(name: "SoapcapNote", dependencies: ["SoapcapCore"], path: "Sources/SoapcapNote",
                 resources: [.copy("Resources/prompts")]),
+        // De-identifying: the text rules around a detector, with no model of its own.
+        .target(name: "SoapcapDeidentify", path: "Sources/SoapcapDeidentify"),
         .executableTarget(name: "NoteProbe", dependencies: ["SoapcapNote"], path: "Sources/NoteProbe"),
         .executableTarget(name: "CaptureProbe", dependencies: ["SoapcapCapture"], path: "Sources/CaptureProbe"),
         // The window and session flow. A library so Xcode can render its previews.
@@ -27,6 +29,7 @@ let package = Package(
         .testTarget(name: "SoapcapCaptureTests", dependencies: ["SoapcapCapture"], path: "Tests/SoapcapCaptureTests",
                     swiftSettings: [.swiftLanguageMode(.v5)]),
         .testTarget(name: "SoapcapNoteTests", dependencies: ["SoapcapNote"], path: "Tests/SoapcapNoteTests"),
+        .testTarget(name: "SoapcapDeidentifyTests", dependencies: ["SoapcapDeidentify"], path: "Tests/SoapcapDeidentifyTests"),
         .testTarget(name: "SoapcapUITests", dependencies: ["SoapcapUI"], path: "Tests/SoapcapUITests",
                     swiftSettings: [.swiftLanguageMode(.v5)]),
     ]
