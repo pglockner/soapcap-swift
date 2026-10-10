@@ -35,13 +35,13 @@ enum Runner {
     }
 
     /// GUI apps get a minimal PATH; soapcap needs Homebrew's jq, ollama, etc.
-    static func makeProcess(_ args: [String]) -> Process {
+    static func makeProcess(_ args: [String], environment extra: [String: String] = [:]) -> Process {
         let p = Process()
         p.executableURL = bin
         p.arguments = args
         var env = ProcessInfo.processInfo.environment
         env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:" + (env["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin")
-        p.environment = env
+        p.environment = env.merging(extra) { _, new in new }
         return p
     }
 
@@ -55,11 +55,11 @@ enum Runner {
         return (String(decoding: o, as: UTF8.self), String(decoding: e, as: UTF8.self))
     }
 
-    /// Runs `soapcap <args>` with `input` on stdin.
-    static func pipe(_ args: [String], input: String) async -> (out: String, err: String, status: Int32) {
+    /// Runs `soapcap <args>` with `input` on stdin and `environment` added to its own.
+    static func pipe(_ args: [String], input: String, environment: [String: String] = [:]) async -> (out: String, err: String, status: Int32) {
         await withCheckedContinuation { cont in
             DispatchQueue.global().async {
-                let p = makeProcess(args)
+                let p = makeProcess(args, environment: environment)
                 let i = Pipe(), o = Pipe(), e = Pipe()
                 p.standardInput = i; p.standardOutput = o; p.standardError = e
                 do { try p.run() } catch {

@@ -12,6 +12,7 @@ public struct SoapcapApp: App {
             ContentView().environmentObject(model)
                 .frame(minWidth: 560, minHeight: 420)
         }
+        Settings { SettingsView() }
     }
 }
 

@@ -10,6 +10,7 @@ private final class FakeCapture: Capturing {
     var segments: [Segment]
     var startError: Error?
     var calls: [String] = []
+    var started = (mic: "", system: "", locale: "")
 
     init(_ segments: [Segment] = [], startError: Error? = nil) {
         (live, continuation) = AsyncStream.makeStream(of: LiveLine.self)
@@ -17,8 +18,9 @@ private final class FakeCapture: Capturing {
         self.startError = startError
     }
 
-    func start(micLabel: String, systemLabel: String) async throws {
+    func start(micLabel: String, systemLabel: String, locale: Locale) async throws {
         calls.append("start")
+        started = (micLabel, systemLabel, locale.identifier)
         if let startError { throw startError }
     }
     func pause() { calls.append("pause") }
@@ -40,7 +42,8 @@ case "$1" in
     echo "redacted 1 span(s): FIRST_NAME x1" >&2 ;;
   note)
     cat > /dev/null
-    printf 'SUBJECTIVE:\nformat %s\nNote about Bob\n' "$3" ;;
+    printf 'SUBJECTIVE:\nformat %s\nNote about Bob\n' "$3"
+    [ "$SOAPCAP_SYSTEM_LABEL" = Client ] || echo "labels $SOAPCAP_MIC_LABEL/$SOAPCAP_SYSTEM_LABEL" ;;
   doctor)
     echo "ok    all good" ;;
 esac
@@ -49,6 +52,8 @@ esac
 @MainActor
 final class SessionModelTests: XCTestCase {
     private var dir: URL!
+    private var suite = ""
+    private var settings: SessionSettings!
 
     override func setUp() async throws {
         dir = FileManager.default.temporaryDirectory
@@ -57,6 +62,8 @@ final class SessionModelTests: XCTestCase {
         let stub = dir.appendingPathComponent("soapcap")
         try stubScript.write(to: stub, atomically: true, encoding: .utf8)
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: stub.path)
+        suite = "soapcap-tests-\(UUID().uuidString)"
+        settings = SessionSettings(defaults: UserDefaults(suiteName: suite)!)
         setenv("SOAPCAP_BIN", stub.path, 1)
         setenv("SOAPCAP_DEIDENTIFY_BIN", stub.path, 1) // any executable: enables the toggle
     }
@@ -64,6 +71,7 @@ final class SessionModelTests: XCTestCase {
     override func tearDown() async throws {
         for k in ["SOAPCAP_BIN", "SOAPCAP_DEIDENTIFY_BIN"] { unsetenv(k) }
         try? FileManager.default.removeItem(at: dir)
+        UserDefaults().removePersistentDomain(forName: suite)
     }
 
     /// Polls (suspending, so the main run loop and timers keep running).
@@ -78,7 +86,7 @@ final class SessionModelTests: XCTestCase {
     }
 
     private func recording(_ capture: FakeCapture, now: @escaping () -> Date = Date.init) async -> SessionModel {
-        let m = SessionModel(makeCapture: { capture }, now: now)
+        let m = SessionModel(makeCapture: { capture }, now: now, settings: settings)
         m.start()
         await waitFor("recording") { m.phase == .recording }
         return m
@@ -99,7 +107,7 @@ final class SessionModelTests: XCTestCase {
     }
 
     func testAnInProgressLineIsReplacedUntilItIsFinal() {
-        let m = SessionModel(makeCapture: { FakeCapture() })
+        let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings)
         m.heard(LiveLine(speaker: "Client", text: "I", isFinal: false))
         m.heard(LiveLine(speaker: "Therapist", text: "mm", isFinal: false))
         m.heard(LiveLine(speaker: "Client", text: "I slept", isFinal: false))
@@ -109,7 +117,7 @@ final class SessionModelTests: XCTestCase {
     }
 
     func testTheLiveStripKeepsOnlyTheLastLines() {
-        let m = SessionModel(makeCapture: { FakeCapture() })
+        let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings)
         for i in 1...40 { m.heard(LiveLine(speaker: "Client", text: "line \(i)", isFinal: true)) }
         XCTAssertEqual(m.liveLines.count, SessionModel.liveLimit)
         XCTAssertEqual(m.liveLines.last?.text, "line 40")
@@ -195,7 +203,7 @@ final class SessionModelTests: XCTestCase {
     }
 
     func testACaptureThatCannotStartShowsWhy() async {
-        let m = SessionModel(makeCapture: { FakeCapture(startError: CaptureError.microphoneDenied) })
+        let m = SessionModel(makeCapture: { FakeCapture(startError: CaptureError.microphoneDenied) }, settings: settings)
         m.start()
         await waitFor("error") { if case .error = m.phase { true } else { false } }
         guard case .error(let message) = m.phase else { return }
@@ -220,7 +228,7 @@ final class SessionModelTests: XCTestCase {
 
     func testCheckPermissionsShowsTheGatheredChecks() async {
         let found = [Check("Microphone", .ok, "fine"), Check("Call audio", .failed, "off")]
-        let m = SessionModel(makeCapture: { FakeCapture() }, checks: { found })
+        let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings, checks: { found })
         m.diagnose()
         await waitFor("checks") { m.phase == .checks(found) }
         m.newSession()
@@ -232,5 +240,50 @@ final class SessionModelTests: XCTestCase {
         setenv("SOAPCAP_BIN", dir.appendingPathComponent("missing").path, 1)
         setenv("SOAPCAP_DEIDENTIFY_BIN", dir.appendingPathComponent("missing").path, 1)
         XCTAssertEqual(Runner.checks.map(\.status), [.failed, .warning])
+    }
+
+    // MARK: settings
+
+    func testSettingsDefaultToSoapcapsLabelsAndTheMacsLanguage() {
+        XCTAssertEqual(settings.micLabel, "Therapist")
+        XCTAssertEqual(settings.systemLabel, "Client")
+        XCTAssertEqual(settings.locale.identifier, Locale.current.identifier)
+        XCTAssertEqual(settings.format, "soap")
+        XCTAssertTrue(settings.deidentify)
+    }
+
+    func testBlankOrColonLabelsFallBackToTheDefaults() {
+        settings.defaults.set("   ", forKey: SessionSettings.Key.micLabel)
+        settings.defaults.set("Cli: ent", forKey: SessionSettings.Key.systemLabel)
+        XCTAssertEqual(settings.micLabel, "Therapist")
+        XCTAssertEqual(settings.systemLabel, "Client")
+    }
+
+    func testChosenLabelsAndLanguageReachCaptureTheTranscriptAndTheNote() async {
+        settings.defaults.set("Dr Lee", forKey: SessionSettings.Key.micLabel)
+        settings.defaults.set("Patient", forKey: SessionSettings.Key.systemLabel)
+        settings.defaults.set("en-GB", forKey: SessionSettings.Key.language)
+        let capture = FakeCapture([Segment(speaker: "Dr Lee", start: 0, text: "hello"),
+                                   Segment(speaker: "Patient", start: 1, text: "hi")])
+        let m = await recording(capture)
+        XCTAssertEqual(capture.started.mic, "Dr Lee")
+        XCTAssertEqual(capture.started.system, "Patient")
+        XCTAssertEqual(capture.started.locale, "en-GB")
+        m.deidentify = false
+        m.stop()
+        await waitFor("transcript") { m.phase == .transcript }
+        XCTAssertEqual(m.transcript, "Dr Lee: hello\nPatient: hi")
+        m.draft()
+        await waitFor("note") { m.phase == .note }
+        XCTAssertTrue(m.note.hasSuffix("labels Dr Lee/Patient"), m.note)
+    }
+
+    func testFormatAndDeidentifyAreRememberedForTheNextLaunch() {
+        let first = SessionModel(makeCapture: { FakeCapture() }, settings: settings)
+        first.format = "dap"
+        first.deidentify = false
+        let second = SessionModel(makeCapture: { FakeCapture() }, settings: settings)
+        XCTAssertEqual(second.format, "dap")
+        XCTAssertFalse(second.deidentify)
     }
 }

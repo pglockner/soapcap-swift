@@ -49,4 +49,12 @@ public enum Readiness {
         }
         return [Check(title, .ok, "Ready for \(wanted), on this Mac only.")]
     }
+
+    /// Languages the on-device recognizer can transcribe, by name.
+    public static func supportedLanguages() async -> [Locale] {
+        await SpeechTranscriber.supportedLocales.sorted {
+            let name = { (l: Locale) in Locale.current.localizedString(forIdentifier: l.identifier) ?? l.identifier }
+            return name($0) < name($1)
+        }
+    }
 }

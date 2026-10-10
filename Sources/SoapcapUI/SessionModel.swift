@@ -7,18 +7,13 @@ import SwiftUI
 /// a scripted stand-in in tests and previews.
 protocol Capturing: AnyObject {
     var live: AsyncStream<LiveLine> { get }
-    func start(micLabel: String, systemLabel: String) async throws
+    func start(micLabel: String, systemLabel: String, locale: Locale) async throws
     func pause()
     func resume()
     func stop() async -> [Segment]
 }
 
-extension CaptureSession: Capturing {
-    func start(micLabel: String, systemLabel: String) async throws {
-        try await start(micLabel: micLabel, systemLabel: systemLabel,
-                        locale: Locale(identifier: Locale.current.identifier))
-    }
-}
+extension CaptureSession: Capturing {}
 
 @MainActor
 final class SessionModel: ObservableObject {
@@ -26,15 +21,13 @@ final class SessionModel: ObservableObject {
         case idle, recording, paused, working(String), transcript, note, error(String), checks([Check])
     }
 
-    static let formats = ["soap", "dap", "birp"]
-    static let micLabel = "Therapist"
-    static let systemLabel = "Client"
+    nonisolated static let formats = ["soap", "dap", "birp"]
     /// How many lines the recording screen's live strip keeps.
     static let liveLimit = 12
 
     @Published var phase: Phase = .idle
-    @Published var deidentify = true
-    @Published var format = "soap"
+    @Published var deidentify: Bool { didSet { settings.deidentify = deidentify } }
+    @Published var format: String { didSet { settings.format = format } }
     @Published var transcript = ""
     @Published var note = ""
     @Published var notice = ""
@@ -43,6 +36,9 @@ final class SessionModel: ObservableObject {
     @Published var copied = false
 
     let canDeidentify = Runner.deidentifyAvailable
+    let settings: SessionSettings
+    /// The labels this session was recorded with; Settings may change mid-session.
+    private var labels = (mic: "", system: "")
     private let makeCapture: () -> Capturing
     private let now: () -> Date
     private let gatherChecks: () async -> [Check]
@@ -54,21 +50,26 @@ final class SessionModel: ObservableObject {
     private var generation = 0
 
     init(makeCapture: @escaping () -> Capturing = { CaptureSession() }, now: @escaping () -> Date = Date.init,
-         checks: @escaping () async -> [Check] = { await Readiness.checks() + Runner.checks }) {
+         settings: SessionSettings = SessionSettings(), checks: (() async -> [Check])? = nil) {
         self.makeCapture = makeCapture
         self.now = now
-        gatherChecks = checks
+        self.settings = settings
+        gatherChecks = checks ?? { await Readiness.checks(locale: settings.locale) + Runner.checks }
+        deidentify = settings.deidentify
+        format = settings.format
     }
 
     func start() {
         guard phase == .idle else { return }
         notice = ""; copied = false; liveLines = []; recordedBefore = 0; elapsed = 0
         phase = .working("Starting…")
+        labels = (settings.micLabel, settings.systemLabel)
+        let locale = settings.locale
         let capture = makeCapture()
         self.capture = capture
         let gen = generation
         Task {
-            do { try await capture.start(micLabel: Self.micLabel, systemLabel: Self.systemLabel) } catch {
+            do { try await capture.start(micLabel: labels.mic, systemLabel: labels.system, locale: locale) } catch {
                 guard gen == generation else { return }
                 self.capture = nil
                 phase = .error(error.localizedDescription); return
@@ -137,16 +138,16 @@ final class SessionModel: ObservableObject {
     }
 
     private func finalize(_ segments: [Segment]) async {
-        transcript = Transcript.render(segments, mic: Self.micLabel, system: Self.systemLabel)
+        transcript = Transcript.render(segments, mic: labels.mic, system: labels.system)
         guard !transcript.isEmpty else {
             phase = .error("No speech was captured.\n\nUse Check permissions to see whether Soapcap can use the microphone and hear the call.")
             return
         }
-        let oneSided = Transcript.oneSidedNotice(segments, mic: Self.micLabel, system: Self.systemLabel) ?? ""
+        let oneSided = Transcript.oneSidedNotice(segments, mic: labels.mic, system: labels.system) ?? ""
         notice = oneSided
         if deidentify && canDeidentify {
             phase = .working("De-identifying the transcript…")
-            let d = await Runner.pipe(["deidentify"], input: transcript)
+            let d = await Runner.pipe(["deidentify"], input: transcript, environment: childEnvironment)
             if d.status == 0 {
                 transcript = d.out.trimmingCharacters(in: .newlines)
                 notice = [oneSided, "transcript: \(d.err)"].filter { !$0.isEmpty }.joined(separator: "\n")
@@ -158,17 +159,21 @@ final class SessionModel: ObservableObject {
         phase = .transcript
     }
 
+    private var childEnvironment: [String: String] {
+        ["SOAPCAP_MIC_LABEL": labels.mic, "SOAPCAP_SYSTEM_LABEL": labels.system]
+    }
+
     func draft() {
         Task {
             phase = .working("Drafting a \(format) note…")
-            let n = await Runner.pipe(["note", "--format", format], input: transcript)
+            let n = await Runner.pipe(["note", "--format", format], input: transcript, environment: childEnvironment)
             guard n.status == 0, !n.out.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 phase = .error("Note drafting failed.\n\n\(n.err)"); return
             }
             note = n.out.trimmingCharacters(in: .newlines)
             notice = ""
             if deidentify && canDeidentify {
-                let d = await Runner.pipe(["deidentify"], input: note)
+                let d = await Runner.pipe(["deidentify"], input: note, environment: childEnvironment)
                 if d.status == 0 {
                     note = d.out.trimmingCharacters(in: .newlines); notice = "note: \(d.err)"
                 } else {

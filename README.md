@@ -6,8 +6,7 @@ and a locally drafted SOAP/DAP/BIRP note, with nothing leaving the machine.
 
 **Status: in development.** Soapcap.app is a SwiftUI window for the
 `soapcap session` flow. It captures and transcribes on its own; de-identifying,
-drafting the note and the permission check still call the existing `soapcap`
-command-line tool as child processes, so it needs a working soapcap install.
+and drafting the note still call the existing `soapcap` command-line tool as child processes, so it needs a working soapcap install.
 The shell version of soapcap remains the supported tool until this one
 replaces it.
 
@@ -26,7 +25,8 @@ interface, so the app keeps working throughout.
 - [ ] Note drafting against the local model servers, replacing `soapcap note`
       (prompts and the structured schema stay as data files)
 - [ ] De-identification in-process
-- [ ] `doctor` checks and model selection
+- [x] Permission checks and settings in the app (labels, language)
+- [ ] Note-model checks and model selection
 - [ ] A signed, notarized build that needs no Xcode to install
 
 ## Soapcap.app
@@ -76,8 +76,14 @@ SOAPCAP_SIGN_IDENTITY="Apple Development: you@example.com (TEAMID)" ./build.sh
 Grant Microphone and Screen Recording to "Soapcap" the first time (quit and
 reopen the app after granting). Screen Recording is how macOS lets an app
 hear what the Mac is playing; no picture is kept. The **Check permissions**
-button runs `soapcap doctor` as the app, so it reports what macOS lets the
-app do.
+button shows whether the app has both grants, whether speech recognition is
+ready for your language, and whether the `soapcap` tool and its de-identify
+helper are found, with a button to the right pane of System Settings. It does
+not check the note model; `soapcap doctor` in a terminal does.
+
+Settings (Cmd-comma) holds the two speaker labels and the language to
+transcribe in. The labels are passed on to `soapcap note`, unless
+`~/.config/soapcap/config.sh` sets its own, which wins.
 
 While recording, the window shows the last few lines heard from each side.
 Pause stops listening and stops the clock; Resume carries on in the same
@@ -95,14 +101,14 @@ swift test
 - `SoapcapCaptureTests`: cutting recognizer output into segments, and
   transcribing a clip spoken by `say`, compared with `yap` if it is installed.
 - `SoapcapUITests`: the session flow against a scripted capture and a stub
-  `soapcap`: pause and resume, the clock, de-identify order, failure screens.
+  `soapcap`: pause and resume, the clock, de-identify order, failure screens,
+  the checks screen and settings.
 
 Live capture, Microphone/Screen Recording permissions, signing, and the window
 itself are not covered; they need a person.
 
 ### Limitations
 
-- Speaker labels are fixed (Therapist for the microphone, Client for the
-  call) and the language is the Mac's; soapcap's `config.sh` is not read yet.
+- The app keeps its own settings and does not read soapcap's `config.sh`.
 - FaceTime's call audio can't be captured (a macOS limit); Zoom, Meet, Teams
   and Doxy.me can.
