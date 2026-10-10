@@ -1,10 +1,11 @@
 import SwiftUI
 
-@main
-struct SoapcapApp: App {
+public struct SoapcapApp: App {
     @StateObject private var model = SessionModel()
 
-    var body: some Scene {
+    public init() {}
+
+    public var body: some Scene {
         WindowGroup("soapcap session") {
             ContentView().environmentObject(model)
                 .frame(minWidth: 560, minHeight: 420)

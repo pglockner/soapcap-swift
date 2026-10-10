@@ -1,0 +1,3 @@
+import SoapcapUI
+
+SoapcapApp.main()

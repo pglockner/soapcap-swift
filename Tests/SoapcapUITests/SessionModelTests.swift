@@ -1,5 +1,5 @@
 import XCTest
-@testable import Soapcap
+@testable import SoapcapUI
 
 /// A stand-in for the `soapcap` CLI, selected with SOAPCAP_BIN. STUB_MODE:
 /// normal (default), relay (models yap under a script that relays SIGINT),
