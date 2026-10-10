@@ -23,7 +23,7 @@ cp "$bin/Soapcap" "$app/Contents/MacOS/Soapcap"
 # Resource bundles of the packages the app links (one holds the Metal library
 # the de-identification model runs on). They are looked up in Resources.
 for bundle in "$bin"/*.bundle; do
-  case "$(basename "$bundle")" in soapcap-swift_*) continue ;; esac
+  case "$(basename "$bundle")" in soapcap-swift_SoapcapNote.bundle) continue ;; esac  # its prompts are copied above
   [ -f "$bundle/Contents/Info.plist" ] && cp -R "$bundle" "$app/Contents/Resources/"
 done
 cat > "$app/Contents/Info.plist" <<PLIST

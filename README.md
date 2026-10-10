@@ -5,11 +5,9 @@ on-device capture of a speaker-attributed telehealth transcript on a Mac,
 and a locally drafted SOAP/DAP/BIRP note, with nothing leaving the machine.
 
 **Status: in development.** Soapcap.app is a SwiftUI window for the
-`soapcap session` flow. It captures, transcribes and drafts the note on its
-own, talking to a local model directly. Only de-identifying still calls the
-existing `soapcap` command-line tool, so that needs a soapcap install.
-The shell version of soapcap remains the supported tool until this one
-replaces it.
+`soapcap session` flow. It captures, transcribes, de-identifies and drafts
+the note on its own, and needs no soapcap install. The shell version of
+soapcap remains the supported tool until this one replaces it.
 
 ## Rewrite plan
 
@@ -24,7 +22,7 @@ interface, so the app keeps working throughout.
 - [x] Transcript rendering and echo de-duplication
 - [x] Note drafting against the local model servers, replacing `soapcap note`
       (narrative style; prompts and the schema stay as data files)
-- [ ] De-identification in-process
+- [x] De-identification in-process (the model files stay a separate download)
 - [x] Permission checks and settings in the app (labels, language)
 - [x] Note-model checks and model selection
 - [ ] A signed, notarized build that needs no Xcode to install
@@ -43,7 +41,7 @@ honor that convention skip it.
 | macOS 26 (Tahoe) or newer, Apple silicon | Same as soapcap |
 | Full Xcode (not just Command Line Tools) | To build |
 | A note model (for drafting; recording works without one) | [Ollama](https://ollama.com) with a pulled model (`llama3.1:8b` is the tested default), or Bonsai set up by soapcap's `tools/bonsai/install.sh` |
-| soapcap and its de-identification (optional) | The de-identify toggle only appears if soapcap's `tools/deidentify/install.sh` has been run. The app runs the `soapcap` in Homebrew's `bin`; set `SOAPCAP_BIN` to use another |
+| The de-identification model (optional) | OpenMed's PII model, about 130 MB, installed from Settings. The de-identify toggle appears once it is there |
 
 ### Build and run
 
@@ -51,7 +49,8 @@ honor that convention skip it.
 ./build.sh && open build/Soapcap.app
 ```
 
-`build.sh` signs ad hoc. To keep macOS privacy grants across rebuilds, set
+The first build fetches the packages the de-identifier is built on and
+takes a minute or so longer. `build.sh` signs ad hoc. To keep macOS privacy grants across rebuilds, set
 `SOAPCAP_SIGN_IDENTITY` to a stable local code-signing identity. The app's
 version comes from `VERSION`; its build number is the commit count.
 
@@ -64,9 +63,9 @@ Grant Microphone and Screen Recording to "Soapcap" the first time (quit and
 reopen the app after granting). Screen Recording is how macOS lets an app
 hear what the Mac is playing; no picture is kept. The **Check permissions**
 button shows whether the app has both grants, whether speech recognition is
-ready for your language, whether the note model is ready, and whether
-de-identification is set up, with a button to the right pane of System
-Settings.
+ready for your language, whether the note model is ready, and whether the
+de-identification model is installed, with a button to the right pane of
+System Settings.
 
 Settings (Cmd-comma) holds the two speaker labels, the language to
 transcribe in, the note model, and the session type that goes on the note's
@@ -83,15 +82,30 @@ appears under the note and is never copied with it. The model stays loaded
 between drafts and is released when you discard the note, start a new
 session or quit.
 
+De-identifying replaces names, phone numbers, dates and similar details in
+the transcript and the note with tokens like `[FIRST_NAME_1]`; speaker
+labels and clock times are left alone. It is best effort: the model misses
+things, so read the result before sharing it. If it fails, the text is
+shown under a red "Not de-identified" banner rather than passed off as
+checked. The model is set up from Settings: if soapcap's copy is on the Mac
+it is copied, otherwise it is downloaded from huggingface.co and each file
+is checked against a pinned checksum. That download is the only time the
+app uses the network, and nothing from a session is sent.
+
+The app menu's **Acknowledgements** lists the projects the app is built on
+and their licences.
+
 While recording, the window shows the last few lines heard from each side.
 Pause stops listening and stops the clock; Resume carries on in the same
 session. If the microphone changes mid-session (AirPods connecting or
 dropping), capture carries on with the new one.
 
-Two command-line checks work without the window: `swift run CaptureProbe 15`
-records for 15 seconds and prints the transcript, and
-`swift run NoteProbe FILE [soap|dap|birp] [MODEL] [MINUTES]` drafts a note
-from a transcript file (`bonsai` as the model uses Bonsai).
+Three command-line checks work without the window:
+`swift run CaptureProbe 15` records for 15 seconds and prints the
+transcript; `swift run NoteProbe FILE [soap|dap|birp] [MODEL] [MINUTES]`
+drafts a note from a transcript file (`bonsai` as the model uses Bonsai);
+and `swift run -c release DeidentifyProbe FILE [note]` de-identifies a file
+(`--install` sets up the model first).
 
 ### Signing
 
@@ -121,9 +135,15 @@ swift test
 - `SoapcapNoteTests`: the checks and fixes applied to a draft (soapcap's own
   cases), the drafting sequence against a scripted model, and both model
   backends against a stubbed HTTP layer and a stand-in `llama-server`.
-- `SoapcapUITests`: the session flow against a scripted capture, a scripted
-  drafter and a stub `soapcap`: pause and resume, the clock, de-identify
-  order, failure screens, the checks screen and settings.
+- `SoapcapDeidentifyTests`: the de-identification rules (soapcap's own
+  cases), speaker labels being left alone, and installing the model against
+  a stubbed download.
+- `SoapcapPIITests`: the real PII model on one sentence; skipped when the
+  model isn't installed.
+- `SoapcapUITests`: the session flow against a scripted capture, drafter
+  and de-identifier: pause and resume, the clock, de-identify order, failure
+  screens, the checks screen and settings; and that every package the build
+  pulls in is credited with its licence.
 
 Live capture, real model output, Microphone/Screen Recording permissions,
 signing, and the window itself are not covered; they need a person.

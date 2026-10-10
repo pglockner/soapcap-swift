@@ -32,6 +32,8 @@ public struct SoapcapApp: App {
                 }
                 .task { AppDelegate.beforeQuit = { [model] in await model.releaseModel() } }
         }
+        .commands { CommandGroup(after: .appInfo) { AcknowledgementsCommand() } }
+        Window("Acknowledgements", id: "acknowledgements") { AcknowledgementsView() }
         Settings { SettingsView() }
     }
 }
