@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5 (2026-10-10)
+
+- Added de-identification inside the app, replacing `soapcap deidentify`; the app no longer needs soapcap or Python
+- Added setting up OpenMed's PII model from Settings: soapcap's copy is used if present, otherwise it is downloaded and each file checked against a pinned checksum
+- Added a red "Not de-identified" banner when de-identifying fails, in place of a small notice
+- Added an Acknowledgements window crediting each source with its licence
+- Fixed the app possibly hanging at quit after force-stopping a Bonsai server that ignored a polite stop
+
 ## 0.4 (2026-10-10)
 
 - Added note drafting inside the app, with a model in Ollama or with Bonsai, replacing `soapcap note`; the `soapcap` tool is now only needed for de-identification
@@ -9,11 +17,13 @@
 - Fixed capture to carry on when the microphone changes mid-session
 - Added an icon for the app
 
+
 ## 0.3 (2026-10-10)
 
 - Changed **Check permissions** to report what the app itself can do: its Microphone and Screen Recording grants, speech recognition for your language, and whether the `soapcap` tool and de-identify helper are found, with a button to the right pane of System Settings. It no longer runs `soapcap doctor`, so it does not check the note model.
 - Added a Settings window (Cmd-comma) for the two speaker labels and the language to transcribe in.
 - Changed the note format and the de-identify choice to be remembered between launches.
+
 
 
 ## 0.2 (2026-10-10)
@@ -23,6 +33,7 @@
 - Added a live strip on the recording screen showing the last few lines heard from each side.
 - Added a warning on the transcript when only the microphone was heard.
 - Added `CaptureProbe`, a command-line check that records for a few seconds and prints the transcript.
+
 
 
 
