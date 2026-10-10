@@ -30,6 +30,9 @@ throughout; it now runs no other program except a note model.
 - [ ] Memory pressure: watch it while a note is drafted, and before
       drafting with Bonsai suggest closing other apps when memory is tight
       (soapcap shows this in its progress line)
+- [ ] Note structure from a settings file (an idea, not scoped): which
+      sections a note has and the rules for each, so the format can be
+      tailored without editing prompts and code. Needs its own documentation
 - [ ] A signed, notarized build that needs no Xcode to install
 
 ## Soapcap.app
