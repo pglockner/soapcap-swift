@@ -9,6 +9,7 @@
 - Fixed the app possibly hanging at quit after force-stopping a Bonsai server that ignored a polite stop
 - Added three de-identification sample transcripts the passes were not chosen on, and a test that runs the model over them (0.5.1)
 - Fixed `build.sh` producing an app without the Metal library de-identifying needs; it now stops with an error (0.5.1)
+- Changed SOAP notes drafted with Bonsai to read the transcript once instead of once per pass, saving about two minutes on an hour-long session (0.5.2)
 
 ## 0.4 (2026-10-10)
 
