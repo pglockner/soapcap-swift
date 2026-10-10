@@ -51,7 +51,11 @@ honor that convention skip it.
 ```
 
 `build.sh` signs ad hoc. To keep macOS privacy grants across rebuilds, set
-`SOAPCAP_SIGN_IDENTITY` to a stable local code-signing identity.
+`SOAPCAP_SIGN_IDENTITY` to a stable local code-signing identity. The app's
+version comes from `VERSION`; its build number is the commit count.
+
+To see SwiftUI previews, open this folder in Xcode and select the `SoapcapUI`
+scheme (the window lives in that library; `Soapcap` is only the launcher).
 
 ### Signing
 

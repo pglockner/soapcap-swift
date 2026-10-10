@@ -6,6 +6,11 @@ set -eu
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 cd "$here"
 
+# Marketing version from VERSION; build number is the commit count, so it
+# rises with every commit (CFBundleVersion must only ever increase).
+version=$(tr -d '[:space:]' < VERSION)
+build=$(git rev-list --count HEAD 2>/dev/null || echo 1)
+
 swift build -c release
 app="$here/build/Soapcap.app"
 rm -rf "$app"
@@ -19,8 +24,8 @@ cat > "$app/Contents/Info.plist" <<PLIST
   <key>CFBundleIdentifier</key><string>local.soapcap.session</string>
   <key>CFBundleExecutable</key><string>Soapcap</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>0.1.0</string>
-  <key>CFBundleVersion</key><string>1</string>
+  <key>CFBundleShortVersionString</key><string>$version</string>
+  <key>CFBundleVersion</key><string>$build</string>
   <key>LSMinimumSystemVersion</key><string>26.0</string>
   <key>NSPrincipalClass</key><string>NSApplication</string>
   <key>NSHighResolutionCapable</key><true/>
