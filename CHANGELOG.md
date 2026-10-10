@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2 (2026-10-10)
+
+- Changed recording to capture and transcribe inside the app (Apple SpeechAnalyzer); it no longer runs `soapcap live` or needs `yap`. The app itself now needs the Microphone and Screen Recording permissions.
+- Changed pause and resume to continue one session: pause stops listening and stops the clock, and the 3-second wait before pausing or stopping is gone.
+- Added a live strip on the recording screen showing the last few lines heard from each side.
+- Added a warning on the transcript when only the microphone was heard.
+- Added `CaptureProbe`, a command-line check that records for a few seconds and prints the transcript.
+
 ## 0.1 (2026-09-18 – 2026-10-10)
 
 - Added Soapcap.app, a native window for the `soapcap session` flow (record, optional de-identify, draft, keep and copy) that runs the `soapcap` command-line tool behind the scenes.
