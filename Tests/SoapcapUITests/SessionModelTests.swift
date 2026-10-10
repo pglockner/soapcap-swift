@@ -217,4 +217,20 @@ final class SessionModelTests: XCTestCase {
         XCTAssertEqual(m.phase, .idle)
         XCTAssertEqual(m.transcript, "")
     }
+
+    func testCheckPermissionsShowsTheGatheredChecks() async {
+        let found = [Check("Microphone", .ok, "fine"), Check("Call audio", .failed, "off")]
+        let m = SessionModel(makeCapture: { FakeCapture() }, checks: { found })
+        m.diagnose()
+        await waitFor("checks") { m.phase == .checks(found) }
+        m.newSession()
+        XCTAssertEqual(m.phase, .idle)
+    }
+
+    func testRunnerChecksReportTheToolAndTheHelper() {
+        XCTAssertEqual(Runner.checks.map(\.status), [.ok, .ok])
+        setenv("SOAPCAP_BIN", dir.appendingPathComponent("missing").path, 1)
+        setenv("SOAPCAP_DEIDENTIFY_BIN", dir.appendingPathComponent("missing").path, 1)
+        XCTAssertEqual(Runner.checks.map(\.status), [.failed, .warning])
+    }
 }

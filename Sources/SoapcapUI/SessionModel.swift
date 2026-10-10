@@ -23,7 +23,7 @@ extension CaptureSession: Capturing {
 @MainActor
 final class SessionModel: ObservableObject {
     enum Phase: Equatable {
-        case idle, recording, paused, working(String), transcript, note, error(String)
+        case idle, recording, paused, working(String), transcript, note, error(String), checks([Check])
     }
 
     static let formats = ["soap", "dap", "birp"]
@@ -45,6 +45,7 @@ final class SessionModel: ObservableObject {
     let canDeidentify = Runner.deidentifyAvailable
     private let makeCapture: () -> Capturing
     private let now: () -> Date
+    private let gatherChecks: () async -> [Check]
     private var capture: Capturing?
     private var recordedBefore: TimeInterval = 0
     private var runStart: Date?
@@ -52,9 +53,11 @@ final class SessionModel: ObservableObject {
     /// Bumped by newSession() so work that finishes afterwards is ignored.
     private var generation = 0
 
-    init(makeCapture: @escaping () -> Capturing = { CaptureSession() }, now: @escaping () -> Date = Date.init) {
+    init(makeCapture: @escaping () -> Capturing = { CaptureSession() }, now: @escaping () -> Date = Date.init,
+         checks: @escaping () async -> [Check] = { await Readiness.checks() + Runner.checks }) {
         self.makeCapture = makeCapture
         self.now = now
+        gatherChecks = checks
     }
 
     func start() {
@@ -186,14 +189,14 @@ final class SessionModel: ObservableObject {
         copied = true
     }
 
-    /// Runs `soapcap doctor` as a child of this app, so its capture probe
-    /// reports what macOS lets *this app* do, not what the terminal can.
+    /// Reports what this app can do: its own permissions and speech
+    /// recognition, and whether the soapcap tool it still relies on is there.
     func diagnose() {
+        let gen = generation
         Task {
-            phase = .working("Running soapcap doctor (a few seconds)…")
-            let d = await Runner.pipe(["doctor"], input: "")
-            let text = (d.out + "\n" + d.err).trimmingCharacters(in: .whitespacesAndNewlines)
-            phase = .error(text.isEmpty ? "soapcap doctor printed nothing (exit \(d.status))" : text)
+            phase = .working("Checking…")
+            let checks = await gatherChecks()
+            if gen == generation { phase = .checks(checks) }
         }
     }
 

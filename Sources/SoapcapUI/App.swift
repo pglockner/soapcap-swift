@@ -1,4 +1,5 @@
 import SoapcapCapture
+import SoapcapCore
 import SwiftUI
 
 public struct SoapcapApp: App {
@@ -27,6 +28,8 @@ struct ContentView: View {
             case .transcript: transcript
             case .note: note
             case .error(let msg): error(msg)
+            case .checks(let checks):
+                ChecksView(checks: checks, again: { m.diagnose() }, back: { m.newSession() })
             }
         }
         .padding(16)
@@ -179,5 +182,31 @@ private let previewLines = [
         $0.phase = .transcript
         $0.transcript = previewLines.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n")
         $0.notice = "transcript: redacted 2 span(s): FIRST_NAME x1, DATE x1"
+    }
+}
+
+#Preview("Checks, all ready") {
+    sampleScreen {
+        $0.phase = .checks([
+            Check("Microphone", .ok, "Soapcap can hear your side."),
+            Check("Call audio", .ok, "Soapcap can hear what the Mac is playing."),
+            Check("Speech recognition", .ok, "Ready for en-US, on this Mac only."),
+            Check("soapcap tool", .ok, "Found at /opt/homebrew/bin/soapcap. It drafts the note."),
+            Check("De-identify", .ok, "The helper is set up."),
+        ])
+    }
+}
+
+#Preview("Checks, problems") {
+    sampleScreen {
+        $0.phase = .checks([
+            Check("Microphone", .warning, "Not asked yet. macOS will ask the first time you start recording."),
+            Check("Call audio", .failed,
+                  "Turn on Soapcap under Screen & System Audio Recording, then quit and reopen Soapcap. If it is already on, remove it from the list and add it again.",
+                  fix: .init(label: "Open Screen Recording settings", url: URL(string: "x-apple.systempreferences:")!)),
+            Check("Speech recognition", .ok, "Ready for en-US, on this Mac only."),
+            Check("soapcap tool", .ok, "Found at /opt/homebrew/bin/soapcap. It drafts the note."),
+            Check("De-identify", .warning, "Optional and not set up. Run tools/deidentify/install.sh in soapcap to add it."),
+        ])
     }
 }
