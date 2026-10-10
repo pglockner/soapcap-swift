@@ -6,14 +6,20 @@ import SoapcapDeidentify
 /// weights and tokenizer. It never uses the network.
 public actor OpenMedDetector: PIIDetector {
     public static let confidence: Float = 0.5
-    /// Detection runs under two chunk-window layouts (token limit, overlap)
-    /// and the results are merged. Neither is strictly better: each catches a
-    /// phone number the other misses, because they put different text near a
-    /// chunk boundary. 480 leaves headroom under the model's 512-token ceiling.
-    /// The third, smaller layout is not in soapcap's helper: this runtime
-    /// cuts chunks differently, and without it an employer and an insurer
-    /// that soapcap removes from its sample transcripts were left in.
-    public static let windows = [(limit: 256, overlap: 32), (limit: 480, overlap: 128), (limit: 128, overlap: 64)]
+    /// The text is cut into chunks of `limit` tokens, each sharing `overlap`
+    /// with the next, and read twice with different cuts; the findings are
+    /// merged. The model's score for a word shifts with what else is in its
+    /// chunk, so one cut alone misses things another catches.
+    ///
+    /// - Detection pass (128/64): short chunks that half-overlap, so every
+    ///   word is at least a quarter-chunk from an edge in one of them.
+    /// - Context pass (480/128): soapcap's long layout, just under the
+    ///   model's 512-token ceiling.
+    ///
+    /// soapcap's helper pairs the context pass with 256/32 instead. In this
+    /// runtime that pair left an employer and an insurer in soapcap's sample
+    /// 06; this pair removes everything the helper removes from its samples.
+    public static let windows = [(limit: 128, overlap: 64), (limit: 480, overlap: 128)]
 
     private let directory: URL
     private let windows: [(limit: Int, overlap: Int)]
