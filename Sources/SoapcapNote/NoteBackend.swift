@@ -45,4 +45,13 @@ public protocol NoteBackend: Sendable {
     func request(prompt: String, cap: Int, schema: Data?, tokens: @escaping @Sendable (Int) -> Void) async throws -> ModelReply
     /// Frees the model's memory. Safe to call when nothing is loaded.
     func stop() async
+    /// True for a model that can skip text it has already read only when an
+    /// earlier request ended at that text. A note with two passes then
+    /// reads the transcript once on its own and starts both prompts with
+    /// it, instead of reading it in full for each pass.
+    var resumesFromSharedOpening: Bool { get }
+}
+
+public extension NoteBackend {
+    var resumesFromSharedOpening: Bool { false }
 }

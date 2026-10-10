@@ -17,15 +17,24 @@ public enum Prompts {
         try String(contentsOf: directory.appendingPathComponent(path), encoding: .utf8)
     }
 
-    /// The prose-draft prompt for `format`, with the transcript appended.
-    public static func draft(_ format: NoteFormat, transcript: String) throws -> String {
-        try read("\(format.rawValue).md").trimmingTrailingNewlines + "\n\nTRANSCRIPT:\n" + transcript
+    /// The transcript as it appears in a prompt. Prompts that put it first
+    /// all begin with exactly this text.
+    public static func opening(transcript: String) -> String { "TRANSCRIPT:\n" + transcript }
+
+    /// The prose-draft prompt for `format`: the instructions, then the
+    /// transcript, or the other way round with `transcriptFirst`.
+    public static func draft(_ format: NoteFormat, transcript: String, transcriptFirst: Bool = false) throws -> String {
+        let instructions = try read("\(format.rawValue).md").trimmingTrailingNewlines
+        return transcriptFirst ? opening(transcript: transcript) + "\n\n" + instructions
+            : instructions + "\n\n" + opening(transcript: transcript)
     }
 
     /// The SOAP Objective pass's prompt. Its own prompt because it does what
     /// the drafting rules forbid: judge affect, mood and speech from a transcript.
-    public static func objective(transcript: String) throws -> String {
-        try read("objective.md").trimmingTrailingNewlines + "\n\nTRANSCRIPT:\n" + transcript + "\n"
+    public static func objective(transcript: String, transcriptFirst: Bool = false) throws -> String {
+        let instructions = try read("objective.md").trimmingTrailingNewlines
+        return (transcriptFirst ? opening(transcript: transcript) + "\n\n" + instructions
+            : instructions + "\n\n" + opening(transcript: transcript)) + "\n"
     }
 
     static let objectiveFields = ["mental_status", "risk", "risk_kind"]

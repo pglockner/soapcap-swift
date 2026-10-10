@@ -33,6 +33,11 @@ public actor BonsaiBackend: NoteBackend {
     public nonisolated let install: Install
     public nonisolated let label = "Bonsai"
     public nonisolated let cautions: [String] = []
+    /// llama-server keeps its place only near the end of each prompt, so a
+    /// transcript in the middle of one is read again by the next request.
+    /// Measured on a 22-minute session: the Objective pass took 97 s
+    /// re-reading it and 43 s resuming after it.
+    public nonisolated let resumesFromSharedOpening = true
     private let session: URLSession
     /// How long to wait for the model to load, and how often to ask.
     private let loadTimeout: TimeInterval

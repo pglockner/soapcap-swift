@@ -86,7 +86,10 @@ empty, keeping the most complete draft. A SOAP note's Objective is a fixed
 mental-status frame filled in by a separate pass; it never states "No SI/HI
 reported" if either pass saw risk language. Anything you should know about a
 draft (an untested model, a section still missing, a failed Objective pass)
-appears under the note and is never copied with it. The model stays loaded
+appears under the note and is never copied with it. With Bonsai, a SOAP
+note first reads the transcript on its own and both passes carry on from
+there, instead of each reading it in full; on an hour-long session that
+saves about two minutes. The model stays loaded
 between drafts and is released when you discard the note, start a new
 session or quit.
 

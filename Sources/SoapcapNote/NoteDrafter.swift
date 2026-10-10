@@ -42,19 +42,22 @@ public struct NoteDrafter: Sendable {
                       progress: @escaping @Sendable (DraftProgress) -> Void = { _ in }) async throws -> DraftedNote {
         var warnings = backend.cautions
         let label = backend.label
-        let prompt = try Prompts.draft(format, transcript: transcript)
+        let hasClient = transcript.split(separator: "\n").contains { $0.hasPrefix("\(systemLabel): ") }
+        // Only a note with a second pass gains from reading the transcript
+        // on its own first; for one pass it would just be extra reading.
+        let shared = backend.resumesFromSharedOpening && format == .soap && hasClient
+        let prompt = try Prompts.draft(format, transcript: transcript, transcriptFirst: shared)
         // Past the cap a model silently loses part of its input, and what it
         // writes then can look fine while missing whole sections.
         if ContextSize.exceedsCap(prompt, headroom: 2048) {
             warnings.append("This transcript is very long — it may be more than \(label) can take in at once, so sections of the note may be missing or wrong. Check the note against the transcript.")
         }
 
-        let hasClient = transcript.split(separator: "\n").contains { $0.hasPrefix("\(systemLabel): ") }
         var objectivePrompt: String?
         var objective = Objective.Result.failed
         if format == .soap {
             if hasClient {
-                objectivePrompt = try Prompts.objective(transcript: transcript)
+                objectivePrompt = try Prompts.objective(transcript: transcript, transcriptFirst: shared)
             } else {
                 // The model would rate the therapist instead.
                 objective = .noClient
@@ -68,6 +71,12 @@ public struct NoteDrafter: Sendable {
                           objectivePrompt.map { ContextSize.estimate($0, headroom: 3072) } ?? 0)
         progress(DraftProgress(title: "Loading \(label)…"))
         try await backend.start(context: context)
+        if shared {
+            // The reply is not used. If this fails the draft still works; it
+            // just reads the transcript itself.
+            progress(DraftProgress(title: "Reading the transcript with \(label)…"))
+            _ = try? await backend.request(prompt: Prompts.opening(transcript: transcript), cap: 1, schema: nil) { _ in }
+        }
 
         // A small model sometimes leaves a section out, or writes "Not
         // addressed in this session" under one the transcript plainly covers.

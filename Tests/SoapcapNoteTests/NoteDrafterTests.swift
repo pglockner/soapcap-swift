@@ -10,6 +10,7 @@ final class ScriptedBackend: NoteBackend, @unchecked Sendable {
     var log: [String] = []
     var contexts: [Int] = []
     var prompts: [String] = []
+    var resumesFromSharedOpening = false
 
     init(drafts: [String], objectives: [String] = [goodObjective]) {
         self.drafts = drafts.map { .success(ModelReply(text: $0)) }
@@ -23,6 +24,10 @@ final class ScriptedBackend: NoteBackend, @unchecked Sendable {
     func request(prompt: String, cap: Int, schema: Data?, tokens: @escaping @Sendable (Int) -> Void) async throws -> ModelReply {
         prompts.append(prompt)
         tokens(1)
+        if schema == nil, cap == 1 {
+            log.append("read")
+            return ModelReply(text: "")
+        }
         if schema == nil {
             log.append("draft")
             // Like soapcap's test stand-in: past the end of the script, a good draft.
@@ -163,4 +168,40 @@ final class Seen: @unchecked Sendable {
     private var items: [DraftProgress] = []
     func add(_ item: DraftProgress) { lock.withLock { items.append(item) } }
     var all: [DraftProgress] { lock.withLock { items } }
+}
+
+/// Putting the transcript first for a model that can resume after it.
+extension NoteDrafterTests {
+    func testAModelThatResumesReadsTheTranscriptOnceAndEveryPromptStartsWithIt() async throws {
+        let backend = ScriptedBackend(drafts: [good])
+        backend.resumesFromSharedOpening = true
+        let transcript = long()
+        _ = try await NoteDrafter(backend: backend).draft(format: .soap, transcript: transcript)
+        XCTAssertEqual(backend.log, ["start", "read", "draft", "objective cap 600"])
+        let opening = "TRANSCRIPT:\n" + transcript
+        XCTAssertEqual(backend.prompts[0], opening)
+        XCTAssertTrue(backend.prompts[1].hasPrefix(opening + "\n\n"))
+        XCTAssertTrue(backend.prompts[2].hasPrefix(opening + "\n\n"))
+        XCTAssertTrue(backend.prompts[1].contains("SUBJECTIVE"))
+    }
+
+    func testANoteWithOnePassKeepsTheUsualOrderAndReadsNothingFirst() async throws {
+        let backend = ScriptedBackend(drafts: [])
+        backend.resumesFromSharedOpening = true
+        _ = try await NoteDrafter(backend: backend).draft(format: .dap, transcript: long())
+        XCTAssertFalse(backend.log.contains("read"))
+        XCTAssertFalse(backend.prompts[0].hasPrefix("TRANSCRIPT:"))
+        let noClient = ScriptedBackend(drafts: [good])
+        noClient.resumesFromSharedOpening = true
+        _ = try await NoteDrafter(backend: noClient).draft(format: .soap, transcript: long("Therapist"))
+        XCTAssertEqual(noClient.log, ["start", "draft"])
+    }
+
+    func testOtherModelsKeepTheUsualOrder() async throws {
+        let backend = ScriptedBackend(drafts: [good])
+        let transcript = long()
+        _ = try await NoteDrafter(backend: backend).draft(format: .soap, transcript: transcript)
+        XCTAssertEqual(backend.log, ["start", "draft", "objective cap 600"])
+        XCTAssertTrue(backend.prompts.allSatisfy { $0.contains("\n\nTRANSCRIPT:\n" + transcript) && !$0.hasPrefix("TRANSCRIPT:") })
+    }
 }
