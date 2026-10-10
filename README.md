@@ -27,9 +27,8 @@ throughout; it now runs no other program except a note model.
 - [x] De-identification in-process (the model files stay a separate download)
 - [x] Permission checks and settings in the app (labels, language)
 - [x] Note-model checks and model selection
-- [ ] Memory pressure: watch it while a note is drafted, and before
-      drafting with Bonsai suggest closing other apps when memory is tight
-      (soapcap shows this in its progress line)
+- [x] Memory pressure: shown while a note is drafted, and before drafting
+      with Bonsai the app suggests closing other apps when memory is short
 - [ ] Note structure from a settings file (an idea, not scoped): which
       sections a note has and the rules for each, so the format can be
       tailored without editing prompts and code. Needs its own documentation
@@ -71,8 +70,8 @@ Grant Microphone and Screen Recording to "Soapcap" the first time (quit and
 reopen the app after granting). Screen Recording is how macOS lets an app
 hear what the Mac is playing; no picture is kept. The **Check permissions**
 button shows whether the app has both grants, whether speech recognition is
-ready for your language, whether the note model is ready, and whether the
-de-identification model is installed, with a button to the right pane of
+ready for your language, whether the note model is ready, whether the
+de-identification model is installed, and how much memory is free, with a button to the right pane of
 System Settings.
 
 Settings (Cmd-comma) holds the two speaker labels, the language to
@@ -89,7 +88,16 @@ draft (an untested model, a section still missing, a failed Objective pass)
 appears under the note and is never copied with it. With Bonsai, a SOAP
 note first reads the transcript on its own and both passes carry on from
 there, instead of each reading it in full; on an hour-long session that
-saves about two minutes. The model stays loaded
+saves about two minutes.
+
+While a note is drafted the window shows memory in use, green, then yellow
+from 75% and red from 90%. The figure counts swap, so it passes 100% once
+the Mac is swapping to make room, which slows drafting a lot; from 90% it
+also shows swap in use. Bonsai takes about 8 GB. When less than that plus
+a gigabyte is free, the transcript screen says so before you draft and
+suggests closing other apps; **Check permissions** reports the same.
+
+The model stays loaded
 between drafts and is released when you discard the note, start a new
 session or quit.
 

@@ -27,6 +27,8 @@ final class SessionModel: ObservableObject {
     @Published var elapsed = 0      // seconds recorded; stands still while paused
     @Published var liveLines: [LiveLine] = []
     @Published var copied = false
+    /// How full memory is, while a note is being drafted; nil otherwise.
+    @Published var memory: MemoryStatus?
 
     /// Whether the de-identification model is installed, so the toggle is offered.
     @Published private(set) var canDeidentify = false
@@ -36,6 +38,7 @@ final class SessionModel: ObservableObject {
     private let makeCapture: () -> Capturing
     private let now: () -> Date
     private let gatherChecks: () async -> [Check]
+    private let readMemory: () -> MemoryStatus?
     private let drafting: Drafting
     private let deidentifying: Deidentifying
     private var isDrafting = false
@@ -49,16 +52,18 @@ final class SessionModel: ObservableObject {
 
     init(makeCapture: @escaping () -> Capturing = { CaptureSession() }, now: @escaping () -> Date = Date.init,
          settings: SessionSettings = SessionSettings(), drafting: Drafting? = nil,
-         deidentifying: Deidentifying? = nil,
+         deidentifying: Deidentifying? = nil, memory: @escaping () -> MemoryStatus? = MemoryStatus.current,
          checks: (() async -> [Check])? = nil) {
         self.makeCapture = makeCapture
         self.now = now
         self.settings = settings
         self.drafting = drafting ?? ModelDrafting(settings: settings)
         self.deidentifying = deidentifying ?? ModelDeidentifying()
+        readMemory = memory
         gatherChecks = checks ?? {
             await Readiness.checks(locale: settings.locale)
                 + [await ModelCatalog.check(settings.noteModel, host: settings.ollamaHost)] + [ModelSetup.check()]
+                + [Self.memoryCheck(memory(), model: settings.noteModel)]
         }
         deidentify = settings.deidentify
         format = settings.format
@@ -173,12 +178,34 @@ final class SessionModel: ObservableObject {
         phase = .transcript
     }
 
+    /// What to do before drafting when the chosen model won't fit in the
+    /// memory that is free, or nil. Read afresh each time it is asked.
+    var memoryAdvice: String? {
+        ModelCatalog.memoryAdvice(for: settings.noteModel, memory: readMemory())
+    }
+
+    /// The line on the checks screen.
+    static func memoryCheck(_ memory: MemoryStatus?, model: String) -> Check {
+        guard let memory else { return Check("Memory", .warning, "Couldn't read how much memory this Mac has.") }
+        let size = String(format: "%.0f GB, about %.0f GB free now.", memory.totalGB, memory.availableGB.rounded(.down))
+        if let advice = ModelCatalog.memoryAdvice(for: model, memory: memory) { return Check("Memory", .warning, size + " " + advice) }
+        return Check("Memory", .ok, size)
+    }
+
     func draft() {
         guard let noteFormat = NoteFormat(rawValue: format) else { return }
         let gen = generation
         draftTask = Task {
             phase = .working("Drafting a \(format) note…")
             isDrafting = true
+            // A model that outgrows memory slows to a crawl; show it happening.
+            let watch = Task {
+                while !Task.isCancelled, gen == generation {
+                    memory = readMemory()
+                    try? await Task.sleep(for: .seconds(2))
+                }
+            }
+            defer { watch.cancel(); memory = nil }
             let drafted: DraftedNote
             do {
                 drafted = try await drafting.draft(format: noteFormat, transcript: transcript, minutes: elapsed / 60,
@@ -249,7 +276,7 @@ final class SessionModel: ObservableObject {
         isDrafting = false
         draftTask?.cancel(); draftTask = nil
         Task { await releaseModel() }
-        liveLines = []; transcript = ""; note = ""; notice = ""; warning = ""; copied = false; phase = .idle
+        liveLines = []; transcript = ""; note = ""; notice = ""; warning = ""; copied = false; memory = nil; phase = .idle
         refreshDeidentify()
     }
 }

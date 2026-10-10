@@ -18,6 +18,19 @@ public enum ModelCatalog {
         }
     }
 
+    /// Roughly how much memory a model takes once loaded, where that is
+    /// known and the app is what loads it. Bonsai measured at 7.4 GB with
+    /// the smallest context the app uses and 8.5 GB with the largest.
+    public static func memoryNeedGB(of model: String) -> Double? {
+        model == bonsai ? 8 : nil
+    }
+
+    /// What to say before drafting with `model` when memory is short, or nil.
+    public static func memoryAdvice(for model: String, memory: MemoryStatus?) -> String? {
+        guard let memory, let need = memoryNeedGB(of: model) else { return nil }
+        return memory.advice(beforeLoading: model == bonsai ? "Bonsai" : model, needGB: need)
+    }
+
     /// `bonsai` is its own backend; every other name is a model in Ollama.
     public static func backend(for model: String, host: URL = OllamaBackend.defaultHost,
                                bonsai install: BonsaiBackend.Install = .standard) -> any NoteBackend {

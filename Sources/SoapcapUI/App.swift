@@ -47,7 +47,12 @@ struct ContentView: View {
             case .idle: idle
             case .recording: recording
             case .paused: paused
-            case .working(let msg): ProgressView(msg).frame(maxWidth: .infinity, maxHeight: .infinity)
+            case .working(let msg):
+                VStack(spacing: 10) {
+                    ProgressView(msg)
+                    if let memory = m.memory { MemoryLine(memory: memory) }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             case .transcript: transcript
             case .note: note
             case .error(let msg): error(msg)
@@ -126,6 +131,12 @@ struct ContentView: View {
             warning
             scrollText(m.transcript)
             if !m.notice.isEmpty { Text(m.notice).font(.caption).foregroundStyle(.orange) }
+            // Memory changes as apps open and close, so this is asked again every few seconds.
+            TimelineView(.periodic(from: .now, by: 5)) { _ in
+                if let advice = m.memoryAdvice {
+                    Label(advice, systemImage: "memorychip").font(.caption).foregroundStyle(.orange)
+                }
+            }
             HStack {
                 Picker("Format", selection: $m.format) {
                     ForEach(SessionModel.formats, id: \.self) { Text($0) }

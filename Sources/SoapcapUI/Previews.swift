@@ -49,6 +49,7 @@ private let previewLines = [
             Check("Speech recognition", .ok, "Ready for en-US, on this Mac only."),
             Check("Note model", .ok, "llama3.1:8b is ready to draft notes."),
             Check("De-identify", .ok, "The model is installed."),
+            Check("Memory", .ok, "16 GB, about 10 GB free now."),
         ])
     }
 }
@@ -68,7 +69,26 @@ private let previewLines = [
 }
 
 #Preview("Drafting") {
-    sampleScreen { $0.phase = .working("Drafting a soap note with llama3.1:8b…  412 tokens") }
+    sampleScreen {
+        $0.phase = .working("Drafting a soap note with llama3.1:8b…  412 tokens")
+        $0.memory = MemoryStatus(totalBytes: 16 << 30, freePercent: 38)
+    }
+}
+
+#Preview("Drafting, memory full") {
+    sampleScreen {
+        $0.phase = .working("Drafting the Objective with Bonsai…")
+        $0.memory = MemoryStatus(totalBytes: 16 << 30, freePercent: 6, swapUsedBytes: 2254 << 20, swapTotalBytes: 5 << 30)
+    }
+}
+
+#Preview("Transcript, memory short") {
+    let defaults = UserDefaults(suiteName: "soapcap-preview")!
+    defaults.set("bonsai", forKey: SessionSettings.Key.noteModel)
+    let m = SessionModel(settings: SessionSettings(defaults: defaults), memory: { MemoryStatus(totalBytes: 16 << 30, freePercent: 41) })
+    m.phase = .transcript
+    m.transcript = previewLines.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n")
+    return ContentView().environmentObject(m).frame(width: 560, height: 420)
 }
 
 #Preview("Note") {

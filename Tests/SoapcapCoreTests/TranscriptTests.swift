@@ -75,3 +75,39 @@ final class TranscriptTests: XCTestCase {
         XCTAssertNil(Transcript.oneSidedNotice([], mic: "Therapist", system: "Client"))
     }
 }
+
+final class MemoryStatusTests: XCTestCase {
+    private let gb: UInt64 = 1 << 30
+
+    func testUsedCountsSwapSoItPassesAHundredWhenSwapping() {
+        XCTAssertEqual(MemoryStatus(totalBytes: 16 * gb, freePercent: 67).usedPercent, 33)
+        XCTAssertEqual(MemoryStatus(totalBytes: 16 * gb, freePercent: 5, swapUsedBytes: 4 * gb, swapTotalBytes: 5 * gb).usedPercent, 120)
+    }
+
+    func testLevelsTurnAtSeventyFiveAndNinety() {
+        XCTAssertEqual(MemoryStatus(totalBytes: 16 * gb, freePercent: 26).level, .ok)
+        XCTAssertEqual(MemoryStatus(totalBytes: 16 * gb, freePercent: 25).level, .high)
+        XCTAssertEqual(MemoryStatus(totalBytes: 16 * gb, freePercent: 10).level, .critical)
+    }
+
+    func testTheSummaryAddsSwapOnlyWhenCritical() {
+        XCTAssertEqual(MemoryStatus(totalBytes: 16 * gb, freePercent: 20, swapUsedBytes: gb, swapTotalBytes: 2 * gb).summary, "memory 86%")
+        XCTAssertEqual(MemoryStatus(totalBytes: 16 * gb, freePercent: 6, swapUsedBytes: 2254 << 20, swapTotalBytes: 5 * gb).summary,
+                       "memory 107%   swap 44% (2.2 GB)")
+    }
+
+    func testAdviceComesOnlyWhenTheModelWontFitWithRoomToSpare() {
+        XCTAssertNil(MemoryStatus(totalBytes: 16 * gb, freePercent: 68).advice(beforeLoading: "Bonsai", needGB: 8))
+        XCTAssertEqual(MemoryStatus(totalBytes: 16 * gb, freePercent: 41).advice(beforeLoading: "Bonsai", needGB: 8),
+                       "About 6 GB of memory is free and Bonsai takes about 8 GB. Close other apps before drafting, or it will be slow.")
+        XCTAssertNil(MemoryStatus(totalBytes: 64 * gb, freePercent: 20).advice(beforeLoading: "Bonsai", needGB: 8))
+        XCTAssertEqual(MemoryStatus(totalBytes: 8 * gb, freePercent: 90).advice(beforeLoading: "Bonsai", needGB: 8),
+                       "Bonsai takes about 8 GB and this Mac has 8 GB of memory. Expect drafting to be very slow.")
+    }
+
+    func testTheCurrentFiguresCanBeRead() throws {
+        let now = try XCTUnwrap(MemoryStatus.current())
+        XCTAssertGreaterThan(now.totalBytes, gb)
+        XCTAssertTrue((0...100).contains(now.freePercent))
+    }
+}

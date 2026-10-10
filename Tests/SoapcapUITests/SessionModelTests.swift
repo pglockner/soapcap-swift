@@ -290,6 +290,34 @@ final class SessionModelTests: XCTestCase {
         }
     }
 
+    func testMemoryIsShownWhileDraftingAndNotAfter() async {
+        let m = SessionModel(makeCapture: { FakeCapture(hello) }, settings: settings, drafting: drafter, deidentifying: deidentifier,
+                             memory: { MemoryStatus(totalBytes: 16 << 30, freePercent: 30) })
+        m.start()
+        await waitFor("recording") { m.phase == .recording }
+        m.stop()
+        await waitFor("transcript") { m.phase == .transcript }
+        XCTAssertNil(m.memory)
+        m.draft()
+        await waitFor("memory shown") { m.memory != nil }
+        XCTAssertEqual(m.memory?.usedPercent, 70)
+        await waitFor("note") { m.phase == .note }
+        XCTAssertNil(m.memory)
+    }
+
+    func testClosingAppsIsAdvisedOnlyForBonsaiWhenMemoryIsShort() {
+        let short = { MemoryStatus(totalBytes: 16 << 30, freePercent: 41) }
+        let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier, memory: short)
+        XCTAssertNil(m.memoryAdvice)                         // llama3.1:8b: Ollama loads it, not the app
+        UserDefaults(suiteName: suite)!.set("bonsai", forKey: SessionSettings.Key.noteModel)
+        XCTAssertTrue(m.memoryAdvice?.contains("Close other apps") == true, m.memoryAdvice ?? "nil")
+        let roomy = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier,
+                                 memory: { MemoryStatus(totalBytes: 16 << 30, freePercent: 68) })
+        XCTAssertNil(roomy.memoryAdvice)
+        XCTAssertEqual(SessionModel.memoryCheck(short(), model: "bonsai").status, .warning)
+        XCTAssertEqual(SessionModel.memoryCheck(short(), model: "llama3.1:8b"), Check("Memory", .ok, "16 GB, about 6 GB free now."))
+    }
+
     // MARK: settings
 
     func testSettingsDefaultToSoapcapsLabelsAndTheMacsLanguage() {
