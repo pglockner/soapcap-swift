@@ -30,6 +30,9 @@ final class Track: @unchecked Sendable {
             throw CaptureError.noAudioFormat
         }
         let continuation = input.continuation
+        source.onProblem = { [speaker, onLive] problem in
+            onLive(LiveLine(speaker: speaker, text: "[\(problem)]", isFinal: true))
+        }
         try await source.start(format: format) { [weak self] buffer in
             guard let self, !self.isPaused else { return }
             continuation.yield(AnalyzerInput(buffer: buffer))

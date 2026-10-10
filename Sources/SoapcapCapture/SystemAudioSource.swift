@@ -6,6 +6,7 @@ import ScreenCaptureKit
 /// ScreenCaptureKit. This is why the app needs Screen Recording permission;
 /// no picture is kept, the video side is a 2x2 frame once a second.
 final class SystemAudioSource: NSObject, AudioSource, SCStreamOutput {
+    var onProblem: ((String) -> Void)?
     private var stream: SCStream?
     private var converter: BufferConverter?
     private var onBuffer: ((AVAudioPCMBuffer) -> Void)?
