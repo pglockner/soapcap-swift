@@ -16,13 +16,18 @@ public actor OpenMedDetector: PIIDetector {
     public static let windows = [(limit: 256, overlap: 32), (limit: 480, overlap: 128), (limit: 128, overlap: 64)]
 
     private let directory: URL
+    private let windows: [(limit: Int, overlap: Int)]
     private var model: OpenMed?
 
-    public init(directory: URL = ModelFiles.directory) { self.directory = directory }
+    public init(directory: URL = ModelFiles.directory, windows: [(limit: Int, overlap: Int)] = OpenMedDetector.windows) {
+        self.directory = directory
+        self.windows = windows
+    }
 
     public func spans(in text: String) async throws -> [Span] {
         let model = try loaded()
-        return try Self.windows.flatMap { window in
+        let windows = windows
+        return try windows.flatMap { window in
             try model.extractPIIChunked(text, confidenceThreshold: Self.confidence,
                                         chunkTokenLimit: window.limit, tokenOverlap: window.overlap)
         }.compactMap { entity in
