@@ -1,0 +1,41 @@
+import Foundation
+
+/// The prompt files, kept as data so they can be read and changed without
+/// touching code. They are soapcap's, unchanged.
+public enum Prompts {
+    /// In the built app they sit in Contents/Resources/prompts; under
+    /// `swift build` and `swift test`, in the package's resource bundle.
+    static let directory: URL = {
+        if let inApp = Bundle.main.resourceURL?.appendingPathComponent("prompts"),
+           FileManager.default.fileExists(atPath: inApp.appendingPathComponent("soap.md").path) {
+            return inApp
+        }
+        return Bundle.module.resourceURL!.appendingPathComponent("prompts")
+    }()
+
+    static func read(_ path: String) throws -> String {
+        try String(contentsOf: directory.appendingPathComponent(path), encoding: .utf8)
+    }
+
+    /// The prose-draft prompt for `format`, with the transcript appended.
+    public static func draft(_ format: NoteFormat, transcript: String) throws -> String {
+        try read("\(format.rawValue).md").trimmingTrailingNewlines + "\n\nTRANSCRIPT:\n" + transcript
+    }
+
+    /// The SOAP Objective pass's prompt. Its own prompt because it does what
+    /// the drafting rules forbid: judge affect, mood and speech from a transcript.
+    public static func objective(transcript: String) throws -> String {
+        try read("objective.md").trimmingTrailingNewlines + "\n\nTRANSCRIPT:\n" + transcript + "\n"
+    }
+
+    /// The JSON schema the Objective pass's reply must match.
+    public static func objectiveSchema() throws -> [String: Any] {
+        let fields = ["mental_status", "risk", "risk_kind"]
+        let all = try JSONSerialization.jsonObject(with: Data(try read("structured/schema.json").utf8)) as? [String: Any] ?? [:]
+        return ["type": "object", "properties": all.filter { fields.contains($0.key) }, "required": fields]
+    }
+}
+
+extension String {
+    var trimmingTrailingNewlines: String { replacing(pattern: "\\n+$", with: "") }
+}

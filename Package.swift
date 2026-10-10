@@ -14,6 +14,9 @@ let package = Package(
         // Audio capture and on-device transcription, producing SoapcapCore segments.
         .target(name: "SoapcapCapture", dependencies: ["SoapcapCore"], path: "Sources/SoapcapCapture",
                 swiftSettings: [.swiftLanguageMode(.v5)]),
+        // Note drafting: prompts, the model backends, and the checks on what comes back.
+        .target(name: "SoapcapNote", dependencies: ["SoapcapCore"], path: "Sources/SoapcapNote",
+                resources: [.copy("Resources/prompts")]),
         .executableTarget(name: "CaptureProbe", dependencies: ["SoapcapCapture"], path: "Sources/CaptureProbe"),
         // The window and session flow. A library so Xcode can render its previews.
         .target(name: "SoapcapUI", dependencies: ["SoapcapCore", "SoapcapCapture"], path: "Sources/SoapcapUI",
@@ -22,6 +25,7 @@ let package = Package(
         .testTarget(name: "SoapcapCoreTests", dependencies: ["SoapcapCore"], path: "Tests/SoapcapCoreTests"),
         .testTarget(name: "SoapcapCaptureTests", dependencies: ["SoapcapCapture"], path: "Tests/SoapcapCaptureTests",
                     swiftSettings: [.swiftLanguageMode(.v5)]),
+        .testTarget(name: "SoapcapNoteTests", dependencies: ["SoapcapNote"], path: "Tests/SoapcapNoteTests"),
         .testTarget(name: "SoapcapUITests", dependencies: ["SoapcapUI"], path: "Tests/SoapcapUITests",
                     swiftSettings: [.swiftLanguageMode(.v5)]),
     ]
