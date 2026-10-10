@@ -38,6 +38,7 @@ let package = Package(
                     swiftSettings: [.swiftLanguageMode(.v5)]),
         .testTarget(name: "SoapcapNoteTests", dependencies: ["SoapcapNote"], path: "Tests/SoapcapNoteTests"),
         .testTarget(name: "SoapcapDeidentifyTests", dependencies: ["SoapcapDeidentify"], path: "Tests/SoapcapDeidentifyTests"),
+        .testTarget(name: "SoapcapPIITests", dependencies: ["SoapcapPII"], path: "Tests/SoapcapPIITests"),
         .testTarget(name: "SoapcapUITests", dependencies: ["SoapcapUI"], path: "Tests/SoapcapUITests",
                     swiftSettings: [.swiftLanguageMode(.v5)]),
     ]
