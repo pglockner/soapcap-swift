@@ -4,6 +4,8 @@ import XCTest
 /// Answers URLSession requests from a table, recording what was sent.
 final class StubHTTP: URLProtocol, @unchecked Sendable {
     nonisolated(unsafe) static var replies: [String: String] = [:]   // path -> body
+    /// Asked first; nil falls through to `replies`.
+    nonisolated(unsafe) static var answer: (String) -> String? = { _ in nil }
     nonisolated(unsafe) static var sent: [(path: String, body: [String: Any])] = []
 
     static func session() -> URLSession {
@@ -30,7 +32,7 @@ final class StubHTTP: URLProtocol, @unchecked Sendable {
         let body = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
         let path = request.url!.path
         Self.sent.append((path, body))
-        guard let reply = Self.replies[path] else {
+        guard let reply = Self.answer(path) ?? Self.replies[path] else {
             client?.urlProtocol(self, didFailWithError: URLError(.cannotConnectToHost)); return
         }
         client?.urlProtocol(self, didReceive: HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!,
@@ -41,7 +43,7 @@ final class StubHTTP: URLProtocol, @unchecked Sendable {
 }
 
 final class OllamaBackendTests: XCTestCase {
-    override func setUp() { StubHTTP.replies = [:]; StubHTTP.sent = [] }
+    override func setUp() { StubHTTP.replies = [:]; StubHTTP.sent = []; StubHTTP.answer = { _ in nil } }
 
     private func backend(_ model: String = "llama3.1:8b", host: String = "http://localhost:11434") -> OllamaBackend {
         OllamaBackend(model: model, host: URL(string: host)!, session: StubHTTP.session())

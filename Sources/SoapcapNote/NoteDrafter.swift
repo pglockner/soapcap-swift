@@ -4,6 +4,11 @@ public struct DraftedNote: Equatable, Sendable {
     public var text: String
     /// Things to tell the clinician about this note; never part of it.
     public var warnings: [String]
+
+    public init(text: String, warnings: [String] = []) {
+        self.text = text
+        self.warnings = warnings
+    }
 }
 
 /// What the drafter is doing right now, for a status line.
@@ -11,6 +16,11 @@ public struct DraftProgress: Equatable, Sendable {
     public var title: String
     /// Tokens generated so far in the current pass, when the backend streams.
     public var tokens: Int?
+
+    public init(title: String, tokens: Int? = nil) {
+        self.title = title
+        self.tokens = tokens
+    }
 }
 
 /// Drafts a note from a transcript with a local model: a prose draft, drafted

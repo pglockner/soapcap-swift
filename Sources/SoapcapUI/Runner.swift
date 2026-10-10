@@ -1,7 +1,7 @@
 import Foundation
 import SoapcapCore
 
-/// Drives the soapcap CLI as child processes. Nothing here touches disk.
+/// Runs soapcap's de-identify step as a child process. Nothing here touches disk.
 enum Runner {
     /// SOAPCAP_BIN overrides; otherwise the installed `soapcap` (install.sh
     /// symlinks it into Homebrew's bin), resolved to the real script so the
@@ -23,18 +23,18 @@ enum Runner {
         return FileManager.default.isExecutableFile(atPath: path)
     }
 
-    /// The pieces of soapcap the app still hands work to.
+    /// The one piece of soapcap the app still hands work to.
     static var checks: [Check] {
-        let tool = FileManager.default.isExecutableFile(atPath: bin.path)
-            ? Check("soapcap tool", .ok, "Found at \(bin.path). It drafts the note.")
-            : Check("soapcap tool", .failed, "Not found at \(bin.path). Install soapcap with its install.sh; notes can't be drafted without it.")
-        let helper = deidentifyAvailable
-            ? Check("De-identify", .ok, "The helper is set up.")
-            : Check("De-identify", .warning, "Optional and not set up. Run tools/deidentify/install.sh in soapcap to add it.")
-        return [tool, helper]
+        guard deidentifyAvailable else {
+            return [Check("De-identify", .warning, "Optional and not set up. Run tools/deidentify/install.sh in soapcap to add it.")]
+        }
+        guard FileManager.default.isExecutableFile(atPath: bin.path) else {
+            return [Check("De-identify", .failed, "The helper is set up, but the soapcap tool that runs it was not found at \(bin.path). Install soapcap with its install.sh.")]
+        }
+        return [Check("De-identify", .ok, "The helper is set up.")]
     }
 
-    /// GUI apps get a minimal PATH; soapcap needs Homebrew's jq, ollama, etc.
+    /// GUI apps get a minimal PATH; soapcap needs Homebrew's tools on it.
     static func makeProcess(_ args: [String], environment extra: [String: String] = [:]) -> Process {
         let p = Process()
         p.executableURL = bin

@@ -1,5 +1,6 @@
 import SoapcapCapture
 import SoapcapCore
+import SoapcapNote
 import XCTest
 @testable import SoapcapUI
 
@@ -29,6 +30,25 @@ private final class FakeCapture: Capturing {
     func hear(_ line: LiveLine) { continuation.yield(line) }
 }
 
+/// Scripted drafting: returns a note naming the format, and records what it was asked.
+@MainActor private final class FakeDrafter: Drafting {
+    var warnings: [String] = []
+    var error: Error?
+    var asked: [(format: NoteFormat, transcript: String, minutes: Int, systemLabel: String)] = []
+    var releases = 0
+
+    func draft(format: NoteFormat, transcript: String, minutes: Int, systemLabel: String,
+               progress: @escaping @Sendable (DraftProgress) -> Void) async throws -> DraftedNote {
+        asked.append((format, transcript, minutes, systemLabel))
+        progress(DraftProgress(title: "Drafting…", tokens: 7))
+        try? await Task.sleep(nanoseconds: 150_000_000)
+        if let error { throw error }
+        return DraftedNote(text: "SUBJECTIVE:\nformat \(format.rawValue)\nNote about Bob", warnings: warnings)
+    }
+
+    func release() async { releases += 1 }
+}
+
 private let hello = [Segment(speaker: "Therapist", start: 0, end: 1, id: 1, text: "hi Bob"),
                      Segment(speaker: "Client", start: 2, end: 3, id: 1, text: "hello")]
 
@@ -40,12 +60,6 @@ case "$1" in
   deidentify)
     sed 's/Bob/[FIRST_NAME_1]/g'
     echo "redacted 1 span(s): FIRST_NAME x1" >&2 ;;
-  note)
-    cat > /dev/null
-    printf 'SUBJECTIVE:\nformat %s\nNote about Bob\n' "$3"
-    [ "$SOAPCAP_SYSTEM_LABEL" = Client ] || echo "labels $SOAPCAP_MIC_LABEL/$SOAPCAP_SYSTEM_LABEL" ;;
-  doctor)
-    echo "ok    all good" ;;
 esac
 """#
 
@@ -54,6 +68,7 @@ final class SessionModelTests: XCTestCase {
     private var dir: URL!
     private var suite = ""
     private var settings: SessionSettings!
+    private var drafter: FakeDrafter!
 
     override func setUp() async throws {
         dir = FileManager.default.temporaryDirectory
@@ -64,6 +79,7 @@ final class SessionModelTests: XCTestCase {
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: stub.path)
         suite = "soapcap-tests-\(UUID().uuidString)"
         settings = SessionSettings(defaults: UserDefaults(suiteName: suite)!)
+        drafter = FakeDrafter()
         setenv("SOAPCAP_BIN", stub.path, 1)
         setenv("SOAPCAP_DEIDENTIFY_BIN", stub.path, 1) // any executable: enables the toggle
     }
@@ -86,7 +102,7 @@ final class SessionModelTests: XCTestCase {
     }
 
     private func recording(_ capture: FakeCapture, now: @escaping () -> Date = Date.init) async -> SessionModel {
-        let m = SessionModel(makeCapture: { capture }, now: now, settings: settings)
+        let m = SessionModel(makeCapture: { capture }, now: now, settings: settings, drafting: drafter)
         m.start()
         await waitFor("recording") { m.phase == .recording }
         return m
@@ -107,7 +123,7 @@ final class SessionModelTests: XCTestCase {
     }
 
     func testAnInProgressLineIsReplacedUntilItIsFinal() {
-        let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings)
+        let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter)
         m.heard(LiveLine(speaker: "Client", text: "I", isFinal: false))
         m.heard(LiveLine(speaker: "Therapist", text: "mm", isFinal: false))
         m.heard(LiveLine(speaker: "Client", text: "I slept", isFinal: false))
@@ -117,7 +133,7 @@ final class SessionModelTests: XCTestCase {
     }
 
     func testTheLiveStripKeepsOnlyTheLastLines() {
-        let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings)
+        let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter)
         for i in 1...40 { m.heard(LiveLine(speaker: "Client", text: "line \(i)", isFinal: true)) }
         XCTAssertEqual(m.liveLines.count, SessionModel.liveLimit)
         XCTAssertEqual(m.liveLines.last?.text, "line 40")
@@ -203,7 +219,7 @@ final class SessionModelTests: XCTestCase {
     }
 
     func testACaptureThatCannotStartShowsWhy() async {
-        let m = SessionModel(makeCapture: { FakeCapture(startError: CaptureError.microphoneDenied) }, settings: settings)
+        let m = SessionModel(makeCapture: { FakeCapture(startError: CaptureError.microphoneDenied) }, settings: settings, drafting: drafter)
         m.start()
         await waitFor("error") { if case .error = m.phase { true } else { false } }
         guard case .error(let message) = m.phase else { return }
@@ -228,18 +244,19 @@ final class SessionModelTests: XCTestCase {
 
     func testCheckPermissionsShowsTheGatheredChecks() async {
         let found = [Check("Microphone", .ok, "fine"), Check("Call audio", .failed, "off")]
-        let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings, checks: { found })
+        let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, checks: { found })
         m.diagnose()
         await waitFor("checks") { m.phase == .checks(found) }
         m.newSession()
         XCTAssertEqual(m.phase, .idle)
     }
 
-    func testRunnerChecksReportTheToolAndTheHelper() {
-        XCTAssertEqual(Runner.checks.map(\.status), [.ok, .ok])
+    func testTheDeidentifyCheckFollowsTheHelperAndTheTool() {
+        XCTAssertEqual(Runner.checks.map(\.status), [.ok])
         setenv("SOAPCAP_BIN", dir.appendingPathComponent("missing").path, 1)
+        XCTAssertEqual(Runner.checks.map(\.status), [.failed])
         setenv("SOAPCAP_DEIDENTIFY_BIN", dir.appendingPathComponent("missing").path, 1)
-        XCTAssertEqual(Runner.checks.map(\.status), [.failed, .warning])
+        XCTAssertEqual(Runner.checks.map(\.status), [.warning])
     }
 
     // MARK: settings
@@ -275,15 +292,86 @@ final class SessionModelTests: XCTestCase {
         XCTAssertEqual(m.transcript, "Dr Lee: hello\nPatient: hi")
         m.draft()
         await waitFor("note") { m.phase == .note }
-        XCTAssertTrue(m.note.hasSuffix("labels Dr Lee/Patient"), m.note)
+        XCTAssertEqual(drafter.asked.last?.systemLabel, "Patient")
+        XCTAssertEqual(drafter.asked.last?.transcript, "Dr Lee: hello\nPatient: hi")
     }
 
     func testFormatAndDeidentifyAreRememberedForTheNextLaunch() {
-        let first = SessionModel(makeCapture: { FakeCapture() }, settings: settings)
+        let first = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter)
         first.format = "dap"
         first.deidentify = false
-        let second = SessionModel(makeCapture: { FakeCapture() }, settings: settings)
+        let second = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter)
         XCTAssertEqual(second.format, "dap")
         XCTAssertFalse(second.deidentify)
+    }
+
+    // MARK: drafting
+
+    private func atTranscript(now: @escaping () -> Date = Date.init) async -> SessionModel {
+        let m = await recording(FakeCapture(hello), now: now)
+        m.deidentify = false
+        m.stop()
+        await waitFor("transcript") { m.phase == .transcript }
+        return m
+    }
+
+    func testDraftAsksForTheChosenFormatWithTheRecordedMinutes() async {
+        var clock = Date(timeIntervalSince1970: 0)
+        let m = await recording(FakeCapture(hello), now: { clock })
+        m.deidentify = false
+        clock += 125
+        m.stop()
+        await waitFor("transcript") { m.phase == .transcript }
+        m.format = "birp"
+        m.draft()
+        await waitFor("note") { m.phase == .note }
+        XCTAssertEqual(drafter.asked.last?.format, .birp)
+        XCTAssertEqual(drafter.asked.last?.minutes, 2, "whole minutes, rounded down")
+        XCTAssertEqual(m.note, "SUBJECTIVE:\nformat birp\nNote about Bob")
+    }
+
+    func testDraftingShowsProgressThenTheNotesWarnings() async {
+        drafter.warnings = ["proofread it", "the Objective pass failed"]
+        let m = await atTranscript()
+        m.draft()
+        await waitFor("progress") { m.phase == .working("Drafting…  7 tokens") }
+        await waitFor("note") { m.phase == .note }
+        XCTAssertEqual(m.notice, "proofread it\nthe Objective pass failed")
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertEqual(m.phase, .note, "late progress must not replace the note")
+    }
+
+    func testAFailedDraftShowsWhy() async {
+        drafter.error = NoteError.notReady("Can't reach Ollama at http://localhost:11434.")
+        let m = await atTranscript()
+        m.draft()
+        await waitFor("error") { if case .error = m.phase { true } else { false } }
+        guard case .error(let message) = m.phase else { return }
+        XCTAssertTrue(message.contains("Can't reach Ollama"), message)
+    }
+
+    func testTheModelIsKeptBetweenDraftsAndReleasedWithTheSession() async {
+        let m = await atTranscript()
+        m.draft()
+        await waitFor("note") { m.phase == .note }
+        m.draft()
+        await waitFor("second note") { self.drafter.asked.count == 2 && m.phase == .note }
+        XCTAssertEqual(drafter.releases, 0)
+        m.newSession()
+        await waitFor("release") { self.drafter.releases == 1 }
+    }
+
+    func testNoteSettingsHaveSoapcapsDefaults() {
+        XCTAssertEqual(settings.noteModel, "llama3.1:8b")
+        XCTAssertEqual(settings.ollamaHost.absoluteString, "http://localhost:11434")
+        XCTAssertEqual(settings.sessionType, "telehealth")
+        settings.defaults.set("bonsai", forKey: SessionSettings.Key.noteModel)
+        settings.defaults.set("not a url", forKey: SessionSettings.Key.ollamaHost)
+        settings.defaults.set("in person", forKey: SessionSettings.Key.sessionType)
+        XCTAssertEqual(settings.noteModel, "bonsai")
+        XCTAssertEqual(settings.ollamaHost.absoluteString, "http://localhost:11434")
+        XCTAssertEqual(settings.sessionType, "in person")
+        settings.defaults.set("http://192.168.1.5:11434", forKey: SessionSettings.Key.ollamaHost)
+        XCTAssertEqual(settings.ollamaHost.absoluteString, "http://192.168.1.5:11434")
     }
 }

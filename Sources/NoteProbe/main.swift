@@ -13,7 +13,7 @@ guard let path = args.first, let transcript = try? String(contentsOfFile: path, 
 }
 let format = args.dropFirst().first.flatMap(NoteFormat.init) ?? .soap
 let model = args.dropFirst(2).first ?? "llama3.1:8b"
-let backend = OllamaBackend(model: model)
+let backend: any NoteBackend = model == "bonsai" ? BonsaiBackend() : OllamaBackend(model: model)
 let drafter = NoteDrafter(backend: backend)
 
 final class Title: @unchecked Sendable { var last = "" }

@@ -1,19 +1,8 @@
 import AppKit
 import SoapcapCapture
 import SoapcapCore
+import SoapcapNote
 import SwiftUI
-
-/// What the session needs from audio capture; `CaptureSession` in the app,
-/// a scripted stand-in in tests and previews.
-protocol Capturing: AnyObject {
-    var live: AsyncStream<LiveLine> { get }
-    func start(micLabel: String, systemLabel: String, locale: Locale) async throws
-    func pause()
-    func resume()
-    func stop() async -> [Segment]
-}
-
-extension CaptureSession: Capturing {}
 
 @MainActor
 final class SessionModel: ObservableObject {
@@ -42,6 +31,9 @@ final class SessionModel: ObservableObject {
     private let makeCapture: () -> Capturing
     private let now: () -> Date
     private let gatherChecks: () async -> [Check]
+    private let drafting: Drafting
+    private var isDrafting = false
+    private var draftTask: Task<Void, Never>?
     private var capture: Capturing?
     private var recordedBefore: TimeInterval = 0
     private var runStart: Date?
@@ -50,11 +42,16 @@ final class SessionModel: ObservableObject {
     private var generation = 0
 
     init(makeCapture: @escaping () -> Capturing = { CaptureSession() }, now: @escaping () -> Date = Date.init,
-         settings: SessionSettings = SessionSettings(), checks: (() async -> [Check])? = nil) {
+         settings: SessionSettings = SessionSettings(), drafting: Drafting? = nil,
+         checks: (() async -> [Check])? = nil) {
         self.makeCapture = makeCapture
         self.now = now
         self.settings = settings
-        gatherChecks = checks ?? { await Readiness.checks(locale: settings.locale) + Runner.checks }
+        self.drafting = drafting ?? ModelDrafting(settings: settings)
+        gatherChecks = checks ?? {
+            await Readiness.checks(locale: settings.locale)
+                + [await ModelCatalog.check(settings.noteModel, host: settings.ollamaHost)] + Runner.checks
+        }
         deidentify = settings.deidentify
         format = settings.format
     }
@@ -164,26 +161,51 @@ final class SessionModel: ObservableObject {
     }
 
     func draft() {
-        Task {
+        guard let noteFormat = NoteFormat(rawValue: format) else { return }
+        let gen = generation
+        draftTask = Task {
             phase = .working("Drafting a \(format) note…")
-            let n = await Runner.pipe(["note", "--format", format], input: transcript, environment: childEnvironment)
-            guard n.status == 0, !n.out.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                phase = .error("Note drafting failed.\n\n\(n.err)"); return
+            isDrafting = true
+            let drafted: DraftedNote
+            do {
+                drafted = try await drafting.draft(format: noteFormat, transcript: transcript, minutes: elapsed / 60,
+                                                   systemLabel: labels.system) { progress in
+                    Task { @MainActor in self.show(progress, generation: gen) }
+                }
+            } catch {
+                isDrafting = false
+                if gen == generation { phase = .error("Note drafting failed.\n\n\(error.localizedDescription)") }
+                return
             }
-            note = n.out.trimmingCharacters(in: .newlines)
-            notice = ""
+            isDrafting = false
+            guard gen == generation else { return }
+            note = drafted.text
+            var notices = drafted.warnings
             if deidentify && canDeidentify {
+                phase = .working("De-identifying the note…")
                 let d = await Runner.pipe(["deidentify"], input: note, environment: childEnvironment)
+                guard gen == generation else { return }
                 if d.status == 0 {
-                    note = d.out.trimmingCharacters(in: .newlines); notice = "note: \(d.err)"
+                    note = d.out.trimmingCharacters(in: .newlines); notices.append("note: \(d.err)")
                 } else {
-                    notice = "note de-identify failed; showing as drafted"
+                    notices.append("note de-identify failed; showing as drafted")
                 }
             }
+            notice = notices.joined(separator: "\n")
             copied = false
             phase = .note
         }
     }
+
+    /// Progress arrives from the drafter's own thread, possibly after the
+    /// draft is over; only a draft still in flight may change the screen.
+    private func show(_ progress: DraftProgress, generation gen: Int) {
+        guard isDrafting, gen == generation else { return }
+        phase = .working(progress.tokens.map { "\(progress.title)  \($0) tokens" } ?? progress.title)
+    }
+
+    /// Frees the note model's memory; it is kept loaded between drafts.
+    func releaseModel() async { await drafting.release() }
 
     func keep() {
         let pb = NSPasteboard.general
@@ -195,7 +217,7 @@ final class SessionModel: ObservableObject {
     }
 
     /// Reports what this app can do: its own permissions and speech
-    /// recognition, and whether the soapcap tool it still relies on is there.
+    /// recognition, the note model, and de-identification.
     func diagnose() {
         let gen = generation
         Task {
@@ -211,6 +233,9 @@ final class SessionModel: ObservableObject {
         runStart = nil
         if let capture { Task { _ = await capture.stop() } }
         capture = nil
+        isDrafting = false
+        draftTask?.cancel(); draftTask = nil
+        Task { await releaseModel() }
         liveLines = []; transcript = ""; note = ""; notice = ""; copied = false; phase = .idle
     }
 }

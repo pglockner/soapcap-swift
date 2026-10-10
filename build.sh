@@ -16,6 +16,8 @@ app="$here/build/Soapcap.app"
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp Assets/soapcap.icns "$app/Contents/Resources/soapcap.icns"
+# The note prompts are data files; the app reads them from its Resources.
+cp -R Sources/SoapcapNote/Resources/prompts "$app/Contents/Resources/prompts"
 cp "$(swift build -c release --show-bin-path)/Soapcap" "$app/Contents/MacOS/Soapcap"
 cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
