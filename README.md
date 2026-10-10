@@ -5,8 +5,9 @@ on-device capture of a speaker-attributed telehealth transcript on a Mac,
 and a locally drafted SOAP/DAP/BIRP note, with nothing leaving the machine.
 
 **Status: in development.** Soapcap.app is a SwiftUI window for the
-`soapcap session` flow. It captures and transcribes on its own; de-identifying,
-and drafting the note still call the existing `soapcap` command-line tool as child processes, so it needs a working soapcap install.
+`soapcap session` flow. It captures and transcribes on its own; de-identifying
+and drafting the note still call the existing `soapcap` command-line tool as
+child processes, so it needs a working soapcap install.
 The shell version of soapcap remains the supported tool until this one
 replaces it.
 
