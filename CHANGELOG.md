@@ -7,6 +7,8 @@
 - Added a red "Not de-identified" banner when de-identifying fails, in place of a small notice
 - Added an Acknowledgements window crediting each source with its licence
 - Fixed the app possibly hanging at quit after force-stopping a Bonsai server that ignored a polite stop
+- Added three de-identification sample transcripts the passes were not chosen on, and a test that runs the model over them (0.5.1)
+- Fixed `build.sh` producing an app without the Metal library de-identifying needs; it now stops with an error (0.5.1)
 
 ## 0.4 (2026-10-10)
 
