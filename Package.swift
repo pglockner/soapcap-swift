@@ -8,6 +8,10 @@ let package = Package(
         .executable(name: "Soapcap", targets: ["Soapcap"]),
         .library(name: "SoapcapUI", targets: ["SoapcapUI"]),
     ],
+    dependencies: [
+        // OpenMed's on-device PII model runtime. Pinned to the version soapcap tested.
+        .package(url: "https://github.com/maziyarpanahi/openmed.git", exact: "2.5.0"),
+    ],
     targets: [
         // Pure logic with no UI, processes or frameworks beyond Foundation.
         .target(name: "SoapcapCore", path: "Sources/SoapcapCore"),
@@ -19,6 +23,10 @@ let package = Package(
                 resources: [.copy("Resources/prompts")]),
         // De-identifying: the text rules around a detector, with no model of its own.
         .target(name: "SoapcapDeidentify", path: "Sources/SoapcapDeidentify"),
+        // The model behind de-identifying. The only target that pulls in OpenMedKit.
+        .target(name: "SoapcapPII", dependencies: ["SoapcapDeidentify", .product(name: "OpenMedKit", package: "openmed")],
+                path: "Sources/SoapcapPII"),
+        .executableTarget(name: "DeidentifyProbe", dependencies: ["SoapcapPII"], path: "Sources/DeidentifyProbe"),
         .executableTarget(name: "NoteProbe", dependencies: ["SoapcapNote"], path: "Sources/NoteProbe"),
         .executableTarget(name: "CaptureProbe", dependencies: ["SoapcapCapture"], path: "Sources/CaptureProbe"),
         // The window and session flow. A library so Xcode can render its previews.
