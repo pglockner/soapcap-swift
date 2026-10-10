@@ -11,11 +11,16 @@ let package = Package(
     targets: [
         // Pure logic with no UI, processes or frameworks beyond Foundation.
         .target(name: "SoapcapCore", path: "Sources/SoapcapCore"),
+        // Audio capture and on-device transcription, producing SoapcapCore segments.
+        .target(name: "SoapcapCapture", dependencies: ["SoapcapCore"], path: "Sources/SoapcapCapture",
+                swiftSettings: [.swiftLanguageMode(.v5)]),
         // The window and session flow. A library so Xcode can render its previews.
         .target(name: "SoapcapUI", dependencies: ["SoapcapCore"], path: "Sources/SoapcapUI",
                 swiftSettings: [.swiftLanguageMode(.v5)]),
         .executableTarget(name: "Soapcap", dependencies: ["SoapcapUI"], path: "Sources/Soapcap"),
         .testTarget(name: "SoapcapCoreTests", dependencies: ["SoapcapCore"], path: "Tests/SoapcapCoreTests"),
+        .testTarget(name: "SoapcapCaptureTests", dependencies: ["SoapcapCapture"], path: "Tests/SoapcapCaptureTests",
+                    swiftSettings: [.swiftLanguageMode(.v5)]),
         .testTarget(name: "SoapcapUITests", dependencies: ["SoapcapUI"], path: "Tests/SoapcapUITests",
                     swiftSettings: [.swiftLanguageMode(.v5)]),
     ]
