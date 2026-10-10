@@ -5,12 +5,18 @@ public enum CaptureError: Error, LocalizedError, Equatable {
     case recognitionUnavailable
     case unsupportedLocale(String)
     case noAudioFormat
+    case microphoneDenied
+    case screenRecordingDenied
 
     public var errorDescription: String? {
         switch self {
         case .recognitionUnavailable: "On-device speech recognition is not available on this Mac."
         case .unsupportedLocale(let id): "Speech recognition does not support the language \"\(id)\"."
         case .noAudioFormat: "No audio format is available for speech recognition."
+        case .microphoneDenied:
+            "Soapcap can't use the microphone. Turn it on for Soapcap in System Settings > Privacy & Security > Microphone, then quit and reopen Soapcap."
+        case .screenRecordingDenied:
+            "Soapcap can't hear the call. Turn on Soapcap in System Settings > Privacy & Security > Screen & System Audio Recording, then quit and reopen Soapcap."
         }
     }
 }
