@@ -112,7 +112,7 @@ Three command-line checks work without the window:
 transcript; `swift run NoteProbe FILE [soap|dap|birp] [MODEL] [MINUTES]`
 drafts a note from a transcript file (`bonsai` as the model uses Bonsai);
 and `swift run -c release DeidentifyProbe FILE [note]` de-identifies a file
-(`--install` sets up the model first).
+(`--install` sets up the model first; `--windows` tries other passes).
 
 ### Signing
 
@@ -145,8 +145,9 @@ swift test
 - `SoapcapDeidentifyTests`: the de-identification rules (soapcap's own
   cases), speaker labels being left alone, and installing the model against
   a stubbed download.
-- `SoapcapPIITests`: the real PII model on one sentence; skipped when the
-  model isn't installed.
+- `SoapcapPIITests`: the real PII model on one sentence and on the
+  transcripts in `Samples/deidentify`, each with a list of what must be
+  removed; skipped when the model isn't installed.
 - `SoapcapUITests`: the session flow against a scripted capture, drafter
   and de-identifier: pause and resume, the clock, de-identify order, failure
   screens, the checks screen and settings; and that every package the build

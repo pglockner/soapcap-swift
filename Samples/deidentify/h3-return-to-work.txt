@@ -1,0 +1,43 @@
+Therapist: Hi Desmond, can you hear me all right? The video froze for a second.
+Client: Yeah, I can hear you. I'm in the car, sorry, it's the only quiet place.
+Therapist: That's fine. How did the first week back go?
+Client: Mixed. Monday was okay. Wednesday I had to leave a meeting.
+Therapist: What happened on Wednesday?
+Client: We were going through the incident report, the one from the warehouse, and they put the photos up on the screen. Nobody warned me. I just stood up and walked out.
+Therapist: Where did you go?
+Client: The stairwell. I sat on the steps for maybe ten minutes. My hands were shaking.
+Therapist: Did anyone come after you?
+Client: Lucinda did, from HR. Lucinda Park. She was kind about it. She said I could have asked for the photos to be left out and I said I didn't know they'd be there.
+Therapist: That sounds like a failure of planning on their side, not a failure on yours.
+Client: That's what she said. She's going to email my supervisor. His name's Bertrand Osei-Mensah, he's new, he doesn't really know what happened in March.
+Therapist: Would it help for him to know?
+Client: I don't want to be the guy with the story. At Kessler Logistics everybody already looks at me like I'm made of glass.
+Therapist: What would you want him to know, if you could choose exactly how much?
+Client: Just that I was there when the racking came down. That I'm fine to work. That I don't need to see pictures of it.
+Therapist: Three sentences. That's a boundary, not a story.
+Client: I guess so.
+Therapist: How have the nights been?
+Client: Better than last month. I had the dream twice this week instead of every night.
+Therapist: That's real progress. What did you do when you woke up?
+Client: What we practiced. Feet on the floor, name five things I can see. Then I text my brother-in-law, he's up early anyway. Rafael works nights at Saint Brendan's.
+Therapist: I'm glad you have someone to reach for at that hour.
+Client: He's been solid. He drove me to the appointment with the occupational health doctor, Dr. Lindqvist-Amari, last Friday.
+Therapist: How did that appointment go?
+Client: She signed me off for half days until the end of October. She wants a letter from you, I think. Her office said to send it to referrals@northfieldclinic.example.
+Therapist: I can do that. Do you have a reference number for the claim?
+Client: Hang on. It's WC-2291-5530-7. And the adjuster's direct line is 555-0188, her name's Imogen.
+Therapist: Thank you. I'll write the letter this week and send you a copy first.
+Client: I appreciate that.
+Therapist: Now, I want to go back to the stairwell. When your hands were shaking, what was going through your mind?
+Client: That I'd never be able to do this job again. That I should just quit.
+Therapist: And ten minutes later?
+Client: I went back in. I sat through the rest of it. They'd taken the photos down.
+Therapist: So the thought said never, and what you actually did was go back in ten minutes.
+Client: When you put it that way.
+Therapist: I'm not putting it any way. That's what happened. I'd like you to keep a short log this week. When the thought "I can't do this" shows up, write down what you did in the next hour.
+Client: Okay. I can do that on my phone.
+Therapist: Good. And will you let Lucinda send that email?
+Client: Yeah. I'll tell her to keep it to the three sentences.
+Therapist: That sounds right. Same time next Wednesday?
+Client: Wednesday works. I'll be parked outside 480 Quarry Lane again, probably.
+Therapist: I'll look for the steering wheel. Take care, Desmond.

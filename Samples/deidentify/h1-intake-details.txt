@@ -1,0 +1,41 @@
+Therapist: Good morning. Before we get going I need to confirm a few things for the file, is that all right?
+Client: Sure, go ahead.
+Therapist: I have your full name as Priya Venkataraman, is that spelled the way it sounds?
+Client: Yes, V-E-N-K-A-T-A-R-A-M-A-N. Most people just give up and say Priya.
+Therapist: And your date of birth?
+Client: The ninth of November, nineteen eighty-eight.
+Therapist: Thank you. The best phone number for you?
+Client: It's 555-0142. If I don't pick up you can leave a message, my husband doesn't check that voicemail.
+Therapist: And an email for the appointment reminders?
+Client: priya.v@fakemail.example. All lowercase.
+Therapist: Got it. Are you still at the same address, 2210 Larkspur Court?
+Client: No, we moved in the spring. It's 77 Tannery Row now, unit 4B.
+Therapist: Thanks, I'll update that. And your insurance is through your employer?
+Client: Through my husband's, actually. He works at Halvorsen Freight, and the plan is with Calloway Mutual. The member number is 4471-882-0916.
+Therapist: Perfect. That's all the paperwork. So, how have things been since we spoke on the phone?
+Client: Honestly, not great. I thought the move would help, new place, fresh start, but I feel more alone than I did before.
+Therapist: Say more about that.
+Client: At the old place I had my neighbor, Mrs. Abernathy, she'd knock on the door most mornings. Here nobody knows me. I walk the dog and nobody says hello.
+Therapist: That's a real loss, even if the move was a good decision in other ways.
+Client: It is. And then work is the other thing. I started at Brightwell Pediatric Dental in June and my manager, Colm, he's fine, but he hovers. I can't tell if he thinks I'm bad at the job.
+Therapist: What has he actually said to you about your work?
+Client: Nothing bad. He said the front desk has never been so organized. But then he stands behind me while I'm on the phone with parents.
+Therapist: So the words are positive and the hovering reads as doubt.
+Client: Exactly. And I go home and replay it. I was up until two on Tuesday going over a call with one mother, I kept thinking I'd been rude.
+Therapist: Were you rude?
+Client: No. I listened to the recording the next day. I was fine. She even said thank you.
+Therapist: I want to notice something. You checked the evidence, and the evidence didn't support the worry.
+Client: I know. It doesn't stop me doing it the next night though.
+Therapist: That's common, and it's something we can work on. How is your sleep otherwise?
+Client: Five hours, maybe. I fall asleep fine and then I'm awake at three with my heart going.
+Therapist: Any changes to medication since your doctor's visit?
+Client: Dr. Okafor started me on something low dose in August. I get it filled at Greenleaf Pharmacy, the one near the school.
+Therapist: And how has that been?
+Client: A bit groggy in the mornings. I told her and she said give it another month.
+Therapist: Okay. I'd like to try something this week. When you notice yourself replaying a conversation, I want you to write down three things. What you're afraid you did, what you actually have evidence for, and what you'd say to your sister if she told you the same story.
+Client: Anjali would laugh at me. She'd say I've been doing this since we were kids.
+Therapist: Then you already know what she'd tell you. That's the voice I want you to practice.
+Client: I can try that. Should I bring the notes next time?
+Therapist: Please. Same time next week works?
+Client: Yes. Thursday at ten.
+Therapist: I'll see you then. Take care of yourself this week.
