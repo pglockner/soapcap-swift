@@ -85,7 +85,9 @@ session or quit.
 De-identifying replaces names, phone numbers, dates and similar details in
 the transcript and the note with tokens like `[FIRST_NAME_1]`; speaker
 labels and clock times are left alone. It is best effort: the model misses
-things, so read the result before sharing it. If it fails, the text is
+things, so read the result before sharing it. The text is read twice and
+the findings merged: a detection pass in short overlapping chunks, and a
+context pass in long ones. If it fails, the text is
 shown under a red "Not de-identified" banner rather than passed off as
 checked. The model is set up from Settings: if soapcap's copy is on the Mac
 it is copied, otherwise it is downloaded from huggingface.co and each file

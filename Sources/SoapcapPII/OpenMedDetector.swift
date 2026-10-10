@@ -6,26 +6,31 @@ import SoapcapDeidentify
 /// weights and tokenizer. It never uses the network.
 public actor OpenMedDetector: PIIDetector {
     public static let confidence: Float = 0.5
-    /// The text is cut into chunks of `limit` tokens, each sharing `overlap`
-    /// with the next, and read twice with different cuts; the findings are
-    /// merged. The model's score for a word shifts with what else is in its
-    /// chunk, so one cut alone misses things another catches.
-    ///
-    /// - Detection pass (128/64): short chunks that half-overlap, so every
-    ///   word is at least a quarter-chunk from an edge in one of them.
-    /// - Context pass (480/128): soapcap's long layout, just under the
-    ///   model's 512-token ceiling.
+    /// How one pass cuts the text: chunks of `limit` tokens, each sharing
+    /// `overlap` with the next.
+    public typealias Window = (limit: Int, overlap: Int)
+
+    /// The detection pass: short chunks that half-overlap, so every word is
+    /// at least a quarter-chunk from an edge in one of them.
+    public static let detection: Window = (limit: 128, overlap: 64)
+    /// The context pass: soapcap's long layout, just under the model's
+    /// 512-token ceiling, which gives each word the most surrounding text.
+    public static let context: Window = (limit: 480, overlap: 128)
+
+    /// The text is read once per pass and the findings are merged. The
+    /// model's score for a word shifts with what else is in its chunk, so
+    /// one cut alone misses things another catches.
     ///
     /// soapcap's helper pairs the context pass with 256/32 instead. In this
     /// runtime that pair left an employer and an insurer in soapcap's sample
     /// 06; this pair removes everything the helper removes from its samples.
-    public static let windows = [(limit: 128, overlap: 64), (limit: 480, overlap: 128)]
+    public static let windows = [detection, context]
 
     private let directory: URL
-    private let windows: [(limit: Int, overlap: Int)]
+    private let windows: [Window]
     private var model: OpenMed?
 
-    public init(directory: URL = ModelFiles.directory, windows: [(limit: Int, overlap: Int)] = OpenMedDetector.windows) {
+    public init(directory: URL = ModelFiles.directory, windows: [Window] = OpenMedDetector.windows) {
         self.directory = directory
         self.windows = windows
     }
