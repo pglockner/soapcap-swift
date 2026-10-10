@@ -141,10 +141,16 @@ struct ContentView: View {
                 Picker("Format", selection: $m.format) {
                     ForEach(SessionModel.formats, id: \.self) { Text($0) }
                 }.pickerStyle(.segmented).frame(width: 220)
-                Button("Draft note") { m.draft() }.keyboardShortcut(.defaultAction)
+                Button("Draft note") { m.draftIfRoom() }.keyboardShortcut(.defaultAction)
                 Spacer()
                 Button("New session") { m.newSession() }
             }
+        }
+        .alert("Not enough free memory", isPresented: Binding(get: { m.memoryQuestion != nil }, set: { if !$0 { m.memoryQuestion = nil } })) {
+            Button("Cancel", role: .cancel) {}
+            Button("Draft anyway") { m.draft() }
+        } message: {
+            Text(m.memoryQuestion ?? "")
         }
     }
 

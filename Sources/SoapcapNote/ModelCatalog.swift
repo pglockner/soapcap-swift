@@ -31,6 +31,12 @@ public enum ModelCatalog {
         return memory.advice(beforeLoading: model == bonsai ? "Bonsai" : model, needGB: need)
     }
 
+    /// What to ask before drafting with `model` when memory is very short, or nil.
+    public static func memoryQuestion(for model: String, memory: MemoryStatus?) -> String? {
+        guard let memory, let need = memoryNeedGB(of: model) else { return nil }
+        return memory.question(beforeLoading: model == bonsai ? "Bonsai" : model, needGB: need)
+    }
+
     /// `bonsai` is its own backend; every other name is a model in Ollama.
     public static func backend(for model: String, host: URL = OllamaBackend.defaultHost,
                                bonsai install: BonsaiBackend.Install = .standard) -> any NoteBackend {

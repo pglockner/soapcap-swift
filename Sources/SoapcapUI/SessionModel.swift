@@ -29,6 +29,9 @@ final class SessionModel: ObservableObject {
     @Published var copied = false
     /// How full memory is, while a note is being drafted; nil otherwise.
     @Published var memory: MemoryStatus?
+    /// Set when a draft was asked for with memory very short: the question
+    /// to put before going ahead. Cleared by the answer.
+    @Published var memoryQuestion: String?
 
     /// Whether the de-identification model is installed, so the toggle is offered.
     @Published private(set) var canDeidentify = false
@@ -192,6 +195,14 @@ final class SessionModel: ObservableObject {
         return Check("Memory", .ok, size)
     }
 
+    /// Drafts, unless memory is very short for the chosen model, in which
+    /// case it asks first. Not for drafting again: by then the model is
+    /// loaded and is itself what fills memory.
+    func draftIfRoom() {
+        memoryQuestion = ModelCatalog.memoryQuestion(for: settings.noteModel, memory: readMemory())
+        if memoryQuestion == nil { draft() }
+    }
+
     func draft() {
         guard let noteFormat = NoteFormat(rawValue: format) else { return }
         let gen = generation
@@ -276,7 +287,7 @@ final class SessionModel: ObservableObject {
         isDrafting = false
         draftTask?.cancel(); draftTask = nil
         Task { await releaseModel() }
-        liveLines = []; transcript = ""; note = ""; notice = ""; warning = ""; copied = false; memory = nil; phase = .idle
+        liveLines = []; transcript = ""; note = ""; notice = ""; warning = ""; copied = false; memory = nil; memoryQuestion = nil; phase = .idle
         refreshDeidentify()
     }
 }

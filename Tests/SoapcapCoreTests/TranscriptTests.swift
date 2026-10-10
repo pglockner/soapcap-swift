@@ -105,6 +105,14 @@ final class MemoryStatusTests: XCTestCase {
                        "Bonsai takes about 8 GB and this Mac has 8 GB of memory. Expect drafting to be very slow.")
     }
 
+    func testAQuestionComesOnlyWhenTheModelWouldNeedSwapFromTheStart() {
+        XCTAssertNil(MemoryStatus(totalBytes: 16 * gb, freePercent: 41).question(beforeLoading: "Bonsai", needGB: 8))
+        XCTAssertEqual(MemoryStatus(totalBytes: 16 * gb, freePercent: 37).question(beforeLoading: "Bonsai", needGB: 8),
+                       "About 5 GB of memory is free and Bonsai takes about 8 GB. Drafting now will be very slow and may slow the whole Mac. Close other apps first, or choose a lighter model in Settings.")
+        XCTAssertEqual(MemoryStatus(totalBytes: 8 * gb, freePercent: 60).question(beforeLoading: "Bonsai", needGB: 8),
+                       "Bonsai takes about 8 GB and this Mac has 8 GB of memory. Expect drafting to be very slow.")
+    }
+
     func testTheCurrentFiguresCanBeRead() throws {
         let now = try XCTUnwrap(MemoryStatus.current())
         XCTAssertGreaterThan(now.totalBytes, gb)

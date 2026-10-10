@@ -91,6 +91,16 @@ private let previewLines = [
     return ContentView().environmentObject(m).frame(width: 560, height: 420)
 }
 
+#Preview("Transcript, memory very short") {
+    let defaults = UserDefaults(suiteName: "soapcap-preview")!
+    defaults.set("bonsai", forKey: SessionSettings.Key.noteModel)
+    let m = SessionModel(settings: SessionSettings(defaults: defaults), memory: { MemoryStatus(totalBytes: 16 << 30, freePercent: 30) })
+    m.phase = .transcript
+    m.transcript = previewLines.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n")
+    m.draftIfRoom()
+    return ContentView().environmentObject(m).frame(width: 560, height: 420)
+}
+
 #Preview("Note") {
     sampleScreen {
         $0.phase = .note

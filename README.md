@@ -95,7 +95,8 @@ from 75% and red from 90%. The figure counts swap, so it passes 100% once
 the Mac is swapping to make room, which slows drafting a lot; from 90% it
 also shows swap in use. Bonsai takes about 8 GB. When less than that plus
 a gigabyte is free, the transcript screen says so before you draft and
-suggests closing other apps; **Check permissions** reports the same.
+suggests closing other apps; **Check permissions** reports the same. When
+6 GB or less is free, **Draft note** asks before going ahead.
 
 The model stays loaded
 between drafts and is released when you discard the note, start a new

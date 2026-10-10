@@ -305,6 +305,24 @@ final class SessionModelTests: XCTestCase {
         XCTAssertNil(m.memory)
     }
 
+    func testAVeryShortMemoryAsksBeforeABonsaiDraft() async {
+        UserDefaults(suiteName: suite)!.set("bonsai", forKey: SessionSettings.Key.noteModel)
+        var free = 30
+        let m = SessionModel(makeCapture: { FakeCapture(hello) }, settings: settings, drafting: drafter, deidentifying: deidentifier,
+                             memory: { MemoryStatus(totalBytes: 16 << 30, freePercent: free) })
+        m.start()
+        await waitFor("recording") { m.phase == .recording }
+        m.stop()
+        await waitFor("transcript") { m.phase == .transcript }
+        m.draftIfRoom()
+        XCTAssertTrue(m.memoryQuestion?.contains("About 4 GB") == true, m.memoryQuestion ?? "nil")
+        XCTAssertEqual(m.phase, .transcript)                 // nothing started
+        free = 41                                            // advice only: no question
+        m.draftIfRoom()
+        XCTAssertNil(m.memoryQuestion)
+        await waitFor("note") { m.phase == .note }
+    }
+
     func testClosingAppsIsAdvisedOnlyForBonsaiWhenMemoryIsShort() {
         let short = { MemoryStatus(totalBytes: 16 << 30, freePercent: 41) }
         let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier, memory: short)
