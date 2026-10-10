@@ -59,20 +59,7 @@ version comes from `VERSION`; its build number is the commit count.
 To see SwiftUI previews, open this folder in Xcode and select the `SoapcapUI`
 scheme (the window lives in that library; `Soapcap` is only the launcher).
 
-### Signing
-
-`build.sh` signs ad hoc unless `SOAPCAP_SIGN_IDENTITY` names a code-signing
-identity, e.g. an Apple Development certificate (Xcode creates one for a
-free Apple ID). Use one: with an ad-hoc signature, macOS treats each rebuild
-as a different app and drops its Microphone and Screen Recording grants. To
-reset a stuck grant: `tccutil reset ScreenCapture local.soapcap.session` and
-`tccutil reset Microphone local.soapcap.session`. Do the same if Soapcap is
-listed in Privacy & Security but recording still fails, which happens after
-switching from an ad-hoc signature to a certificate.
-
-```sh
-SOAPCAP_SIGN_IDENTITY="Apple Development: you@example.com (TEAMID)" ./build.sh
-```
+### Using the app
 
 Grant Microphone and Screen Recording to "Soapcap" the first time (quit and
 reopen the app after granting). Screen Recording is how macOS lets an app
@@ -88,8 +75,26 @@ transcribe in. The labels are passed on to `soapcap note`, unless
 
 While recording, the window shows the last few lines heard from each side.
 Pause stops listening and stops the clock; Resume carries on in the same
-session. `swift run CaptureProbe 15` records for 15 seconds from the
-terminal and prints the transcript, for checking capture without the window.
+session. If the microphone changes mid-session (AirPods connecting or
+dropping), capture carries on with the new one.
+
+`swift run CaptureProbe 15` records for 15 seconds from the terminal and
+prints the transcript, for checking capture without the window.
+
+### Signing
+
+`build.sh` signs ad hoc unless `SOAPCAP_SIGN_IDENTITY` names a code-signing
+identity, e.g. an Apple Development certificate (Xcode creates one for a
+free Apple ID). Use one: with an ad-hoc signature, macOS treats each rebuild
+as a different app and drops its Microphone and Screen Recording grants. To
+reset a stuck grant: `tccutil reset ScreenCapture local.soapcap.session` and
+`tccutil reset Microphone local.soapcap.session`. Do the same if Soapcap is
+listed in Privacy & Security but recording still fails, which happens after
+switching from an ad-hoc signature to a certificate.
+
+```sh
+SOAPCAP_SIGN_IDENTITY="Apple Development: you@example.com (TEAMID)" ./build.sh
+```
 
 ### Tests
 
