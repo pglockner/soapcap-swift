@@ -65,7 +65,9 @@ identity, e.g. an Apple Development certificate (Xcode creates one for a
 free Apple ID). Use one: with an ad-hoc signature, macOS treats each rebuild
 as a different app and drops its Microphone and Screen Recording grants. To
 reset a stuck grant: `tccutil reset ScreenCapture local.soapcap.session` and
-`tccutil reset Microphone local.soapcap.session`.
+`tccutil reset Microphone local.soapcap.session`. Do the same if Soapcap is
+listed in Privacy & Security but recording still fails, which happens after
+switching from an ad-hoc signature to a certificate.
 
 ```sh
 SOAPCAP_SIGN_IDENTITY="Apple Development: you@example.com (TEAMID)" ./build.sh
