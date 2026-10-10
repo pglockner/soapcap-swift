@@ -73,7 +73,7 @@ public enum Transcript {
     /// order, each leg's timestamps shifted to follow the previous leg's last
     /// segment. The shift only preserves ORDERING across legs; it doesn't
     /// reflect how long a pause lasted.
-/// A warning when the microphone was heard but the other side never was,
+    /// A warning when the microphone was heard but the other side never was,
     /// which is what a FaceTime call looks like; nil otherwise.
     public static func oneSidedNotice(_ segments: [Segment], mic: String, system: String) -> String? {
         guard segments.contains(where: { $0.speaker == mic }),
