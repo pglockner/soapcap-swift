@@ -154,7 +154,9 @@ public actor BonsaiBackend: NoteBackend {
         server.terminate()
         for _ in 0..<30 where server.isRunning { try? await Task.sleep(for: .milliseconds(100)) }
         if server.isRunning { kill(server.processIdentifier, SIGKILL) }
-        server.waitUntilExit()
+        // Not waitUntilExit(): called from here it can wait forever on a
+        // process that has already gone, which would hang the app at quit.
+        for _ in 0..<20 where server.isRunning { try? await Task.sleep(for: .milliseconds(50)) }
     }
 }
 
