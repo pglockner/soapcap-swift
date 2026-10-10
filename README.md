@@ -18,6 +18,7 @@ throughout; it now runs no other program except a note model.
 - [x] Window front end for the session flow (record, pause/resume, optional
       de-identify, draft, keep and copy)
 - [ ] The `structured` and `combined` note styles, and showing their review
+      (a stretch goal: nobody is asking for them yet)
 - [x] Capture and transcription in-process (Apple SpeechAnalyzer), replacing
       `soapcap live` and the `yap` dependency
 - [x] Transcript rendering and echo de-duplication
@@ -26,6 +27,9 @@ throughout; it now runs no other program except a note model.
 - [x] De-identification in-process (the model files stay a separate download)
 - [x] Permission checks and settings in the app (labels, language)
 - [x] Note-model checks and model selection
+- [ ] Memory pressure: watch it while a note is drafted, and before
+      drafting with Bonsai suggest closing other apps when memory is tight
+      (soapcap shows this in its progress line)
 - [ ] A signed, notarized build that needs no Xcode to install
 
 ## Soapcap.app
