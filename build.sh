@@ -26,6 +26,12 @@ for bundle in "$bin"/*.bundle; do
   case "$(basename "$bundle")" in soapcap-swift_SoapcapNote.bundle) continue ;; esac  # its prompts are copied above
   [ -f "$bundle/Contents/Info.plist" ] && cp -R "$bundle" "$app/Contents/Resources/"
 done
+# Without the Metal library the app quits the first time it de-identifies,
+# so a build that lacks it is not worth producing.
+if [ ! -f "$app/Contents/Resources/mlx-swift_Cmlx.bundle/Contents/Resources/default.metallib" ]; then
+  echo "build.sh: the Metal library (mlx-swift_Cmlx.bundle) is missing from $bin" >&2
+  exit 1
+fi
 cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

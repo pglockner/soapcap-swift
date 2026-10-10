@@ -11,8 +11,9 @@ soapcap remains the supported tool until this one replaces it.
 
 ## Rewrite plan
 
-Each step replaces one child-process call with Swift code behind the same
-interface, so the app keeps working throughout.
+The app began as a window around the `soapcap` command-line tool. Each
+step moved one piece of that tool into Swift, with the app working
+throughout; it now runs no other program except a note model.
 
 - [x] Window front end for the session flow (record, pause/resume, optional
       de-identify, draft, keep and copy)
@@ -92,7 +93,11 @@ shown under a red "Not de-identified" banner rather than passed off as
 checked. The model is set up from Settings: if soapcap's copy is on the Mac
 it is copied, otherwise it is downloaded from huggingface.co and each file
 is checked against a pinned checksum. That download is the only time the
-app uses the network, and nothing from a session is sent.
+app uses the network, and nothing from a session is sent. The model is kept
+in `~/Library/Application Support/Soapcap/deidentify-model`; delete that
+folder to remove it. `SOAPCAP_DEIDENTIFY_MODEL` names a different folder,
+and `SOAPCAP_DEIDENTIFY_DIR` says where soapcap's de-identify install is
+(as it does for soapcap), when the app is started from a terminal.
 
 The app menu's **Acknowledgements** lists the projects the app is built on
 and their licences.
