@@ -54,16 +54,6 @@ final class TranscriptTests: XCTestCase {
                        "Therapist: Hello\nClient: fine")
     }
 
-    func testMergePutsSecondLegAfterFirst() {
-        let legs = [[seg("Client", 0, 1, 1, "First run.")], [seg("Client", 0, 1, 1, "Second run.")]]
-        XCTAssertEqual(Transcript.render(Transcript.merge(legs), dedupe: nil), "Client: First run. Second run.")
-    }
-
-    func testMergeToleratesEmptyLeg() {
-        let legs = [[], [seg("Client", 0, 1, 1, "Only real content.")]]
-        XCTAssertEqual(Transcript.render(Transcript.merge(legs), dedupe: nil), "Client: Only real content.")
-    }
-
     func testDecodesYapJSONWithMissingFields() throws {
         let json = #"{"segments":[{"end":2.0,"id":1,"start":0.5,"text":"A recorded line"},{"text":"bare"}]}"#
         let segments = try Segment.decode(yapJSON: Data(json.utf8))

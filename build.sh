@@ -14,7 +14,8 @@ build=$(git rev-list --count HEAD 2>/dev/null || echo 1)
 swift build -c release
 app="$here/build/Soapcap.app"
 rm -rf "$app"
-mkdir -p "$app/Contents/MacOS"
+mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+cp Assets/soapcap.icns "$app/Contents/Resources/soapcap.icns"
 cp "$(swift build -c release --show-bin-path)/Soapcap" "$app/Contents/MacOS/Soapcap"
 cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -23,6 +24,7 @@ cat > "$app/Contents/Info.plist" <<PLIST
   <key>CFBundleName</key><string>Soapcap</string>
   <key>CFBundleIdentifier</key><string>local.soapcap.session</string>
   <key>CFBundleExecutable</key><string>Soapcap</string>
+  <key>CFBundleIconFile</key><string>soapcap</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>$version</string>
   <key>CFBundleVersion</key><string>$build</string>

@@ -141,7 +141,7 @@ struct LiveStrip: View {
                     Text("Listening…").foregroundStyle(.tertiary)
                 }
                 ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
-                    (Text(line.speaker + "  ").fontWeight(.medium) + Text(line.text))
+                    Text("\(Text(line.speaker).fontWeight(.medium))  \(line.text)")
                         .foregroundStyle(line.isFinal ? .secondary : .tertiary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
