@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3 (2026-10-10)
+
+- Changed **Check permissions** to report what the app itself can do: its Microphone and Screen Recording grants, speech recognition for your language, and whether the `soapcap` tool and de-identify helper are found, with a button to the right pane of System Settings. It no longer runs `soapcap doctor`, so it does not check the note model.
+- Added a Settings window (Cmd-comma) for the two speaker labels and the language to transcribe in.
+- Changed the note format and the de-identify choice to be remembered between launches.
+
 ## 0.2 (2026-10-10)
 
 - Changed recording to capture and transcribe inside the app (Apple SpeechAnalyzer); it no longer runs `soapcap live` or needs `yap`. The app itself now needs the Microphone and Screen Recording permissions.
@@ -7,6 +13,7 @@
 - Added a live strip on the recording screen showing the last few lines heard from each side.
 - Added a warning on the transcript when only the microphone was heard.
 - Added `CaptureProbe`, a command-line check that records for a few seconds and prints the transcript.
+
 
 ## 0.1 (2026-09-18 – 2026-10-10)
 
