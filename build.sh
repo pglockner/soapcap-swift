@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds build/Soapcap.app (SwiftUI window front end for the soapcap CLI).
+# Builds build/Soapcap.app.
 # Signs ad hoc by default. Set SOAPCAP_SIGN_IDENTITY to a stable local code
 # signing identity to keep macOS privacy grants across rebuilds.
 set -eu
@@ -18,7 +18,14 @@ mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp Assets/soapcap.icns "$app/Contents/Resources/soapcap.icns"
 # The note prompts are data files; the app reads them from its Resources.
 cp -R Sources/SoapcapNote/Resources/prompts "$app/Contents/Resources/prompts"
-cp "$(swift build -c release --show-bin-path)/Soapcap" "$app/Contents/MacOS/Soapcap"
+bin=$(swift build -c release --show-bin-path)
+cp "$bin/Soapcap" "$app/Contents/MacOS/Soapcap"
+# Resource bundles of the packages the app links (one holds the Metal library
+# the de-identification model runs on). They are looked up in Resources.
+for bundle in "$bin"/*.bundle; do
+  case "$(basename "$bundle")" in soapcap-swift_*) continue ;; esac
+  [ -f "$bundle/Contents/Info.plist" ] && cp -R "$bundle" "$app/Contents/Resources/"
+done
 cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

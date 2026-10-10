@@ -33,6 +33,14 @@ private let previewLines = [
     }
 }
 
+#Preview("Transcript, not de-identified") {
+    sampleScreen {
+        $0.phase = .transcript
+        $0.transcript = previewLines.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n")
+        $0.warning = "Not de-identified. This transcript still contains names and other identifying details.\nThe model's files could not be read."
+    }
+}
+
 #Preview("Checks, all ready") {
     sampleScreen {
         $0.phase = .checks([
@@ -40,7 +48,7 @@ private let previewLines = [
             Check("Call audio", .ok, "Soapcap can hear what the Mac is playing."),
             Check("Speech recognition", .ok, "Ready for en-US, on this Mac only."),
             Check("Note model", .ok, "llama3.1:8b is ready to draft notes."),
-            Check("De-identify", .ok, "The helper is set up."),
+            Check("De-identify", .ok, "The model is installed."),
         ])
     }
 }
@@ -54,7 +62,7 @@ private let previewLines = [
                   fix: .init(label: "Open Screen Recording settings", url: URL(string: "x-apple.systempreferences:")!)),
             Check("Speech recognition", .ok, "Ready for en-US, on this Mac only."),
             Check("Note model", .failed, "The model 'llama3.1:8b' is not pulled. Run: ollama pull llama3.1:8b\nOr choose another model in Settings."),
-            Check("De-identify", .warning, "Optional and not set up. Run tools/deidentify/install.sh in soapcap to add it."),
+            Check("De-identify", .warning, "Optional and not set up. Open Settings (Cmd-comma) to get the model."),
         ])
     }
 }
@@ -69,4 +77,10 @@ private let previewLines = [
         $0.note = "53 minutes, telehealth\n\nSUBJECTIVE:\nThe client reported sleeping better since starting the breathing exercises.\n\nOBJECTIVE:\nOn time via video. Engaged. Affect congruent; mood stressed. Speech clear. Thought process linear. Insight good; judgment intact. No psychomotor abnormalities. No SI/HI reported.\n\nASSESSMENT:\nSleep is improving; conflict at home remains a stressor.\n\nPLAN:\nContinue the breathing exercises nightly. Return next week."
         $0.notice = "qwen3:14b hasn't been tested with soapcap's prompts — proofread it with extra care."
     }
+}
+
+#Preview("Settings, model missing") { SettingsView(setup: ModelSetup(isReady: false)) }
+
+#Preview("Settings, downloading") {
+    SettingsView(setup: { let s = ModelSetup(isReady: false); s.show(.working(file: "weights.safetensors", fraction: 0.43)); return s }())
 }

@@ -27,6 +27,9 @@ public struct SoapcapApp: App {
         WindowGroup("soapcap session") {
             ContentView().environmentObject(model)
                 .frame(minWidth: 560, minHeight: 420)
+                .onReceive(ModelSetup.shared.$state) { state in
+                    if state == .ready { Task { @MainActor in model.refreshDeidentify() } }
+                }
                 .task { AppDelegate.beforeQuit = { [model] in await model.releaseModel() } }
         }
         Settings { SettingsView() }
@@ -104,9 +107,21 @@ struct ContentView: View {
             .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 6))
     }
 
+    /// Shown above text that was meant to be de-identified and was not.
+    @ViewBuilder private var warning: some View {
+        if !m.warning.isEmpty {
+            Label(m.warning, systemImage: "exclamationmark.triangle.fill")
+                .foregroundStyle(.white)
+                .padding(8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.red, in: RoundedRectangle(cornerRadius: 6))
+        }
+    }
+
     private var transcript: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Transcript").font(.headline)
+            warning
             scrollText(m.transcript)
             if !m.notice.isEmpty { Text(m.notice).font(.caption).foregroundStyle(.orange) }
             HStack {
@@ -123,6 +138,7 @@ struct ContentView: View {
     private var note: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("\(m.format.uppercased()) note").font(.headline)
+            warning
             scrollText(m.note)
             if !m.notice.isEmpty { Text(m.notice).font(.caption).foregroundStyle(.orange) }
             HStack {

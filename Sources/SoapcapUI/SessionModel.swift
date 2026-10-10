@@ -1,6 +1,7 @@
 import AppKit
 import SoapcapCapture
 import SoapcapCore
+import SoapcapDeidentify
 import SoapcapNote
 import SwiftUI
 
@@ -20,11 +21,15 @@ final class SessionModel: ObservableObject {
     @Published var transcript = ""
     @Published var note = ""
     @Published var notice = ""
+    /// Set when de-identifying was asked for and failed: what is on screen
+    /// still has names in it.
+    @Published var warning = ""
     @Published var elapsed = 0      // seconds recorded; stands still while paused
     @Published var liveLines: [LiveLine] = []
     @Published var copied = false
 
-    let canDeidentify = Runner.deidentifyAvailable
+    /// Whether the de-identification model is installed, so the toggle is offered.
+    @Published private(set) var canDeidentify = false
     let settings: SessionSettings
     /// The labels this session was recorded with; Settings may change mid-session.
     private var labels = (mic: "", system: "")
@@ -32,6 +37,7 @@ final class SessionModel: ObservableObject {
     private let now: () -> Date
     private let gatherChecks: () async -> [Check]
     private let drafting: Drafting
+    private let deidentifying: Deidentifying
     private var isDrafting = false
     private var draftTask: Task<Void, Never>?
     private var capture: Capturing?
@@ -43,22 +49,37 @@ final class SessionModel: ObservableObject {
 
     init(makeCapture: @escaping () -> Capturing = { CaptureSession() }, now: @escaping () -> Date = Date.init,
          settings: SessionSettings = SessionSettings(), drafting: Drafting? = nil,
+         deidentifying: Deidentifying? = nil,
          checks: (() async -> [Check])? = nil) {
         self.makeCapture = makeCapture
         self.now = now
         self.settings = settings
         self.drafting = drafting ?? ModelDrafting(settings: settings)
+        self.deidentifying = deidentifying ?? ModelDeidentifying()
         gatherChecks = checks ?? {
             await Readiness.checks(locale: settings.locale)
-                + [await ModelCatalog.check(settings.noteModel, host: settings.ollamaHost)] + Runner.checks
+                + [await ModelCatalog.check(settings.noteModel, host: settings.ollamaHost)] + [ModelSetup.check()]
         }
         deidentify = settings.deidentify
         format = settings.format
+        canDeidentify = self.deidentifying.isReady
+    }
+
+    /// Call when the model may have been installed since the window opened.
+    func refreshDeidentify() { canDeidentify = deidentifying.isReady }
+
+    /// Replaces identifying text, or sets `warning` and returns nil: the
+    /// session's text is kept, but never shown as if it had been checked.
+    private func deidentified(_ text: String, kind: LabeledText.Kind, what: String) async -> Deidentified? {
+        do { return try await deidentifying.deidentify(text, kind: kind) } catch {
+            warning = "Not de-identified. This \(what) still contains names and other identifying details.\n\(error.localizedDescription)"
+            return nil
+        }
     }
 
     func start() {
         guard phase == .idle else { return }
-        notice = ""; copied = false; liveLines = []; recordedBefore = 0; elapsed = 0
+        notice = ""; warning = ""; copied = false; liveLines = []; recordedBefore = 0; elapsed = 0
         phase = .working("Starting…")
         labels = (settings.micLabel, settings.systemLabel)
         let locale = settings.locale
@@ -144,20 +165,12 @@ final class SessionModel: ObservableObject {
         notice = oneSided
         if deidentify && canDeidentify {
             phase = .working("De-identifying the transcript…")
-            let d = await Runner.pipe(["deidentify"], input: transcript, environment: childEnvironment)
-            if d.status == 0 {
-                transcript = d.out.trimmingCharacters(in: .newlines)
-                notice = [oneSided, "transcript: \(d.err)"].filter { !$0.isEmpty }.joined(separator: "\n")
-            } else {
-                notice = [oneSided, "transcript de-identify failed; continuing with the original"]
-                    .filter { !$0.isEmpty }.joined(separator: "\n")
+            if let d = await deidentified(transcript, kind: .transcript, what: "transcript") {
+                transcript = d.text
+                notice = [oneSided, "transcript: \(d.summary)"].filter { !$0.isEmpty }.joined(separator: "\n")
             }
         }
         phase = .transcript
-    }
-
-    private var childEnvironment: [String: String] {
-        ["SOAPCAP_MIC_LABEL": labels.mic, "SOAPCAP_SYSTEM_LABEL": labels.system]
     }
 
     func draft() {
@@ -186,13 +199,10 @@ final class SessionModel: ObservableObject {
             var notices = drafted.warnings
             if deidentify && canDeidentify {
                 phase = .working("De-identifying the note…")
-                let d = await Runner.pipe(["deidentify"], input: note, environment: childEnvironment)
+                warning = ""
+                let d = await deidentified(note, kind: .note, what: "note")
                 guard gen == generation else { return }
-                if d.status == 0 {
-                    note = d.out.trimmingCharacters(in: .newlines); notices.append("note: \(d.err)")
-                } else {
-                    notices.append("note de-identify failed; showing as drafted")
-                }
+                if let d { note = d.text; notices.append("note: \(d.summary)") }
             }
             notice = notices.joined(separator: "\n")
             copied = false
@@ -239,6 +249,7 @@ final class SessionModel: ObservableObject {
         isDrafting = false
         draftTask?.cancel(); draftTask = nil
         Task { await releaseModel() }
-        liveLines = []; transcript = ""; note = ""; notice = ""; copied = false; phase = .idle
+        liveLines = []; transcript = ""; note = ""; notice = ""; warning = ""; copied = false; phase = .idle
+        refreshDeidentify()
     }
 }

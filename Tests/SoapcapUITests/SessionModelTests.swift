@@ -1,5 +1,6 @@
 import SoapcapCapture
 import SoapcapCore
+import SoapcapDeidentify
 import SoapcapNote
 import XCTest
 @testable import SoapcapUI
@@ -52,16 +53,18 @@ private final class FakeCapture: Capturing {
 private let hello = [Segment(speaker: "Therapist", start: 0, end: 1, id: 1, text: "hi Bob"),
                      Segment(speaker: "Client", start: 2, end: 3, id: 1, text: "hello")]
 
-/// A stand-in for the `soapcap` CLI, selected with SOAPCAP_BIN, for the steps
-/// the app still hands to it.
-private let stubScript = #"""
-#!/usr/bin/env bash
-case "$1" in
-  deidentify)
-    sed 's/Bob/[FIRST_NAME_1]/g'
-    echo "redacted 1 span(s): FIRST_NAME x1" >&2 ;;
-esac
-"""#
+/// Scripted de-identifying: replaces "Bob", and records what kind of text it was given.
+@MainActor private final class FakeDeidentifier: Deidentifying {
+    var isReady = true
+    var error: Error?
+    var kinds: [LabeledText.Kind] = []
+
+    func deidentify(_ text: String, kind: LabeledText.Kind) async throws -> Deidentified {
+        kinds.append(kind)
+        if let error { throw error }
+        return Deidentified(text: text.replacingOccurrences(of: "Bob", with: "[FIRST_NAME_1]"), summary: "redacted 1 span(s): FIRST_NAME x1")
+    }
+}
 
 @MainActor
 final class SessionModelTests: XCTestCase {
@@ -69,23 +72,19 @@ final class SessionModelTests: XCTestCase {
     private var suite = ""
     private var settings: SessionSettings!
     private var drafter: FakeDrafter!
+    private var deidentifier: FakeDeidentifier!
 
     override func setUp() async throws {
         dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("soapcap-app-tests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let stub = dir.appendingPathComponent("soapcap")
-        try stubScript.write(to: stub, atomically: true, encoding: .utf8)
-        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: stub.path)
         suite = "soapcap-tests-\(UUID().uuidString)"
         settings = SessionSettings(defaults: UserDefaults(suiteName: suite)!)
         drafter = FakeDrafter()
-        setenv("SOAPCAP_BIN", stub.path, 1)
-        setenv("SOAPCAP_DEIDENTIFY_BIN", stub.path, 1) // any executable: enables the toggle
+        deidentifier = FakeDeidentifier()
     }
 
     override func tearDown() async throws {
-        for k in ["SOAPCAP_BIN", "SOAPCAP_DEIDENTIFY_BIN"] { unsetenv(k) }
         try? FileManager.default.removeItem(at: dir)
         UserDefaults().removePersistentDomain(forName: suite)
     }
@@ -102,7 +101,7 @@ final class SessionModelTests: XCTestCase {
     }
 
     private func recording(_ capture: FakeCapture, now: @escaping () -> Date = Date.init) async -> SessionModel {
-        let m = SessionModel(makeCapture: { capture }, now: now, settings: settings, drafting: drafter)
+        let m = SessionModel(makeCapture: { capture }, now: now, settings: settings, drafting: drafter, deidentifying: deidentifier)
         m.start()
         await waitFor("recording") { m.phase == .recording }
         return m
@@ -110,20 +109,17 @@ final class SessionModelTests: XCTestCase {
 
     // MARK: pure logic
 
-    func testDeidentifyAvailabilityFollowsTheHelperBinary() {
-        XCTAssertTrue(Runner.deidentifyAvailable)
-        setenv("SOAPCAP_DEIDENTIFY_BIN", dir.appendingPathComponent("missing").path, 1)
-        XCTAssertFalse(Runner.deidentifyAvailable)
-    }
-
-    func testPipeRunsTheCLIWithInputOnStdin() async {
-        let r = await Runner.pipe(["deidentify"], input: "hi Bob")
-        XCTAssertEqual(r.status, 0)
-        XCTAssertEqual(r.out, "hi [FIRST_NAME_1]")
+    func testTheToggleIsOfferedOnceTheModelIsInstalled() {
+        deidentifier.isReady = false
+        let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier)
+        XCTAssertFalse(m.canDeidentify)
+        deidentifier.isReady = true
+        m.refreshDeidentify()
+        XCTAssertTrue(m.canDeidentify)
     }
 
     func testAnInProgressLineIsReplacedUntilItIsFinal() {
-        let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter)
+        let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier)
         m.heard(LiveLine(speaker: "Client", text: "I", isFinal: false))
         m.heard(LiveLine(speaker: "Therapist", text: "mm", isFinal: false))
         m.heard(LiveLine(speaker: "Client", text: "I slept", isFinal: false))
@@ -133,7 +129,7 @@ final class SessionModelTests: XCTestCase {
     }
 
     func testTheLiveStripKeepsOnlyTheLastLines() {
-        let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter)
+        let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier)
         for i in 1...40 { m.heard(LiveLine(speaker: "Client", text: "line \(i)", isFinal: true)) }
         XCTAssertEqual(m.liveLines.count, SessionModel.liveLimit)
         XCTAssertEqual(m.liveLines.last?.text, "line 40")
@@ -197,6 +193,30 @@ final class SessionModelTests: XCTestCase {
         await waitFor("note") { m.phase == .note }
         XCTAssertEqual(m.note, "SUBJECTIVE:\nformat soap\nNote about [FIRST_NAME_1]")
         XCTAssertEqual(m.notice, "note: redacted 1 span(s): FIRST_NAME x1")
+        XCTAssertEqual(deidentifier.kinds, [.transcript, .note])
+        XCTAssertEqual(m.warning, "")
+    }
+
+    func testAFailedDeidentifyKeepsTheTextAndWarnsThatItIsNotChecked() async {
+        deidentifier.error = DeidentifyError.lineCountChanged
+        let m = await recording(FakeCapture(hello))
+        m.stop()
+        await waitFor("transcript") { m.phase == .transcript }
+        XCTAssertEqual(m.transcript, "Therapist: hi Bob\nClient: hello")
+        XCTAssertTrue(m.warning.hasPrefix("Not de-identified. This transcript still contains"), m.warning)
+        XCTAssertFalse(m.notice.contains("redacted"))
+        deidentifier.error = nil
+        m.draft()
+        await waitFor("note") { m.phase == .note }
+        XCTAssertEqual(m.warning, "")
+        XCTAssertTrue(m.note.contains("[FIRST_NAME_1]"))
+        deidentifier.error = DeidentifyError.lineCountChanged
+        m.draft()
+        await waitFor("note warning") { m.phase == .note && !m.warning.isEmpty }
+        XCTAssertTrue(m.warning.hasPrefix("Not de-identified. This note still contains"), m.warning)
+        XCTAssertTrue(m.note.contains("Bob"))
+        m.newSession()
+        XCTAssertEqual(m.warning, "")
     }
 
     func testWithoutDeidentifyNothingIsRedacted() async {
@@ -219,7 +239,7 @@ final class SessionModelTests: XCTestCase {
     }
 
     func testACaptureThatCannotStartShowsWhy() async {
-        let m = SessionModel(makeCapture: { FakeCapture(startError: CaptureError.microphoneDenied) }, settings: settings, drafting: drafter)
+        let m = SessionModel(makeCapture: { FakeCapture(startError: CaptureError.microphoneDenied) }, settings: settings, drafting: drafter, deidentifying: deidentifier)
         m.start()
         await waitFor("error") { if case .error = m.phase { true } else { false } }
         guard case .error(let message) = m.phase else { return }
@@ -244,19 +264,17 @@ final class SessionModelTests: XCTestCase {
 
     func testCheckPermissionsShowsTheGatheredChecks() async {
         let found = [Check("Microphone", .ok, "fine"), Check("Call audio", .failed, "off")]
-        let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, checks: { found })
+        let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier, checks: { found })
         m.diagnose()
         await waitFor("checks") { m.phase == .checks(found) }
         m.newSession()
         XCTAssertEqual(m.phase, .idle)
     }
 
-    func testTheDeidentifyCheckFollowsTheHelperAndTheTool() {
-        XCTAssertEqual(Runner.checks.map(\.status), [.ok])
-        setenv("SOAPCAP_BIN", dir.appendingPathComponent("missing").path, 1)
-        XCTAssertEqual(Runner.checks.map(\.status), [.failed])
-        setenv("SOAPCAP_DEIDENTIFY_BIN", dir.appendingPathComponent("missing").path, 1)
-        XCTAssertEqual(Runner.checks.map(\.status), [.warning])
+    func testTheDeidentifyCheckFollowsTheModelFiles() {
+        XCTAssertEqual(ModelSetup.check(isReady: true).status, .ok)
+        XCTAssertEqual(ModelSetup.check(isReady: false).status, .warning)
+        XCTAssertTrue(ModelSetup.check(isReady: false).detail.contains("Settings"))
     }
 
     // MARK: settings
@@ -297,10 +315,10 @@ final class SessionModelTests: XCTestCase {
     }
 
     func testFormatAndDeidentifyAreRememberedForTheNextLaunch() {
-        let first = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter)
+        let first = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier)
         first.format = "dap"
         first.deidentify = false
-        let second = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter)
+        let second = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier)
         XCTAssertEqual(second.format, "dap")
         XCTAssertFalse(second.deidentify)
     }

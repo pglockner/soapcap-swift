@@ -71,6 +71,7 @@ struct SettingsView: View {
     @AppStorage(SessionSettings.Key.sessionType) private var sessionType = ""
     @State private var languages: [Locale] = []
     @State private var models: [String] = []
+    @ObservedObject var setup = ModelSetup.shared
 
     private var settings: SessionSettings { SessionSettings() }
 
@@ -110,6 +111,26 @@ struct SettingsView: View {
             } footer: {
                 Text(ModelCatalog.description(of: settings.noteModel)
                      ?? "Not tested with these prompts; proofread its notes closely.")
+                    .foregroundStyle(.secondary)
+            }
+            Section {
+                switch setup.state {
+                case .ready:
+                    Label("The model is installed.", systemImage: "checkmark.circle.fill")
+                case .working(let file, let fraction):
+                    ProgressView(value: fraction) { Text(file.isEmpty ? "Setting up…" : "Getting \(file)…") }
+                case .missing, .failed:
+                    if case .failed(let why) = setup.state { Text(why).foregroundStyle(.orange) }
+                    Text(setup.canCopyFromSoapcap
+                         ? "soapcap's copy of the model is on this Mac. It will be copied; nothing is downloaded."
+                         : "Needs OpenMed's PII model, a one-time 130 MB download from huggingface.co. This is the only time Soapcap uses the network, and nothing from a session is sent.")
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button(setup.canCopyFromSoapcap ? "Set up" : "Download model") { setup.install() }
+                }
+            } header: {
+                Text("De-identification")
+            } footer: {
+                Text("Replaces names, phone numbers, dates and similar details with tokens like [FIRST_NAME_1]. Best effort: the model misses things, so read the result before sharing it.")
                     .foregroundStyle(.secondary)
             }
             Section {
