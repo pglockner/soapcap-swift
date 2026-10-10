@@ -28,8 +28,18 @@ struct Credit: Decodable, Identifiable, Equatable {
 /// Who made what this app is built from, and under which licence.
 struct AcknowledgementsView: View {
     var body: some View {
-        List(Credit.all) { CreditRow(credit: $0) }
-            .frame(minWidth: 520, minHeight: 420)
+        // A plain stack rather than a List: with these rows, whose height
+        // changes when a licence is shown, a List crashed as it was drawn.
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Credit.all) { credit in
+                    CreditRow(credit: credit)
+                    Divider()
+                }
+            }
+            .padding(.horizontal, 16)
+        }
+        .frame(minWidth: 520, minHeight: 420)
     }
 }
 
@@ -55,7 +65,7 @@ private struct CreditRow: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 10)
     }
 }
 
