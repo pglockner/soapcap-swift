@@ -42,7 +42,7 @@ honor that convention skip it.
 |---|---|
 | macOS 26 (Tahoe) or newer, Apple silicon | Same as soapcap |
 | Full Xcode (not just Command Line Tools) | To build |
-| A note model | [Ollama](https://ollama.com) with a pulled model (`llama3.1:8b` is the tested default), or Bonsai set up by soapcap's `tools/bonsai/install.sh` |
+| A note model (for drafting; recording works without one) | [Ollama](https://ollama.com) with a pulled model (`llama3.1:8b` is the tested default), or Bonsai set up by soapcap's `tools/bonsai/install.sh` |
 | soapcap and its de-identification (optional) | The de-identify toggle only appears if soapcap's `tools/deidentify/install.sh` has been run. The app runs the `soapcap` in Homebrew's `bin`; set `SOAPCAP_BIN` to use another |
 
 ### Build and run

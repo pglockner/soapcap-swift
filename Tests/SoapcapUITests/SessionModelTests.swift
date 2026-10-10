@@ -348,6 +348,7 @@ final class SessionModelTests: XCTestCase {
         await waitFor("error") { if case .error = m.phase { true } else { false } }
         guard case .error(let message) = m.phase else { return }
         XCTAssertTrue(message.contains("Can't reach Ollama"), message)
+        XCTAssertEqual(drafter.releases, 1, "a failed draft must not leave the model loaded")
     }
 
     func testTheModelIsKeptBetweenDraftsAndReleasedWithTheSession() async {

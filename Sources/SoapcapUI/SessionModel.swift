@@ -174,6 +174,9 @@ final class SessionModel: ObservableObject {
                 }
             } catch {
                 isDrafting = false
+                // Don't leave a half-started model holding memory (or, for
+                // Bonsai, its port) behind an error screen.
+                await releaseModel()
                 if gen == generation { phase = .error("Note drafting failed.\n\n\(error.localizedDescription)") }
                 return
             }

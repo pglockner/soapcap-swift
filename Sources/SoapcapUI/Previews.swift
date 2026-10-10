@@ -53,7 +53,7 @@ private let previewLines = [
                   "Turn on Soapcap under Screen & System Audio Recording, then quit and reopen Soapcap. If it is already on, remove it from the list and add it again.",
                   fix: .init(label: "Open Screen Recording settings", url: URL(string: "x-apple.systempreferences:")!)),
             Check("Speech recognition", .ok, "Ready for en-US, on this Mac only."),
-            Check("Note model", .failed, "The model 'llama3.1:8b' is not pulled. Run: ollama pull llama3.1:8b Or choose another model in Settings."),
+            Check("Note model", .failed, "The model 'llama3.1:8b' is not pulled. Run: ollama pull llama3.1:8b\nOr choose another model in Settings."),
             Check("De-identify", .warning, "Optional and not set up. Run tools/deidentify/install.sh in soapcap to add it."),
         ])
     }

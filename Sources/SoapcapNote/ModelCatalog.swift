@@ -41,7 +41,7 @@ public enum ModelCatalog {
             let caution = backend.cautions.first
             return Check("Note model", caution == nil ? .ok : .warning, caution ?? "\(backend.label) is ready to draft notes.")
         } catch {
-            return Check("Note model", .failed, error.localizedDescription + " Or choose another model in Settings.")
+            return Check("Note model", .failed, error.localizedDescription + "\nOr choose another model in Settings.")
         }
     }
 }
