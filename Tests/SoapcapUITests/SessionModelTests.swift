@@ -306,12 +306,12 @@ final class SessionModelTests: XCTestCase {
         await waitFor("recording") { m.phase == .recording }
         m.stop()
         await waitFor("transcript") { m.phase == .transcript }
-        XCTAssertNil(m.memory)
+        XCTAssertNil(m.draftRun.memory)
         m.draft()
-        await waitFor("memory shown") { m.memory != nil }
-        XCTAssertEqual(m.memory?.usedPercent, 70)
+        await waitFor("memory shown") { m.draftRun.memory != nil }
+        XCTAssertEqual(m.draftRun.memory?.usedPercent, 70)
         await waitFor("note") { m.phase == .note }
-        XCTAssertNil(m.memory)
+        XCTAssertNil(m.draftRun.memory)
     }
 
     func testAVeryShortMemoryAsksBeforeABonsaiDraft() async {
@@ -340,11 +340,11 @@ final class SessionModelTests: XCTestCase {
         await waitFor("transcript") { m.phase == .transcript }
         drafter.releaseDelay = 300_000_000
         m.draft()
-        await waitFor("drafting") { m.isDrafting }
+        await waitFor("drafting") { m.draftRun.isRunning }
         m.stopDraft()
         XCTAssertEqual(m.phase, .working("Stopping…"))       // not the transcript until the model has gone
-        XCTAssertFalse(m.isDrafting)
-        XCTAssertNil(m.memory)
+        XCTAssertFalse(m.draftRun.isRunning)
+        XCTAssertNil(m.draftRun.memory)
         await waitFor("transcript") { m.phase == .transcript }
         XCTAssertEqual(drafter.events, ["draft", "released"])
         try? await Task.sleep(nanoseconds: 300_000_000)      // the abandoned draft finishing changes nothing
@@ -354,7 +354,7 @@ final class SessionModelTests: XCTestCase {
         m.draft()                                            // and drafting again still works
         await waitFor("note") { m.phase == .note }
         m.draft()
-        await waitFor("drafting again") { m.isDrafting }
+        await waitFor("drafting again") { m.draftRun.isRunning }
         m.stopDraft()
         await waitFor("note again") { m.phase == .note }     // the earlier note is kept
         XCTAssertTrue(m.note.contains("format soap"))
@@ -368,7 +368,7 @@ final class SessionModelTests: XCTestCase {
         await waitFor("transcript") { m.phase == .transcript }
         drafter.releaseDelay = 300_000_000
         m.draft()
-        await waitFor("drafting") { m.isDrafting }
+        await waitFor("drafting") { m.draftRun.isRunning }
         m.stopDraft()
         m.draft()                                            // sooner than the window allows
         await waitFor("note") { m.phase == .note }
@@ -378,12 +378,12 @@ final class SessionModelTests: XCTestCase {
     func testAModelAskedToGoTwiceAtOnceIsReleasedOnceAndBothWait() async {
         let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier)
         drafter.releaseDelay = 200_000_000
-        async let first: Void = m.releaseModel()
-        async let second: Void = m.releaseModel()
-        _ = await (first, second)
+        let first = m.draftRun.stop(), second = m.draftRun.stop()
+        await first.value
+        await second.value
         XCTAssertEqual(drafter.events, ["released"])
         XCTAssertEqual(drafter.releases, 1)
-        await m.releaseModel()                               // a later ask is a new release
+        await m.draftRun.stop().value                        // a later ask is a new release
         XCTAssertEqual(drafter.releases, 2)
     }
 
@@ -396,8 +396,8 @@ final class SessionModelTests: XCTestCase {
         let roomy = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier,
                                  memory: { MemoryStatus(totalBytes: 16 << 30, freePercent: 68) })
         XCTAssertNil(roomy.memoryAdvice)
-        XCTAssertEqual(SessionModel.memoryCheck(short(), model: "bonsai").status, .warning)
-        XCTAssertEqual(SessionModel.memoryCheck(short(), model: "llama3.1:8b"), Check("Memory", .ok, "16 GB, about 6 GB free now."))
+        XCTAssertEqual(ModelCatalog.memoryCheck(short(), model: "bonsai").status, .warning)
+        XCTAssertEqual(ModelCatalog.memoryCheck(short(), model: "llama3.1:8b"), Check("Memory", .ok, "16 GB, about 6 GB free now."))
     }
 
     // MARK: settings

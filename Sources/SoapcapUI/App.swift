@@ -30,7 +30,7 @@ public struct SoapcapApp: App {
                 .onReceive(ModelSetup.shared.$state) { state in
                     if state == .ready { Task { @MainActor in model.refreshDeidentify() } }
                 }
-                .task { AppDelegate.beforeQuit = { [model] in await model.releaseModel() } }
+                .task { AppDelegate.beforeQuit = { [model] in await model.draftRun.stop().value } }
         }
         .commands { CommandGroup(after: .appInfo) { AcknowledgementsCommand() } }
         Window("Acknowledgements", id: "acknowledgements") { AcknowledgementsView() }
@@ -47,13 +47,7 @@ struct ContentView: View {
             case .idle: idle
             case .recording: recording
             case .paused: paused
-            case .working(let msg):
-                VStack(spacing: 10) {
-                    ProgressView(msg)
-                    if let memory = m.memory { MemoryLine(memory: memory) }
-                    if m.isDrafting { Button("Stop drafting") { m.stopDraft() }.padding(.top, 8) }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            case .working(let msg): WorkingView(message: msg, run: m.draftRun, stop: { m.stopDraft() })
             case .transcript: transcript
             case .note: note
             case .error(let msg): error(msg)

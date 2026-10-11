@@ -37,6 +37,15 @@ public enum ModelCatalog {
         return memory.question(beforeLoading: model == bonsai ? "Bonsai" : model, needGB: need)
     }
 
+    /// How much memory this Mac has and has free, as a line for the checks
+    /// screen, with the advice for `model` when it is short.
+    public static func memoryCheck(_ memory: MemoryStatus?, model: String) -> Check {
+        guard let memory else { return Check("Memory", .warning, "Couldn't read how much memory this Mac has.") }
+        let size = String(format: "%.0f GB, about %.0f GB free now.", memory.totalGB, memory.availableGB.rounded(.down))
+        if let advice = memoryAdvice(for: model, memory: memory) { return Check("Memory", .warning, size + " " + advice) }
+        return Check("Memory", .ok, size)
+    }
+
     /// `bonsai` is its own backend; every other name is a model in Ollama.
     public static func backend(for model: String, host: URL = OllamaBackend.defaultHost,
                                bonsai install: BonsaiBackend.Install = .standard) -> any NoteBackend {

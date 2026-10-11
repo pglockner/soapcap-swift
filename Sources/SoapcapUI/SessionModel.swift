@@ -27,13 +27,11 @@ final class SessionModel: ObservableObject {
     @Published var elapsed = 0      // seconds recorded; stands still while paused
     @Published var liveLines: [LiveLine] = []
     @Published var copied = false
-    /// How full memory is, while a note is being drafted; nil otherwise.
-    @Published var memory: MemoryStatus?
     /// Set when a draft was asked for with memory very short: the question
     /// to put before going ahead. Cleared by the answer.
     @Published var memoryQuestion: String?
-    /// True while the note model is working, which is when it can be stopped.
-    @Published var isDrafting = false
+    /// The note model: whether it is working, and the memory in use meanwhile.
+    let draftRun: DraftRun
 
     /// Whether the de-identification model is installed, so the toggle is offered.
     @Published private(set) var canDeidentify = false
@@ -44,10 +42,7 @@ final class SessionModel: ObservableObject {
     private let now: () -> Date
     private let gatherChecks: () async -> [Check]
     private let readMemory: () -> MemoryStatus?
-    private let drafting: Drafting
     private let deidentifying: Deidentifying
-    private var draftTask: Task<Void, Never>?
-    private var releasing: Task<Void, Never>?
     private var capture: Capturing?
     private var recordedBefore: TimeInterval = 0
     private var runStart: Date?
@@ -62,13 +57,13 @@ final class SessionModel: ObservableObject {
         self.makeCapture = makeCapture
         self.now = now
         self.settings = settings
-        self.drafting = drafting ?? ModelDrafting(settings: settings)
+        draftRun = DraftRun(drafting: drafting ?? ModelDrafting(settings: settings), memory: memory)
         self.deidentifying = deidentifying ?? ModelDeidentifying()
         readMemory = memory
         gatherChecks = checks ?? {
             await Readiness.checks(locale: settings.locale)
                 + [await ModelCatalog.check(settings.noteModel, host: settings.ollamaHost)] + [ModelSetup.check()]
-                + [Self.memoryCheck(memory(), model: settings.noteModel)]
+                + [ModelCatalog.memoryCheck(memory(), model: settings.noteModel)]
         }
         deidentify = settings.deidentify
         format = settings.format
@@ -189,14 +184,6 @@ final class SessionModel: ObservableObject {
         ModelCatalog.memoryAdvice(for: settings.noteModel, memory: readMemory())
     }
 
-    /// The line on the checks screen.
-    static func memoryCheck(_ memory: MemoryStatus?, model: String) -> Check {
-        guard let memory else { return Check("Memory", .warning, "Couldn't read how much memory this Mac has.") }
-        let size = String(format: "%.0f GB, about %.0f GB free now.", memory.totalGB, memory.availableGB.rounded(.down))
-        if let advice = ModelCatalog.memoryAdvice(for: model, memory: memory) { return Check("Memory", .warning, size + " " + advice) }
-        return Check("Memory", .ok, size)
-    }
-
     /// Drafts, unless memory is very short for the chosen model, in which
     /// case it asks first. Not for drafting again: by then the model is
     /// loaded and is itself what fills memory.
@@ -208,37 +195,20 @@ final class SessionModel: ObservableObject {
     func draft() {
         guard let noteFormat = NoteFormat(rawValue: format) else { return }
         let gen = generation
-        draftTask = Task {
-            phase = .working("Drafting a \(format) note…")
-            // A model that is still stopping must be gone before another loads.
-            await releasing?.value
-            guard gen == generation else { return }
-            isDrafting = true
-            // A model that outgrows memory slows to a crawl; show it happening.
-            let watch = Task {
-                while !Task.isCancelled, gen == generation {
-                    memory = readMemory()
-                    try? await Task.sleep(for: .seconds(2))
-                }
-            }
-            defer { watch.cancel(); memory = nil }
+        phase = .working("Drafting a \(format) note…")
+        Task {
             let drafted: DraftedNote
             do {
-                drafted = try await drafting.draft(format: noteFormat, transcript: transcript, minutes: elapsed / 60,
-                                                   systemLabel: labels.system) { progress in
+                // Nil when the draft was stopped; stopDraft() has the screen.
+                guard let done = try await draftRun.draft(format: noteFormat, transcript: transcript, minutes: elapsed / 60,
+                                                          systemLabel: labels.system, progress: { progress in
                     Task { @MainActor in self.show(progress, generation: gen) }
-                }
+                }), gen == generation else { return }
+                drafted = done
             } catch {
-                guard gen == generation else { return }     // stopped: whoever stopped it frees the model
-                isDrafting = false
-                // Don't leave a half-started model holding memory (or, for
-                // Bonsai, its port) behind an error screen.
-                await releaseModel()
                 if gen == generation { phase = .error("Note drafting failed.\n\n\(error.localizedDescription)") }
                 return
             }
-            guard gen == generation else { return }
-            isDrafting = false
             note = drafted.text
             var notices = drafted.warnings
             if deidentify && canDeidentify {
@@ -259,15 +229,13 @@ final class SessionModel: ObservableObject {
     /// The screen waits for the model to go, so that another draft can't
     /// start while the first one's model is still shutting down.
     func stopDraft() {
-        guard isDrafting else { return }
+        guard draftRun.isRunning else { return }
         generation += 1
         let gen = generation, back: Phase = note.isEmpty ? .transcript : .note
-        isDrafting = false
-        draftTask?.cancel(); draftTask = nil
-        memory = nil
+        let stopping = draftRun.stop()
         phase = .working("Stopping…")
         Task {
-            await releaseModel()
+            await stopping.value
             if gen == generation { phase = back }
         }
     }
@@ -275,16 +243,8 @@ final class SessionModel: ObservableObject {
     /// Progress arrives from the drafter's own thread, possibly after the
     /// draft is over; only a draft still in flight may change the screen.
     private func show(_ progress: DraftProgress, generation gen: Int) {
-        guard isDrafting, gen == generation else { return }
+        guard draftRun.isRunning, gen == generation else { return }
         phase = .working(progress.tokens.map { "\(progress.title)  \($0) tokens" } ?? progress.title)
-    }
-
-    /// Frees the note model's memory; it is kept loaded between drafts.
-    /// However many ask at once, it is released once and each of them
-    /// returns only when it has gone.
-    func releaseModel() async {
-        if releasing == nil { releasing = Task { await drafting.release(); releasing = nil } }
-        await releasing?.value
     }
 
     func keep() {
@@ -313,10 +273,8 @@ final class SessionModel: ObservableObject {
         runStart = nil
         if let capture { Task { _ = await capture.stop() } }
         capture = nil
-        isDrafting = false
-        draftTask?.cancel(); draftTask = nil
-        Task { await releaseModel() }
-        liveLines = []; transcript = ""; note = ""; notice = ""; warning = ""; copied = false; memory = nil; memoryQuestion = nil; phase = .idle
+        draftRun.stop()
+        liveLines = []; transcript = ""; note = ""; notice = ""; warning = ""; copied = false; memoryQuestion = nil; phase = .idle
         refreshDeidentify()
     }
 }

@@ -71,16 +71,16 @@ private let previewLines = [
 #Preview("Drafting") {
     sampleScreen {
         $0.phase = .working("Drafting a soap note with llama3.1:8b…  412 tokens")
-        $0.isDrafting = true
-        $0.memory = MemoryStatus(totalBytes: 16 << 30, freePercent: 38)
+        $0.draftRun.isRunning = true
+        $0.draftRun.memory = MemoryStatus(totalBytes: 16 << 30, freePercent: 38)
     }
 }
 
 #Preview("Drafting, memory full") {
     sampleScreen {
         $0.phase = .working("Drafting the Objective with Bonsai…")
-        $0.isDrafting = true
-        $0.memory = MemoryStatus(totalBytes: 16 << 30, freePercent: 6, swapUsedBytes: 2254 << 20, swapTotalBytes: 5 << 30)
+        $0.draftRun.isRunning = true
+        $0.draftRun.memory = MemoryStatus(totalBytes: 16 << 30, freePercent: 6, swapUsedBytes: 2254 << 20, swapTotalBytes: 5 << 30)
     }
 }
 
