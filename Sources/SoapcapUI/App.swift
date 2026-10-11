@@ -33,7 +33,12 @@ public struct SoapcapApp: App {
                 .task { AppDelegate.beforeQuit = { [model] in await model.draftRun.stop().value } }
                 .task { model.setUpIfNeeded() }
         }
-        .commands { CommandGroup(after: .appInfo) { AcknowledgementsCommand() } }
+        .commands {
+            CommandGroup(after: .appInfo) {
+                AcknowledgementsCommand()
+                UninstallCommand(stop: { [model] in await model.draftRun.stop().value })
+            }
+        }
         Window("Acknowledgements", id: "acknowledgements") { AcknowledgementsView() }
         Settings { SettingsView() }
     }

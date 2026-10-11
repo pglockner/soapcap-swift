@@ -100,6 +100,11 @@ are downloaded here: each says how big it is first, a download that is
 stopped carries on where it left off, and **Remove** deletes Bonsai again.
 Ollama's address is under Advanced.
 
+**Uninstalling.** The app menu's **Uninstall Soapcap…** removes the models
+the app downloaded, its settings and its permissions, then moves the app to
+the Trash. A Bonsai or an Ollama that something else installed is left
+alone.
+
 ## Privacy
 
 - **Nothing is saved.** Audio is never recorded. The transcript and the
