@@ -48,8 +48,9 @@ the exception: macOS doesn't let its call audio be captured.
 ```
 
 The first build fetches the de-identifier's packages and builds the note
-engine, and takes a few minutes longer. Sign with a stable identity (see [Signing](#signing)), or macOS
-forgets the app's permissions on every rebuild.
+engine, and takes a few minutes longer. Sign with a stable identity (see
+[Signing and notarizing](#signing-and-notarizing)), or macOS forgets the
+app's permissions on every rebuild.
 
 ## Using the app
 
