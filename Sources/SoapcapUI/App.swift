@@ -62,6 +62,9 @@ struct ContentView: View {
                            again: { m.diagnose() }, back: { m.newSession() })
             }
         }
+        // Against the top left however wide the window is; a screen narrower
+        // than the window would otherwise float in the middle.
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(16)
     }
 

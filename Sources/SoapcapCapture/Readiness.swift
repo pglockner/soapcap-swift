@@ -46,7 +46,7 @@ public enum Readiness {
         granted
             ? Check("Call audio", .ok, "Soapcap can hear what the Mac is playing.")
             : Check("Call audio", .failed,
-                    "Needed to hear the other side. macOS files this under Screen & System Audio Recording; no picture is taken. Turn Soapcap on in the list that opens, then reopen Soapcap. If it is already on, remove it from the list and add it again.",
+                    "Needed to hear the other side. macOS files this under Screen & System Audio Recording; no picture is taken.\n1. If macOS asks, choose Open System Settings, not Deny.\n2. Turn Soapcap on in the list. macOS wants Touch ID or your password for that.\n3. Choose Quit & Reopen.\nIf Soapcap is already on in the list, remove it and add it again.",
                     fix: Check.Fix(label: "Allow call audio", action: .askForCallAudio))
     }
 
