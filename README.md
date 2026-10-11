@@ -176,7 +176,7 @@ ones. When the app is started from a terminal, `SOAPCAP_DEIDENTIFY_MODEL`
 names a different folder, and `SOAPCAP_DEIDENTIFY_DIR` says where soapcap's
 de-identify install is.
 
-### Signing
+### Signing and notarizing
 
 `build.sh` signs ad hoc unless `SOAPCAP_SIGN_IDENTITY` names a code-signing
 identity, such as an Apple Development certificate (Xcode creates one for a
@@ -194,6 +194,21 @@ which also happens after switching from ad hoc to a certificate:
 tccutil reset ScreenCapture local.soapcap.session
 tccutil reset Microphone local.soapcap.session
 ```
+
+Every build runs under the hardened runtime. For a build that opens on
+another Mac without a warning, sign with a Developer ID Application
+identity and have Apple notarize it. `notarize.sh` uploads the app to
+Apple, attaches the ticket and leaves a zip to ship:
+
+```sh
+SOAPCAP_SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" ./build.sh
+./notarize.sh
+```
+
+It uses credentials stored once with
+`xcrun notarytool store-credentials soapcap-notary`. `SOAPCAP_BUNDLE_ID` and
+`SOAPCAP_OUT` give a build its own identifier and folder, so that it can sit
+beside the usual one with permissions of its own.
 
 ### Tests
 
