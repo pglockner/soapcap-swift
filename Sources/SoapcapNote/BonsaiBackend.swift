@@ -32,13 +32,13 @@ public actor BonsaiBackend: NoteBackend {
 
     public nonisolated let install: Install
     public static let displayName = "Bonsai"
-    public nonisolated let label = BonsaiBackend.displayName
+    public nonisolated let label: String
     public nonisolated let cautions: [String] = []
     /// llama-server keeps its place only near the end of each prompt, so a
     /// transcript in the middle of one is read again by the next request.
     /// Measured on a 22-minute session: the Objective pass took 97 s
     /// re-reading it and 43 s resuming after it.
-    public nonisolated let resumesFromSharedOpening = true
+    public nonisolated let resumesFromSharedOpening: Bool
     private let session: URLSession
     /// How long to wait for the model to load, and how often to ask.
     private let loadTimeout: TimeInterval
@@ -47,9 +47,14 @@ public actor BonsaiBackend: NoteBackend {
     private var context = 0
     private let log = LogTail()
 
-    public init(install: Install = .standard, session: URLSession = .shared,
+    /// The defaults are Bonsai's. The same server runs any GGUF model, so a
+    /// different one is a different `install`, with its own name.
+    public init(install: Install = .standard, label: String = BonsaiBackend.displayName,
+                resumesFromSharedOpening: Bool = true, session: URLSession = .shared,
                 loadTimeout: TimeInterval = 180, pollInterval: TimeInterval = 1) {
         self.install = install
+        self.label = label
+        self.resumesFromSharedOpening = resumesFromSharedOpening
         self.session = session
         self.loadTimeout = loadTimeout
         self.pollInterval = pollInterval
