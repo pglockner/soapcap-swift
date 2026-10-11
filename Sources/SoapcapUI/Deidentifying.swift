@@ -68,6 +68,7 @@ import SoapcapPII
     static func check(isReady: Bool = ModelFiles.isReady()) -> Check {
         isReady
             ? Check("De-identify", .ok, "The model is installed.")
-            : Check("De-identify", .warning, "Optional and not set up. Open Settings (Cmd-comma) to get the model.")
+            : Check("De-identify", .warning, "Optional and not set up. The model is a 130 MB download in Settings.",
+                    fix: Check.Fix(label: "Open Settings", action: .showSettings))
     }
 }

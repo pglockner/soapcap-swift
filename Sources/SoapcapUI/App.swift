@@ -31,6 +31,7 @@ public struct SoapcapApp: App {
                     if state == .ready { Task { @MainActor in model.refreshDeidentify() } }
                 }
                 .task { AppDelegate.beforeQuit = { [model] in await model.draftRun.stop().value } }
+                .task { model.setUpIfNeeded() }
         }
         .commands { CommandGroup(after: .appInfo) { AcknowledgementsCommand() } }
         Window("Acknowledgements", id: "acknowledgements") { AcknowledgementsView() }
@@ -52,7 +53,8 @@ struct ContentView: View {
             case .note: note
             case .error(let msg): error(msg)
             case .checks(let checks):
-                ChecksView(checks: checks, again: { m.diagnose() }, back: { m.newSession() })
+                ChecksView(checks: checks, perform: { m.perform($0) }, reopen: { m.reopen() },
+                           again: { m.diagnose() }, back: { m.newSession() })
             }
         }
         .padding(16)

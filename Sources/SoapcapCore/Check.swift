@@ -4,15 +4,28 @@ import Foundation
 public struct Check: Equatable, Sendable, Identifiable {
     public enum Status: Equatable, Sendable { case ok, warning, failed }
 
-    /// Where to go to put it right, e.g. a pane of System Settings.
+    /// A button that puts it right, or starts to.
     public struct Fix: Equatable, Sendable {
-        public var label: String
-        public var url: URL
-
-        public init(label: String, url: URL) {
-            self.label = label
-            self.url = url
+        public enum Action: Equatable, Sendable {
+            /// Opens a pane of System Settings, or a web page.
+            case open(URL)
+            /// Has macOS ask for the microphone.
+            case askForMicrophone
+            /// Has macOS ask to hear the call, which it files under Screen Recording.
+            case askForCallAudio
+            /// Opens this app's own Settings window.
+            case showSettings
         }
+
+        public var label: String
+        public var action: Action
+
+        public init(label: String, action: Action) {
+            self.label = label
+            self.action = action
+        }
+
+        public init(label: String, url: URL) { self.init(label: label, action: .open(url)) }
     }
 
     public var title: String

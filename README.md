@@ -54,11 +54,15 @@ app's permissions on every rebuild.
 
 ## Using the app
 
-**First run.** Grant Microphone and Screen Recording to Soapcap, then quit
-and reopen it. Screen Recording is how macOS lets an app hear what the Mac
-is playing; no picture is taken. **Check permissions** reports both grants,
-speech recognition for your language, the note model, the de-identification
-model and free memory, with a button to the right pane of System Settings.
+**First run.** Soapcap opens on a setup screen that walks through the two
+permissions macOS asks for, Microphone and Screen Recording. Each has a
+button that says what you are about to see, and **Reopen Soapcap** finishes
+the job, because macOS counts a new permission once the app is reopened.
+Screen Recording is how macOS lets an app hear what the Mac is playing; no
+picture is taken. **Check permissions** brings the same screen back later,
+with speech recognition for your language, the note model, the
+de-identification model and free memory, each with a button that puts it
+right.
 
 **Record.** Use headphones and turn on Do Not Disturb. The window shows the
 last few lines heard from each side. **Pause** stops listening and stops

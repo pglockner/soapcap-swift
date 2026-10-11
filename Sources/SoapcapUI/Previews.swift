@@ -58,13 +58,29 @@ private let previewLines = [
 #Preview("Checks, problems") {
     sampleScreen {
         $0.phase = .checks([
-            Check("Microphone", .warning, "Not asked yet. macOS will ask the first time you start recording."),
-            Check("Call audio", .failed,
-                  "Turn on Soapcap under Screen & System Audio Recording, then quit and reopen Soapcap. If it is already on, remove it from the list and add it again.",
-                  fix: .init(label: "Open Screen Recording settings", url: URL(string: "x-apple.systempreferences:")!)),
+            Check("Microphone", .ok, "Soapcap can hear your side."),
+            Check("Call audio", .ok, "Soapcap can hear what the Mac is playing."),
             Check("Speech recognition", .ok, "Ready for en-US, on this Mac only."),
-            Check("Note model", .failed, "The model 'llama3.1:8b' is not pulled. Run: ollama pull llama3.1:8b\nOr choose another model in Settings."),
-            Check("De-identify", .warning, "Optional and not set up. Open Settings (Cmd-comma) to get the model."),
+            Check("Note model", .failed, "The model 'llama3.1:8b' is not pulled. Run: ollama pull llama3.1:8b\nOr choose another model in Settings.",
+                  fix: .init(label: "Open Settings", action: .showSettings)),
+            Check("De-identify", .warning, "Optional and not set up. The model is a 130 MB download in Settings.",
+                  fix: .init(label: "Open Settings", action: .showSettings)),
+        ])
+    }
+}
+
+#Preview("Checks, first run") {
+    sampleScreen {
+        $0.phase = .checks([
+            Check("Microphone", .warning, "Needed to hear your side. macOS will ask whether Soapcap may use the microphone; choose Allow.",
+                  fix: .init(label: "Allow the microphone", action: .askForMicrophone)),
+            Check("Call audio", .failed,
+                  "Needed to hear the other side. macOS files this under Screen & System Audio Recording; no picture is taken. Turn Soapcap on in the list that opens, then reopen Soapcap. If it is already on, remove it from the list and add it again.",
+                  fix: .init(label: "Allow call audio", action: .askForCallAudio)),
+            Check("Speech recognition", .ok, "Ready for en-US, on this Mac only."),
+            Check("Note model", .ok, "llama3.1:8b is ready to draft notes."),
+            Check("De-identify", .warning, "Optional and not set up. The model is a 130 MB download in Settings.",
+                  fix: .init(label: "Open Settings", action: .showSettings)),
         ])
     }
 }

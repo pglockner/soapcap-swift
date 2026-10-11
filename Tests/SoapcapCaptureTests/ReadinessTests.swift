@@ -7,10 +7,10 @@ final class ReadinessTests: XCTestCase {
     func testMicrophoneStatusMapsToACheck() {
         XCTAssertEqual(Readiness.microphone(.authorized).status, .ok)
         XCTAssertEqual(Readiness.microphone(.notDetermined).status, .warning)
-        XCTAssertNil(Readiness.microphone(.notDetermined).fix)
+        XCTAssertEqual(Readiness.microphone(.notDetermined).fix?.action, .askForMicrophone)
         let denied = Readiness.microphone(.denied)
         XCTAssertEqual(denied.status, .failed)
-        XCTAssertTrue(denied.fix?.url.absoluteString.hasSuffix("Privacy_Microphone") ?? false)
+        XCTAssertEqual(denied.fix?.action, .open(Readiness.pane("Privacy_Microphone")))
         XCTAssertEqual(Readiness.microphone(.restricted).status, .failed)
     }
 
@@ -18,7 +18,8 @@ final class ReadinessTests: XCTestCase {
         XCTAssertEqual(Readiness.callAudio(granted: true).status, .ok)
         let off = Readiness.callAudio(granted: false)
         XCTAssertEqual(off.status, .failed)
-        XCTAssertTrue(off.fix?.url.absoluteString.hasSuffix("Privacy_ScreenCapture") ?? false)
+        XCTAssertEqual(off.fix?.action, .askForCallAudio)
+        XCTAssertTrue(Readiness.callAudioPane.absoluteString.hasSuffix("Privacy_ScreenCapture"))
     }
 
     func testAnUnsupportedLanguageFails() async {

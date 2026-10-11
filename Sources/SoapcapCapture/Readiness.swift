@@ -5,10 +5,24 @@ import Speech
 
 /// Whether this app can capture and transcribe, read from macOS without recording anything.
 public enum Readiness {
-    static func privacy(_ pane: String, _ label: String) -> Check.Fix {
-        Check.Fix(label: label,
-                  url: URL(string: "x-apple.systempreferences:com.apple.preference.security?\(pane)")!)
+    static func pane(_ name: String) -> URL {
+        URL(string: "x-apple.systempreferences:com.apple.preference.security?\(name)")!
     }
+
+    /// The pane where the call-audio permission is turned on.
+    public static let callAudioPane = pane("Privacy_ScreenCapture")
+
+    /// True when the app may use the microphone and hear the call.
+    public static var hasPermissions: Bool {
+        AVCaptureDevice.authorizationStatus(for: .audio) == .authorized && CGPreflightScreenCaptureAccess()
+    }
+
+    /// Has macOS put its question about the microphone.
+    public static func askForMicrophone() async { _ = await AVCaptureDevice.requestAccess(for: .audio) }
+
+    /// Has macOS list this app under Screen & System Audio Recording, asking
+    /// about it the first time. The grant counts once the app is reopened.
+    public static func askForCallAudio() { _ = CGRequestScreenCaptureAccess() }
 
     public static func checks(locale: Locale = Locale(identifier: Locale.current.identifier)) async -> [Check] {
         [microphone(AVCaptureDevice.authorizationStatus(for: .audio)),
@@ -16,14 +30,15 @@ public enum Readiness {
     }
 
     static func microphone(_ status: AVAuthorizationStatus) -> Check {
-        let fix = privacy("Privacy_Microphone", "Open Microphone settings")
         switch status {
         case .authorized:
             return Check("Microphone", .ok, "Soapcap can hear your side.")
         case .notDetermined:
-            return Check("Microphone", .warning, "Not asked yet. macOS will ask the first time you start recording.")
+            return Check("Microphone", .warning, "Needed to hear your side. macOS will ask whether Soapcap may use the microphone; choose Allow.",
+                         fix: Check.Fix(label: "Allow the microphone", action: .askForMicrophone))
         default:
-            return Check("Microphone", .failed, "Turn on Soapcap under Microphone, then quit and reopen Soapcap.", fix: fix)
+            return Check("Microphone", .failed, "Turn on Soapcap under Microphone, then reopen Soapcap.",
+                         fix: Check.Fix(label: "Open Microphone settings", url: pane("Privacy_Microphone")))
         }
     }
 
@@ -31,8 +46,8 @@ public enum Readiness {
         granted
             ? Check("Call audio", .ok, "Soapcap can hear what the Mac is playing.")
             : Check("Call audio", .failed,
-                    "Turn on Soapcap under Screen & System Audio Recording, then quit and reopen Soapcap. If it is already on, remove it from the list and add it again.",
-                    fix: privacy("Privacy_ScreenCapture", "Open Screen Recording settings"))
+                    "Needed to hear the other side. macOS files this under Screen & System Audio Recording; no picture is taken. Turn Soapcap on in the list that opens, then reopen Soapcap. If it is already on, remove it from the list and add it again.",
+                    fix: Check.Fix(label: "Allow call audio", action: .askForCallAudio))
     }
 
     static func speech(locale: Locale) async -> [Check] {

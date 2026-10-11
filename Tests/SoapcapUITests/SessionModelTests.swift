@@ -199,6 +199,42 @@ final class SessionModelTests: XCTestCase {
         XCTAssertEqual(m.phase, .idle)
     }
 
+    func testALaunchWithoutPermissionsStartsOnTheSetupScreen() async {
+        let needed = [Check("Microphone", .warning, "ask")]
+        var fixer = SessionModel.Fixer()
+        fixer.hasPermissions = { false }
+        let first = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier,
+                                 fixer: fixer, checks: { needed })
+        first.setUpIfNeeded()
+        await waitFor("setup") { first.phase == .checks(needed) }
+        fixer.hasPermissions = { true }
+        let later = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier,
+                                 fixer: fixer, checks: { needed })
+        later.setUpIfNeeded()
+        try? await Task.sleep(nanoseconds: 200_000_000)
+        XCTAssertEqual(later.phase, .idle)
+    }
+
+    func testTheSetupButtonsAskMacOSAndOpenTheRightPlace() async {
+        final class Seen: @unchecked Sendable { var did: [String] = [] }
+        let seen = Seen()
+        var fixer = SessionModel.Fixer()
+        fixer.open = { seen.did.append("open \($0.absoluteString)") }
+        fixer.askForMicrophone = { seen.did.append("ask microphone") }
+        fixer.askForCallAudio = { seen.did.append("ask call audio") }
+        fixer.reopen = { seen.did.append("reopen") }
+        let after = [Check("Microphone", .ok, "granted")]
+        let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier,
+                             fixer: fixer, checks: { after })
+        m.perform(.askForMicrophone)
+        await waitFor("checked again") { m.phase == .checks(after) }     // the answer shows without another click
+        m.perform(.askForCallAudio)
+        m.perform(.open(URL(string: "https://ollama.com")!))
+        m.reopen()
+        XCTAssertEqual(seen.did, ["ask microphone", "ask call audio", "open \(Readiness.callAudioPane.absoluteString)",
+                                  "open https://ollama.com", "reopen"])
+    }
+
     func testTheDeidentifyCheckFollowsTheModelFiles() {
         XCTAssertEqual(ModelSetup.check(isReady: true).status, .ok)
         XCTAssertEqual(ModelSetup.check(isReady: false).status, .warning)

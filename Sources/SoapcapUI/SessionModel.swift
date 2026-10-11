@@ -42,6 +42,7 @@ final class SessionModel: ObservableObject {
     private let now: () -> Date
     private let gatherChecks: () async -> [Check]
     private let readMemory: () -> MemoryStatus?
+    private let fixer: Fixer
     private let deidentifying: Deidentifying
     private var capture: Capturing?
     private var recordedBefore: TimeInterval = 0
@@ -53,7 +54,8 @@ final class SessionModel: ObservableObject {
     init(makeCapture: @escaping () -> Capturing = { CaptureSession() }, now: @escaping () -> Date = Date.init,
          settings: SessionSettings = SessionSettings(), drafting: Drafting? = nil,
          deidentifying: Deidentifying? = nil, memory: @escaping () -> MemoryStatus? = MemoryStatus.current,
-         checks: (() async -> [Check])? = nil) {
+         fixer: Fixer = Fixer(), checks: (() async -> [Check])? = nil) {
+        self.fixer = fixer
         self.makeCapture = makeCapture
         self.now = now
         self.settings = settings
@@ -266,6 +268,47 @@ final class SessionModel: ObservableObject {
             if gen == generation { phase = .checks(checks) }
         }
     }
+
+    /// What the setup screen's buttons reach outside this window.
+    struct Fixer {
+        var hasPermissions: () -> Bool = { Readiness.hasPermissions }
+        var open: (URL) -> Void = { NSWorkspace.shared.open($0) }
+        var askForMicrophone: () async -> Void = { await Readiness.askForMicrophone() }
+        var askForCallAudio: () -> Void = { Readiness.askForCallAudio() }
+        var reopen: () -> Void = {
+            let again = NSWorkspace.OpenConfiguration()
+            again.createsNewApplicationInstance = true
+            NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: again) { _, _ in
+                DispatchQueue.main.async { NSApp.terminate(nil) }
+            }
+        }
+    }
+
+    /// On a first launch, or after a permission was taken away, the checks
+    /// screen is the place to start.
+    func setUpIfNeeded() {
+        if phase == .idle, !fixer.hasPermissions() { diagnose() }
+    }
+
+    /// Does what a button on the checks screen stands for.
+    func perform(_ action: Check.Fix.Action) {
+        switch action {
+        case .open(let url):
+            fixer.open(url)
+        case .askForMicrophone:
+            Task { await fixer.askForMicrophone(); diagnose() }      // the answer shows at once
+        case .askForCallAudio:
+            // The first time macOS asks; after that it stays quiet, so the
+            // list is opened either way.
+            fixer.askForCallAudio()
+            fixer.open(Readiness.callAudioPane)
+        case .showSettings:
+            break       // the window opens its own Settings
+        }
+    }
+
+    /// Quits and opens the app again, which is when macOS counts a new permission.
+    func reopen() { fixer.reopen() }
 
     func newSession() {
         generation += 1

@@ -4,14 +4,26 @@ import SwiftUI
 /// What the app needs in order to record, and what to do about anything missing.
 struct ChecksView: View {
     let checks: [Check]
+    /// Does what a row's button stands for.
+    let perform: (Check.Fix.Action) -> Void
+    let reopen: () -> Void
     let again: () -> Void
     let back: () -> Void
-    @Environment(\.openURL) private var openURL
+    @Environment(\.openSettings) private var openSettings
+
+    /// While a permission is missing this screen is the way in, not a report.
+    private var isSetup: Bool {
+        checks.contains { ["Microphone", "Call audio"].contains($0.title) && $0.status != .ok }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(checks.allSatisfy { $0.status == .ok } ? "Everything is ready" : "Some things need attention")
+            Text(checks.allSatisfy { $0.status == .ok } ? "Everything is ready" : isSetup ? "Set up Soapcap" : "Some things need attention")
                 .font(.title2.bold())
+            if isSetup {
+                Text("Soapcap needs two permissions from macOS before it can record. Each button below says what you are about to see.")
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     ForEach(checks) { check in
@@ -22,7 +34,9 @@ struct ChecksView: View {
                                 Text(check.detail).foregroundStyle(.secondary)
                                     .fixedSize(horizontal: false, vertical: true)
                                 if let fix = check.fix {
-                                    Button(fix.label) { openURL(fix.url) }.controlSize(.small).padding(.top, 2)
+                                    Button(fix.label) {
+                                        if fix.action == .showSettings { openSettings() } else { perform(fix.action) }
+                                    }.controlSize(.small).padding(.top, 2)
                                 }
                             }
                         }
@@ -30,9 +44,19 @@ struct ChecksView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+            if isSetup {
+                Text("macOS counts a new permission once the app has been reopened.").font(.caption).foregroundStyle(.secondary)
+            }
             HStack {
-                Button("Back") { back() }.keyboardShortcut(.defaultAction)
-                Button("Check again") { again() }
+                if isSetup {
+                    Button("Reopen Soapcap") { reopen() }.keyboardShortcut(.defaultAction)
+                    Button("Check again") { again() }
+                    Spacer()
+                    Button("Not now") { back() }
+                } else {
+                    Button("Back") { back() }.keyboardShortcut(.defaultAction)
+                    Button("Check again") { again() }
+                }
             }
         }
     }
