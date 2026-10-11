@@ -32,6 +32,8 @@ final class SessionModel: ObservableObject {
     /// Set when a draft was asked for with memory very short: the question
     /// to put before going ahead. Cleared by the answer.
     @Published var memoryQuestion: String?
+    /// True while the note model is working, which is when it can be stopped.
+    @Published var isDrafting = false
 
     /// Whether the de-identification model is installed, so the toggle is offered.
     @Published private(set) var canDeidentify = false
@@ -44,7 +46,6 @@ final class SessionModel: ObservableObject {
     private let readMemory: () -> MemoryStatus?
     private let drafting: Drafting
     private let deidentifying: Deidentifying
-    private var isDrafting = false
     private var draftTask: Task<Void, Never>?
     private var capture: Capturing?
     private var recordedBefore: TimeInterval = 0
@@ -246,6 +247,18 @@ final class SessionModel: ObservableObject {
             copied = false
             phase = .note
         }
+    }
+
+    /// Gives up on the draft in flight and frees the model's memory, going
+    /// back to the transcript (or to the note being drafted again).
+    func stopDraft() {
+        guard isDrafting else { return }
+        generation += 1
+        isDrafting = false
+        draftTask?.cancel(); draftTask = nil
+        Task { await releaseModel() }
+        memory = nil
+        phase = note.isEmpty ? .transcript : .note
     }
 
     /// Progress arrives from the drafter's own thread, possibly after the

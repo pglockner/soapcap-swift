@@ -51,6 +51,7 @@ struct ContentView: View {
                 VStack(spacing: 10) {
                     ProgressView(msg)
                     if let memory = m.memory { MemoryLine(memory: memory) }
+                    if m.isDrafting { Button("Stop drafting") { m.stopDraft() }.padding(.top, 8) }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             case .transcript: transcript

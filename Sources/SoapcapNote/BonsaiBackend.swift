@@ -84,6 +84,7 @@ public actor BonsaiBackend: NoteBackend {
         if isRunning, context >= wanted { return }
         await stop()
         try await check()
+        try Task.checkCancellation()
 
         let server = Process()
         server.executableURL = install.server
@@ -107,6 +108,8 @@ public actor BonsaiBackend: NoteBackend {
                 await stop()
                 throw NoteError.notReady("llama-server exited while loading Bonsai. Its last lines:\n\(log.tail)")
             }
+            // A draft given up on while loading must not leave the server behind.
+            if Task.isCancelled { await stop(); throw CancellationError() }
             if await healthy() == true { return }
             try? await Task.sleep(for: .seconds(pollInterval))
         }

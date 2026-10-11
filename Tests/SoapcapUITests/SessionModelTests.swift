@@ -309,7 +309,7 @@ final class SessionModelTests: XCTestCase {
         UserDefaults(suiteName: suite)!.set("bonsai", forKey: SessionSettings.Key.noteModel)
         var free = 30
         let m = SessionModel(makeCapture: { FakeCapture(hello) }, settings: settings, drafting: drafter, deidentifying: deidentifier,
-                             memory: { MemoryStatus(totalBytes: 16 << 30, freePercent: free) })
+                             memory: { MemoryStatus(totalBytes: 16 << 30, freePercent: free, swapUsedBytes: 7 << 30, swapTotalBytes: 8 << 30) })
         m.start()
         await waitFor("recording") { m.phase == .recording }
         m.stop()
@@ -321,6 +321,29 @@ final class SessionModelTests: XCTestCase {
         m.draftIfRoom()
         XCTAssertNil(m.memoryQuestion)
         await waitFor("note") { m.phase == .note }
+    }
+
+    func testStoppingADraftFreesTheModelAndGoesBackToTheTranscript() async {
+        let m = SessionModel(makeCapture: { FakeCapture(hello) }, settings: settings, drafting: drafter, deidentifying: deidentifier)
+        m.start()
+        await waitFor("recording") { m.phase == .recording }
+        m.stop()
+        await waitFor("transcript") { m.phase == .transcript }
+        m.draft()
+        await waitFor("drafting") { m.isDrafting }
+        m.stopDraft()
+        XCTAssertEqual(m.phase, .transcript)
+        XCTAssertNil(m.memory)
+        await waitFor("released") { self.drafter.releases > 0 }
+        try? await Task.sleep(nanoseconds: 300_000_000)      // the abandoned draft finishing changes nothing
+        XCTAssertEqual(m.phase, .transcript)
+        XCTAssertEqual(m.note, "")
+        m.draft()                                            // and drafting again still works
+        await waitFor("note") { m.phase == .note }
+        m.draft()
+        await waitFor("drafting again") { m.isDrafting }
+        m.stopDraft()
+        XCTAssertEqual(m.phase, .note)                       // the earlier note is kept
     }
 
     func testClosingAppsIsAdvisedOnlyForBonsaiWhenMemoryIsShort() {
