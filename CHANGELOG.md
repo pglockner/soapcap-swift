@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7 (2026-10-10)
+
+- Added the note engine inside the app: `llama-server`, built from PrismML's pinned source by `engine.sh`, so Bonsai no longer needs soapcap's build. Building the app now needs cmake
+- Added downloading Bonsai from Settings: size, time, free disk and memory are said first, a stopped download carries on where it left off, and **Remove** deletes it. A copy soapcap installed is used where it is
+- Changed every build to run under the hardened runtime, and added `notarize.sh`, which has Apple notarize a build signed with a Developer ID
+- Changed the note screen's **Discard** button to **New session** once the note has been copied
+- Added llama.cpp and Bonsai to Acknowledgements
+
 ## 0.6 (2026-10-10)
 
 - Added a line showing memory in use while a note is drafted: green, yellow from 75%, red from 90%, where it also shows swap in use
@@ -22,7 +30,6 @@
 - Fixed `build.sh` producing an app without the Metal library de-identifying needs; it now stops with an error (0.5.1)
 - Changed SOAP notes drafted with Bonsai to read the transcript once instead of once per pass, saving about two minutes on an hour-long session (0.5.2)
 
-
 ## 0.4 (2026-10-10)
 
 - Added note drafting inside the app, with a model in Ollama or with Bonsai, replacing `soapcap note`; the `soapcap` tool is now only needed for de-identification
@@ -32,13 +39,11 @@
 - Fixed capture to carry on when the microphone changes mid-session
 - Added an icon for the app
 
-
 ## 0.3 (2026-10-10)
 
 - Changed **Check permissions** to report what the app itself can do: its Microphone and Screen Recording grants, speech recognition for your language, and whether the `soapcap` tool and de-identify helper are found, with a button to the right pane of System Settings. It no longer runs `soapcap doctor`, so it does not check the note model.
 - Added a Settings window (Cmd-comma) for the two speaker labels and the language to transcribe in.
 - Changed the note format and the de-identify choice to be remembered between launches.
-
 
 ## 0.2 (2026-10-10)
 
@@ -47,7 +52,6 @@
 - Added a live strip on the recording screen showing the last few lines heard from each side.
 - Added a warning on the transcript when only the microphone was heard.
 - Added `CaptureProbe`, a command-line check that records for a few seconds and prints the transcript.
-
 
 ## 0.1 (2026-09-18 – 2026-10-10)
 
