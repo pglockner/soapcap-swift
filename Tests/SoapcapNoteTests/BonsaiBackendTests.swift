@@ -47,6 +47,25 @@ final class BonsaiBackendTests: XCTestCase {
 
     private func touch(_ name: String) { FileManager.default.createFile(atPath: dir.appendingPathComponent(name).path, contents: nil) }
 
+    func testTheAppsOwnEngineAndWeightsComeBeforeSoapcaps() throws {
+        let mine = dir.appendingPathComponent("app"), soapcaps = dir.appendingPathComponent("soapcap")
+        func file(_ url: URL) throws -> URL {
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try Data().write(to: url)
+            return url
+        }
+        let servers = [mine.appendingPathComponent("llama-server"), soapcaps.appendingPathComponent("llama-server")]
+        let weights = [mine.appendingPathComponent("model.gguf"), soapcaps.appendingPathComponent("model.gguf")]
+        // Nothing anywhere: the app's own places are what will be reported missing.
+        XCTAssertEqual(BonsaiBackend.Install.found(servers: servers, weights: weights), .init(server: servers[0], weights: weights[0]))
+        // Only soapcap's install: it is used where it is.
+        _ = try file(servers[1]); _ = try file(weights[1])
+        XCTAssertEqual(BonsaiBackend.Install.found(servers: servers, weights: weights), .init(server: servers[1], weights: weights[1]))
+        // The app's engine with soapcap's weights, as on a Mac that had soapcap first.
+        _ = try file(servers[0])
+        XCTAssertEqual(BonsaiBackend.Install.found(servers: servers, weights: weights), .init(server: servers[0], weights: weights[1]))
+    }
+
     func testCheckSaysWhenBonsaiIsNotSetUpOrThePortIsTaken() async throws {
         try await backend().check()
         StubHTTP.answer = { _ in #"{"status": "ok"}"# }

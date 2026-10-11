@@ -1,8 +1,10 @@
 [
-  {"name": "soapcap", "by": "Phil Glockner", "role": "The shell tool this app is a rewrite of. Its note prompts, draft checks and de-identification rules are used here.",
+  {"name": "soapcap", "by": "Phil Glockner", "role": "The command-line tool with the same goal. Its note prompts, draft checks and de-identification rules are used here.",
    "url": "https://github.com/pglockner/soapcap", "license": "MIT", "licenseFile": "soapcap.txt"},
   {"name": "yap", "by": "Finn Voorhees", "role": "Capture and transcription on Apple's SpeechAnalyzer. The capture and segmenting code here is ported from it.",
    "url": "https://github.com/finnvoor/yap", "license": "CC0 1.0", "licenseFile": "yap.txt"},
+  {"name": "llama.cpp, PrismML's fork", "by": "The ggml authors and PrismML", "role": "Runs the note models. Its llama-server is built from source and ships inside the app.",
+   "url": "https://github.com/PrismML-Eng/llama.cpp", "license": "MIT", "licenseFile": "llama-cpp.txt"},
   {"name": "OpenMed PII model", "by": "OpenMed", "role": "The on-device model that finds names and other identifying details (OpenMed-PII-ClinicalE5-Small-33M-v1). Downloaded separately, not shipped in the app.",
    "url": "https://huggingface.co/OpenMed/OpenMed-PII-ClinicalE5-Small-33M-v1-mlx", "license": "Apache-2.0", "licenseFile": "openmed-model.txt"},
   {"name": "OpenMedKit", "by": "Maziyar Panahi", "role": "Runs the PII model inside the app.",

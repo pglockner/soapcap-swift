@@ -37,8 +37,8 @@ the exception: macOS doesn't let its call audio be captured.
 | Requirement | Notes |
 |---|---|
 | macOS 26 (Tahoe) or newer, Apple silicon | |
-| Full Xcode | To build; the Command Line Tools alone are not enough |
-| A note model | [Ollama](https://ollama.com) with a pulled model (`llama3.1:8b` is the tested default), or Bonsai, set up by soapcap's `tools/bonsai/install.sh`. Recording works without one |
+| Full Xcode, and cmake | To build. The Command Line Tools alone are not enough; cmake (`brew install cmake`) builds the note engine |
+| A note model | [Ollama](https://ollama.com) with a pulled model (`llama3.1:8b` is the tested default), or Bonsai. The app carries Bonsai's engine; its model file (5.9 GB) still comes from soapcap's `tools/bonsai/install.sh`. Recording works without one |
 | The de-identification model (optional) | OpenMed's PII model, about 130 MB, installed from Settings |
 
 ## Build and run
@@ -47,8 +47,8 @@ the exception: macOS doesn't let its call audio be captured.
 ./build.sh && open build/Soapcap.app
 ```
 
-The first build fetches the de-identifier's packages and takes a minute or
-so longer. Sign with a stable identity (see [Signing](#signing)), or macOS
+The first build fetches the de-identifier's packages and builds the note
+engine, and takes a few minutes longer. Sign with a stable identity (see [Signing](#signing)), or macOS
 forgets the app's permissions on every rebuild.
 
 ## Using the app
@@ -135,8 +135,9 @@ Ollama's address is under Advanced.
 | Settings | `config.sh` | Its own Settings window |
 
 They share the prompts, the Objective frame and the checks applied to a
-draft, and the app's tests reuse soapcap's cases so the two agree. Bonsai
-is installed by soapcap's script, and the app finds it there.
+draft, and the app's tests reuse soapcap's cases so the two agree. The app
+runs Bonsai with an engine of its own and, for now, the model file that
+soapcap's script downloads.
 
 ## Development
 
@@ -156,6 +157,14 @@ Three probes run a piece of the app without the window:
   `gguf:PATH` runs a model file with Bonsai's server.
 - `swift run -c release DeidentifyProbe FILE [note]` de-identifies a file.
   `--install` sets up the model first; `--windows` tries other passes.
+
+### Note engine
+
+`engine.sh` builds `llama-server` from PrismML's llama.cpp, at a pinned
+commit, into `.build/engine`. `build.sh` runs it and puts the result inside
+the app, which starts it for a draft and gives it a key only the app knows.
+`SOAPCAP_ENGINE` names a different `llama-server`, for trying a build with
+the probes.
 
 ### De-identification model
 

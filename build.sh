@@ -12,14 +12,17 @@ version=$(tr -d '[:space:]' < VERSION)
 build=$(git rev-list --count HEAD 2>/dev/null || echo 1)
 
 swift build -c release
+./engine.sh
 app="$here/build/Soapcap.app"
 rm -rf "$app"
-mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources" "$app/Contents/Helpers"
 cp Assets/soapcap.icns "$app/Contents/Resources/soapcap.icns"
 # The note prompts are data files; the app reads them from its Resources.
 cp -R Sources/SoapcapNote/Resources/prompts "$app/Contents/Resources/prompts"
 bin=$(swift build -c release --show-bin-path)
 cp "$bin/Soapcap" "$app/Contents/MacOS/Soapcap"
+# The note-model engine: started by the app for a draft, never run by hand.
+cp "$here/.build/engine/llama-server" "$app/Contents/Helpers/llama-server"
 # Resource bundles of the packages the app links (one holds the Metal library
 # the de-identification model runs on). They are looked up in Resources.
 for bundle in "$bin"/*.bundle; do
@@ -50,6 +53,8 @@ cat > "$app/Contents/Info.plist" <<PLIST
   <string>Soapcap transcribes your microphone on-device during a session.</string>
 </dict></plist>
 PLIST
+# Code inside the app is signed first; the app's signature then covers it.
+codesign --force --sign "${SOAPCAP_SIGN_IDENTITY:--}" --identifier local.soapcap.session.llama-server "$app/Contents/Helpers/llama-server"
 codesign --force --sign "${SOAPCAP_SIGN_IDENTITY:--}" --identifier local.soapcap.session "$app"
 echo "Built $app"
 echo "Run: open \"$app\""

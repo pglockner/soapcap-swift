@@ -1,8 +1,8 @@
 import Foundation
 
 /// Bonsai 2 27B, served by a `llama-server` this backend starts for a note
-/// and stops afterwards. Both the server build and the weights are set up
-/// outside the app, by soapcap's tools/bonsai/install.sh.
+/// and stops afterwards. The server ships inside the app (see engine.sh);
+/// the weights are a download.
 public actor BonsaiBackend: NoteBackend {
     /// Where the two halves of a Bonsai setup are, and the local port to serve on.
     public struct Install: Equatable, Sendable {
@@ -16,11 +16,29 @@ public actor BonsaiBackend: NoteBackend {
             self.port = port
         }
 
-        /// Where soapcap's installer puts it.
+        static let weightsName = "Ternary-Bonsai-2-27B-PTQ1_0.gguf"
+
+        /// Where the app keeps the note models it downloads.
+        public static var modelsDirectory: URL {
+            URL.applicationSupportDirectory.appending(path: "Soapcap/note-models", directoryHint: .isDirectory)
+        }
+
+        /// The engine inside the app and the app's own copy of the weights,
+        /// or else what soapcap's installer set up, used where it is.
+        /// SOAPCAP_ENGINE names a different llama-server, for trying a build.
         public static var standard: Install {
-            let dir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".local/share/soapcap/bonsai")
-            return Install(server: dir.appendingPathComponent("llama.cpp/build/bin/llama-server"),
-                           weights: dir.appendingPathComponent("Ternary-Bonsai-2-27B-PTQ1_0.gguf"))
+            let soapcap = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".local/share/soapcap/bonsai")
+            let named = ProcessInfo.processInfo.environment["SOAPCAP_ENGINE"].map { [URL(fileURLWithPath: $0)] } ?? []
+            return found(servers: named + [Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/llama-server"),
+                                           soapcap.appendingPathComponent("llama.cpp/build/bin/llama-server")],
+                         weights: [modelsDirectory.appendingPathComponent(weightsName), soapcap.appendingPathComponent(weightsName)])
+        }
+
+        /// The first of each that is there. When none is, the first, so that
+        /// what gets reported missing is the place the app would put it.
+        static func found(servers: [URL], weights: [URL]) -> Install {
+            func first(_ urls: [URL]) -> URL { urls.first { FileManager.default.fileExists(atPath: $0.path) } ?? urls[0] }
+            return Install(server: first(servers), weights: first(weights))
         }
 
         public var isPresent: Bool {
