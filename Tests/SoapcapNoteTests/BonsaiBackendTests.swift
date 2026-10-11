@@ -1,13 +1,14 @@
 import XCTest
 @testable import SoapcapNote
 
-/// A stand-in llama-server, as in soapcap's tests: logs its arguments, then
-/// runs until signalled. With the `crash` file present it exits at once, as a
+/// A stand-in llama-server, as in soapcap's tests: notes the key it was
+/// given, logs its arguments, then runs until signalled. With the `crash` file present it exits at once, as a
 /// failed model load does; with `stubborn` it ignores a polite stop.
 private let fakeServer = #"""
 #!/usr/bin/env bash
 dir=$(dirname "$0")
 if [ -f "$dir/crash" ]; then echo "llama_model_load: error loading model" >&2; exit 1; fi
+echo "$LLAMA_API_KEY" > "$dir/key"
 echo "started $*" >> "$dir/log"
 if [ -f "$dir/stubborn" ]; then trap '' TERM; else trap 'echo stopped >> "$dir/log"; exit 0' TERM INT; fi
 while :; do sleep 0.05; done
@@ -84,6 +85,24 @@ final class BonsaiBackendTests: XCTestCase {
         do { try await backend().start(context: 8192); XCTFail("started") } catch {
             XCTAssertTrue(error.localizedDescription.contains("error loading model"), error.localizedDescription)
         }
+    }
+
+    func testOnlyTheAppCanTalkToTheServerItStarts() async throws {
+        StubHTTP.replies["/v1/chat/completions"] = #"{"choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}]}"#
+        let bonsai = backend()
+        func key() throws -> String {
+            try String(contentsOf: dir.appendingPathComponent("key"), encoding: .utf8).trimmingCharacters(in: .newlines)
+        }
+        try await bonsai.start(context: 8192)
+        let first = try key()
+        XCTAssertEqual(first.count, 64)
+        XCTAssertFalse(log.joined().contains(first), "the key must not be on the command line")
+        _ = try await bonsai.request(prompt: "P", cap: 10, schema: nil) { _ in }
+        XCTAssertEqual(StubHTTP.sent.last?.authorization, "Bearer \(first)")
+        await bonsai.stop()
+        try await bonsai.start(context: 8192)
+        XCTAssertNotEqual(try key(), first, "each server gets a key of its own")
+        await bonsai.stop()
     }
 
     func testGivingUpWhileTheModelLoadsStopsTheServer() async throws {

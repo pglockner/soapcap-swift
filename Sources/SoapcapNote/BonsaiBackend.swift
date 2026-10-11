@@ -45,6 +45,10 @@ public actor BonsaiBackend: NoteBackend {
     private let pollInterval: TimeInterval
     private var process: Process?
     private var context = 0
+    /// Made afresh for each server and known only to it and this app.
+    /// Without a key the server answers any program on this Mac, and any
+    /// web page open in a browser.
+    private var key = ""
     private let log = LogTail()
 
     /// The defaults are Bonsai's. The same server runs any GGUF model, so a
@@ -97,6 +101,9 @@ public actor BonsaiBackend: NoteBackend {
         server.arguments = ["-m", install.weights.path, "--host", "127.0.0.1", "--port", String(install.port),
                             "-ngl", "99", "-c", String(wanted), "--parallel", "1",
                             "--cache-type-k", "q8_0", "--cache-type-v", "q8_0"]
+        key = (0..<32).map { _ in String(format: "%02x", UInt8.random(in: .min ... .max)) }.joined()
+        // In its environment, not its arguments, which any process can list.
+        server.environment = ProcessInfo.processInfo.environment.merging(["LLAMA_API_KEY": key]) { _, new in new }
         let output = Pipe()
         server.standardOutput = output
         server.standardError = output
@@ -139,6 +146,7 @@ public actor BonsaiBackend: NoteBackend {
         var request = URLRequest(url: install.url.appendingPathComponent("v1/chat/completions"))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if !key.isEmpty { request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization") }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         request.timeoutInterval = 900
 

@@ -6,7 +6,7 @@ final class StubHTTP: URLProtocol, @unchecked Sendable {
     nonisolated(unsafe) static var replies: [String: String] = [:]   // path -> body
     /// Asked first; nil falls through to `replies`.
     nonisolated(unsafe) static var answer: (String) -> String? = { _ in nil }
-    nonisolated(unsafe) static var sent: [(path: String, body: [String: Any])] = []
+    nonisolated(unsafe) static var sent: [(path: String, body: [String: Any], authorization: String?)] = []
 
     static func session() -> URLSession {
         let config = URLSessionConfiguration.ephemeral
@@ -31,7 +31,7 @@ final class StubHTTP: URLProtocol, @unchecked Sendable {
         }
         let body = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
         let path = request.url!.path
-        Self.sent.append((path, body))
+        Self.sent.append((path, body, request.value(forHTTPHeaderField: "Authorization")))
         guard let reply = Self.answer(path) ?? Self.replies[path] else {
             client?.urlProtocol(self, didFailWithError: URLError(.cannotConnectToHost)); return
         }
