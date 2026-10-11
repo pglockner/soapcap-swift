@@ -1,153 +1,183 @@
 # soapcap-swift
 
-A native Swift rewrite of [soapcap](https://github.com/pglockner/soapcap):
-on-device capture of a speaker-attributed telehealth transcript on a Mac,
-and a locally drafted SOAP/DAP/BIRP note, with nothing leaving the machine.
+A Mac app that turns a telehealth session into a **speaker-attributed
+transcript** and a **drafted SOAP, DAP or BIRP note**, entirely on the Mac.
+No cloud, no audio recorded, nothing saved to disk.
 
-**Status: in development.** Soapcap.app is a SwiftUI window for the
-`soapcap session` flow. It captures, transcribes, de-identifies and drafts
-the note on its own, and needs no soapcap install. The shell version of
-soapcap remains the supported tool until this one replaces it.
+It has the same goal as [soapcap](https://github.com/pglockner/soapcap),
+the command-line tool, and shares its prompts and test cases. It is its own
+implementation: one window that captures, de-identifies and drafts by
+itself.
 
-## Rewrite plan
+**In development.** Everything below works, but there is no installer yet:
+you build it with Xcode. For a finished tool, use soapcap.
 
-The app began as a window around the `soapcap` command-line tool. Each
-step moved one piece of that tool into Swift, with the app working
-throughout; it now runs no other program except a note model.
+[How it works](#how-it-works) ·
+[Requirements](#requirements) ·
+[Build and run](#build-and-run) ·
+[Using the app](#using-the-app) ·
+[Privacy](#privacy) ·
+[Not yet](#not-yet) ·
+[soapcap and this app](#soapcap-and-this-app) ·
+[Development](#development)
 
-- [x] Window front end for the session flow (record, pause/resume, optional
-      de-identify, draft, keep and copy)
-- [ ] The `structured` and `combined` note styles, and showing their review
-      (a stretch goal: nobody is asking for them yet)
-- [x] Capture and transcription in-process (Apple SpeechAnalyzer), replacing
-      `soapcap live` and the `yap` dependency
-- [x] Transcript rendering and echo de-duplication
-- [x] Note drafting against the local model servers, replacing `soapcap note`
-      (narrative style; prompts and the schema stay as data files)
-- [x] De-identification in-process (the model files stay a separate download)
-- [x] Permission checks and settings in the app (labels, language)
-- [x] Note-model checks and model selection
-- [x] Memory pressure: shown while a note is drafted, and before drafting
-      with Bonsai the app suggests closing other apps when memory is short
-- [ ] Note structure from a settings file (an idea, not scoped): which
-      sections a note has and the rules for each, so the format can be
-      tailored without editing prompts and code. Needs its own documentation
-- [ ] A signed, notarized build that needs no Xcode to install
+## How it works
 
-## Soapcap.app
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="Assets/how-it-works-dark.svg">
+  <img src="Assets/how-it-works-light.svg" alt="Call audio and your microphone feed Record (Apple SpeechAnalyzer, no audio recorded), which produces a transcript. The transcript goes straight to Draft note (Ollama or Bonsai, a local model), or first through the optional De-identify step, which redacts names and identifiers. The draft note is shown in the window, and Keep copies it. Everything runs on this Mac and is held in memory only; no audio, transcript or note is saved to disk.">
+</picture>
 
-Because it isn't a terminal program, nothing it shows can end up in terminal
-scrollback or a terminal's window-restore snapshot. Data stays in memory; the
-note is copied to the clipboard marked as concealed so clipboard managers that
-honor that convention skip it.
+The app listens to **what the Mac is playing** and to **your microphone**,
+so it works with any conferencing tool and never talks to one. FaceTime is
+the exception: macOS doesn't let its call audio be captured.
 
-### Requirements
+## Requirements
 
 | Requirement | Notes |
 |---|---|
-| macOS 26 (Tahoe) or newer, Apple silicon | Same as soapcap |
-| Full Xcode (not just Command Line Tools) | To build |
-| A note model (for drafting; recording works without one) | [Ollama](https://ollama.com) with a pulled model (`llama3.1:8b` is the tested default), or Bonsai set up by soapcap's `tools/bonsai/install.sh` |
-| The de-identification model (optional) | OpenMed's PII model, about 130 MB, installed from Settings. The de-identify toggle appears once it is there |
+| macOS 26 (Tahoe) or newer, Apple silicon | |
+| Full Xcode | To build; the Command Line Tools alone are not enough |
+| A note model | [Ollama](https://ollama.com) with a pulled model (`llama3.1:8b` is the tested default), or Bonsai, set up by soapcap's `tools/bonsai/install.sh`. Recording works without one |
+| The de-identification model (optional) | OpenMed's PII model, about 130 MB, installed from Settings |
 
-### Build and run
+## Build and run
 
 ```sh
 ./build.sh && open build/Soapcap.app
 ```
 
-The first build fetches the packages the de-identifier is built on and
-takes a minute or so longer. `build.sh` signs ad hoc. To keep macOS privacy grants across rebuilds, set
-`SOAPCAP_SIGN_IDENTITY` to a stable local code-signing identity. The app's
-version comes from `VERSION`; its build number is the commit count.
+The first build fetches the de-identifier's packages and takes a minute or
+so longer. Sign with a stable identity (see [Signing](#signing)), or macOS
+forgets the app's permissions on every rebuild.
 
-To see SwiftUI previews, open this folder in Xcode and select the `SoapcapUI`
-scheme (the window lives in that library; `Soapcap` is only the launcher).
+## Using the app
 
-### Using the app
+**First run.** Grant Microphone and Screen Recording to Soapcap, then quit
+and reopen it. Screen Recording is how macOS lets an app hear what the Mac
+is playing; no picture is taken. **Check permissions** reports both grants,
+speech recognition for your language, the note model, the de-identification
+model and free memory, with a button to the right pane of System Settings.
 
-Grant Microphone and Screen Recording to "Soapcap" the first time (quit and
-reopen the app after granting). Screen Recording is how macOS lets an app
-hear what the Mac is playing; no picture is kept. The **Check permissions**
-button shows whether the app has both grants, whether speech recognition is
-ready for your language, whether the note model is ready, whether the
-de-identification model is installed, and how much memory is free, with a button to the right pane of
-System Settings.
+**Record.** Use headphones and turn on Do Not Disturb. The window shows the
+last few lines heard from each side. **Pause** stops listening and stops
+the clock; **Resume** carries on in the same session. A microphone that
+changes mid-session, such as AirPods connecting, is picked up.
 
-Settings (Cmd-comma) holds the two speaker labels, the language to
-transcribe in, the note model, and the session type that goes on the note's
-first line ("53 minutes, telehealth"). Under Advanced is Ollama's address;
-anything but this Mac sends the transcript over the network, and the note
-says so.
+**De-identify** (optional). Names, phone numbers, dates and similar details
+become tokens like `[FIRST_NAME_1]`, in the transcript and again in the
+note. Speaker labels and clock times are kept. It is best effort, so read
+the result before sharing it. If it fails, the text is shown under a red
+"Not de-identified" banner rather than passed off as checked.
 
-A note is drafted up to three times if a section comes back missing or
-empty, keeping the most complete draft. A SOAP note's Objective is a fixed
-mental-status frame filled in by a separate pass; it never states "No SI/HI
-reported" if either pass saw risk language. Anything you should know about a
-draft (an untested model, a section still missing, a failed Objective pass)
-appears under the note and is never copied with it. With Bonsai, a SOAP
-note first reads the transcript on its own and both passes carry on from
-there, instead of each reading it in full; on an hour-long session that
-saves about two minutes.
+**Draft note.** Pick SOAP, DAP or BIRP.
 
-While a note is drafted the window shows memory in use, green, then yellow
-from 75% and red from 90%. The figure counts swap, so it passes 100% once
-the Mac is swapping to make room, which slows drafting a lot; from 90% it
-also shows swap in use. Bonsai takes about 8 GB. When less than that plus
-a gigabyte is free, the transcript screen says so before you draft and
-suggests closing other apps; **Check permissions** reports the same. When
-6 GB or less is free and 6 GB or more is already in swap, **Draft note**
-asks before going ahead. **Stop drafting** gives up on a draft, frees the
-model's memory and goes back to the transcript.
+- A draft with a missing or empty section is redone, up to three times, and
+  the most complete one is kept.
+- A SOAP note's Objective is a fixed mental-status frame filled in by a
+  separate pass. It never says "No SI/HI reported" if risk language was
+  seen.
+- Cautions about a draft (an untested model, a section still missing)
+  appear under the note and are never copied with it.
+- **Keep** copies the note. **Regenerate** drafts it again.
 
-The model stays loaded
-between drafts and is released when you discard the note, start a new
-session or quit.
+**While drafting.** The window shows memory in use, turning yellow and then
+red as the Mac fills up and starts swapping. Bonsai takes about 8 GB: the
+app suggests closing other apps when memory is short, and asks before
+drafting when the Mac is also deep in swap. **Stop drafting** ends a draft
+and frees the model's memory. Otherwise the model stays loaded until you
+discard the note, start a new session or quit.
 
-De-identifying replaces names, phone numbers, dates and similar details in
-the transcript and the note with tokens like `[FIRST_NAME_1]`; speaker
-labels and clock times are left alone. It is best effort: the model misses
-things, so read the result before sharing it. The text is read twice and
-the findings merged: a detection pass in short overlapping chunks, and a
-context pass in long ones. If it fails, the text is
-shown under a red "Not de-identified" banner rather than passed off as
-checked. The model is set up from Settings: if soapcap's copy is on the Mac
-it is copied, otherwise it is downloaded from huggingface.co and each file
-is checked against a pinned checksum. That download is the only time the
-app uses the network, and nothing from a session is sent. The model is kept
-in `~/Library/Application Support/Soapcap/deidentify-model`; delete that
-folder to remove it. `SOAPCAP_DEIDENTIFY_MODEL` names a different folder,
-and `SOAPCAP_DEIDENTIFY_DIR` says where soapcap's de-identify install is
-(as it does for soapcap), when the app is started from a terminal.
+**Settings** (Cmd-comma). The two speaker labels, the language to
+transcribe in, the note model, the session type on the note's first line
+("53 minutes, telehealth"), and setting up the de-identification model.
+Ollama's address is under Advanced.
 
-The app menu's **Acknowledgements** lists the projects the app is built on
-and their licences.
+## Privacy
 
-While recording, the window shows the last few lines heard from each side.
-Pause stops listening and stops the clock; Resume carries on in the same
-session. If the microphone changes mid-session (AirPods connecting or
-dropping), capture carries on with the new one.
+- **Nothing is saved.** Audio is never recorded. The transcript and the
+  note live in memory and are gone when you start a new session or quit.
+- **Nothing lands in a terminal.** A window has no scrollback and no
+  window-restore snapshot.
+- **The copied note is marked concealed**, so clipboard managers that honor
+  that convention skip it.
+- **One download, nothing uploaded.** Setting up the de-identification
+  model fetches it from huggingface.co and checks each file against a
+  pinned checksum, or copies soapcap's if that is on the Mac. It is the
+  only time the app goes online, and nothing from a session is sent.
+- **Ollama on another machine breaks the promise.** If its address is not
+  this Mac, the transcript travels over the network, and the note says so.
 
-Three command-line checks work without the window:
-`swift run CaptureProbe 15` records for 15 seconds and prints the
-transcript; `swift run NoteProbe FILE [soap|dap|birp] [MODEL] [MINUTES]`
-drafts a note from a transcript file (`bonsai` as the model uses Bonsai);
-and `swift run -c release DeidentifyProbe FILE [note]` de-identifies a file
-(`--install` sets up the model first; `--windows` tries other passes).
+## Not yet
+
+- [ ] A signed, notarized build that installs without Xcode
+- [ ] Stretch: the `structured` and `combined` note styles (nobody is
+      asking for them yet). Notes are drafted in the narrative style only
+- [ ] Idea, not scoped: note structure from a settings file, so a note's
+      sections and their rules can be tailored without editing prompts and
+      code
+
+## soapcap and this app
+
+| | soapcap | soapcap-swift |
+|---|---|---|
+| Form | Command-line tool | Mac app, one window |
+| Setup | `./install.sh`, with Homebrew | Build with Xcode |
+| Speech recognition | Apple SpeechAnalyzer, through `yap` | Apple SpeechAnalyzer, built in |
+| De-identification | OpenMed's PII model, through a Python helper | The same model, built in |
+| Saving to a file | Only if you ask | Never |
+| Note styles | narrative, structured, combined | narrative |
+| Settings | `config.sh` | Its own Settings window |
+
+They share the prompts, the Objective frame and the checks applied to a
+draft, and the app's tests reuse soapcap's cases so the two agree. Bonsai
+is installed by soapcap's script, and the app finds it there.
+
+## Development
+
+To see SwiftUI previews, open this folder in Xcode and select the
+`SoapcapUI` scheme. The window lives in that library; `Soapcap` is only the
+launcher. The app's version comes from `VERSION`, and its build number is
+the commit count.
+
+### Command-line checks
+
+Three probes run a piece of the app without the window:
+
+- `swift run CaptureProbe 15` records for 15 seconds and prints the
+  transcript.
+- `swift run NoteProbe FILE [soap|dap|birp] [MODEL] [MINUTES]` drafts a
+  note from a transcript file. `bonsai` as the model uses Bonsai.
+- `swift run -c release DeidentifyProbe FILE [note]` de-identifies a file.
+  `--install` sets up the model first; `--windows` tries other passes.
+
+### De-identification model
+
+The model is kept in
+`~/Library/Application Support/Soapcap/deidentify-model`; delete that
+folder to remove it. The text is read twice and the findings merged: a
+detection pass in short overlapping chunks, and a context pass in long
+ones. When the app is started from a terminal, `SOAPCAP_DEIDENTIFY_MODEL`
+names a different folder, and `SOAPCAP_DEIDENTIFY_DIR` says where soapcap's
+de-identify install is.
 
 ### Signing
 
 `build.sh` signs ad hoc unless `SOAPCAP_SIGN_IDENTITY` names a code-signing
-identity, e.g. an Apple Development certificate (Xcode creates one for a
-free Apple ID). Use one: with an ad-hoc signature, macOS treats each rebuild
-as a different app and drops its Microphone and Screen Recording grants. To
-reset a stuck grant: `tccutil reset ScreenCapture local.soapcap.session` and
-`tccutil reset Microphone local.soapcap.session`. Do the same if Soapcap is
-listed in Privacy & Security but recording still fails, which happens after
-switching from an ad-hoc signature to a certificate.
+identity, such as an Apple Development certificate (Xcode creates one for a
+free Apple ID):
 
 ```sh
 SOAPCAP_SIGN_IDENTITY="Apple Development: you@example.com (TEAMID)" ./build.sh
+```
+
+With an ad-hoc signature, macOS treats each rebuild as a different app and
+drops its Microphone and Screen Recording grants. To reset a stuck grant,
+which also happens after switching from ad hoc to a certificate:
+
+```sh
+tccutil reset ScreenCapture local.soapcap.session
+tccutil reset Microphone local.soapcap.session
 ```
 
 ### Tests
@@ -156,30 +186,19 @@ SOAPCAP_SIGN_IDENTITY="Apple Development: you@example.com (TEAMID)" ./build.sh
 swift test
 ```
 
-- `SoapcapCoreTests`: transcript rendering, echo de-duplication and joining,
-  with the same cases as soapcap's own fixture tests.
-- `SoapcapCaptureTests`: cutting recognizer output into segments, and
-  transcribing a clip spoken by `say`, compared with `yap` if it is installed.
-- `SoapcapNoteTests`: the checks and fixes applied to a draft (soapcap's own
-  cases), the drafting sequence against a scripted model, and both model
-  backends against a stubbed HTTP layer and a stand-in `llama-server`.
-- `SoapcapDeidentifyTests`: the de-identification rules (soapcap's own
-  cases), speaker labels being left alone, and installing the model against
-  a stubbed download.
-- `SoapcapPIITests`: the real PII model on one sentence and on the
-  transcripts in `Samples/deidentify`, each with a list of what must be
-  removed; skipped when the model isn't installed.
-- `SoapcapUITests`: the session flow against a scripted capture, drafter
-  and de-identifier: pause and resume, the clock, de-identify order, failure
-  screens, the checks screen and settings; and that every package the build
-  pulls in is credited with its licence.
+| Bundle | Covers |
+|---|---|
+| `SoapcapCoreTests` | Transcript rendering and echo de-duplication (soapcap's cases); memory figures |
+| `SoapcapCaptureTests` | Cutting recognizer output into segments; transcribing a clip spoken by `say` |
+| `SoapcapNoteTests` | The checks and fixes on a draft (soapcap's cases); the drafting sequence; both model backends against stand-ins |
+| `SoapcapDeidentifyTests` | The rules (soapcap's cases); speaker labels left alone; installing the model |
+| `SoapcapPIITests` | The real PII model on the transcripts in `Samples/deidentify`; skipped when the model isn't installed |
+| `SoapcapUITests` | The session flow against scripted stand-ins; starting and stopping the note model; settings; credits |
 
-Live capture, real model output, Microphone/Screen Recording permissions,
-signing, and the window itself are not covered; they need a person.
+Live capture, real model output, the permission grants, signing and the
+window itself are not covered. They need a person.
 
-### Limitations
+## Credits
 
-- The app keeps its own settings and does not read soapcap's `config.sh`.
-- Notes are drafted in soapcap's narrative style only.
-- FaceTime's call audio can't be captured (a macOS limit); Zoom, Meet, Teams
-  and Doxy.me can.
+The app menu's **Acknowledgements** lists the projects the app is built on
+and their licences.
