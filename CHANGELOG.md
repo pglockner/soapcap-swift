@@ -6,6 +6,10 @@
 - Added advice on the transcript screen to close other apps when Bonsai is selected and less than 9 GB of memory is free; **Check permissions** has a Memory line saying the same
 - Added a question before a Bonsai draft when 6 GB or less is free and 6 GB or more is already in swap, with Cancel as the default answer
 - Added a **Stop drafting** button that gives up on a draft, frees the model's memory and goes back to the transcript
+- Fixed **Stop drafting** going back to the transcript while the note model was still shutting down; the window now shows "Stopping…" until it has gone, so a new draft can't collide with the old one (0.6.1)
+- Fixed Bonsai's server answering any program on the Mac, and any web page open in a browser: each server now has a key only the app knows (0.6.1)
+- Fixed a Bonsai server given up on while it loads being force-killed and not waited for (0.6.1)
+- Added `engine.sh`, which builds the note engine from PrismML's pinned source as one self-contained file (not yet used by the app), and a `gguf:PATH` option for `NoteProbe` (0.6.1)
 
 ## 0.5 (2026-10-10)
 
