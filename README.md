@@ -152,7 +152,8 @@ Three probes run a piece of the app without the window:
 - `swift run CaptureProbe 15` records for 15 seconds and prints the
   transcript.
 - `swift run NoteProbe FILE [soap|dap|birp] [MODEL] [MINUTES]` drafts a
-  note from a transcript file. `bonsai` as the model uses Bonsai.
+  note from a transcript file. `bonsai` as the model uses Bonsai;
+  `gguf:PATH` runs a model file with Bonsai's server.
 - `swift run -c release DeidentifyProbe FILE [note]` de-identifies a file.
   `--install` sets up the model first; `--windows` tries other passes.
 
