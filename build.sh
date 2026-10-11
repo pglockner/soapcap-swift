@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # Builds build/Soapcap.app.
 # Signs ad hoc by default. Set SOAPCAP_SIGN_IDENTITY to a stable local code
-# signing identity to keep macOS privacy grants across rebuilds.
+# signing identity to keep macOS privacy grants across rebuilds, or to a
+# Developer ID Application identity for a build to hand to notarize.sh.
+# SOAPCAP_BUNDLE_ID and SOAPCAP_OUT give a build its own identifier and
+# folder, so that one signed another way can sit beside the usual one with
+# permissions of its own.
 set -eu
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 cd "$here"
@@ -13,7 +17,9 @@ build=$(git rev-list --count HEAD 2>/dev/null || echo 1)
 
 swift build -c release
 ./engine.sh
-app="$here/build/Soapcap.app"
+identity="${SOAPCAP_SIGN_IDENTITY:--}"
+id="${SOAPCAP_BUNDLE_ID:-local.soapcap.session}"
+app="${SOAPCAP_OUT:-$here/build}/Soapcap.app"
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources" "$app/Contents/Helpers"
 cp Assets/soapcap.icns "$app/Contents/Resources/soapcap.icns"
@@ -40,7 +46,7 @@ cat > "$app/Contents/Info.plist" <<PLIST
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
   <key>CFBundleName</key><string>Soapcap</string>
-  <key>CFBundleIdentifier</key><string>local.soapcap.session</string>
+  <key>CFBundleIdentifier</key><string>$id</string>
   <key>CFBundleExecutable</key><string>Soapcap</string>
   <key>CFBundleIconFile</key><string>soapcap</string>
   <key>CFBundlePackageType</key><string>APPL</string>
@@ -53,8 +59,13 @@ cat > "$app/Contents/Info.plist" <<PLIST
   <string>Soapcap transcribes your microphone on-device during a session.</string>
 </dict></plist>
 PLIST
+# Every build runs under the hardened runtime, as a notarized one must, so
+# that what it forbids shows up here first. The microphone needs the
+# entitlement. Apple's timestamp is only wanted on a build for release.
+case "$identity" in "Developer ID Application"*) stamp=--timestamp ;; *) stamp=--timestamp=none ;; esac
 # Code inside the app is signed first; the app's signature then covers it.
-codesign --force --sign "${SOAPCAP_SIGN_IDENTITY:--}" --identifier local.soapcap.session.llama-server "$app/Contents/Helpers/llama-server"
-codesign --force --sign "${SOAPCAP_SIGN_IDENTITY:--}" --identifier local.soapcap.session "$app"
+codesign --force --options runtime $stamp --sign "$identity" --identifier "$id.llama-server" "$app/Contents/Helpers/llama-server"
+codesign --force --options runtime $stamp --sign "$identity" --identifier "$id" \
+  --entitlements Assets/Soapcap.entitlements "$app"
 echo "Built $app"
 echo "Run: open \"$app\""
