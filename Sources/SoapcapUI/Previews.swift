@@ -111,6 +111,14 @@ private let previewLines = [
     }
 }
 
+#Preview("Note, copied") {
+    sampleScreen {
+        $0.phase = .note
+        $0.note = "53 minutes, telehealth\n\nSUBJECTIVE:\nThe client reported sleeping better since starting the breathing exercises.\n\nOBJECTIVE:\nOn time via video. Engaged. Affect congruent; mood stressed. Speech clear. Thought process linear. Insight good; judgment intact. No psychomotor abnormalities. No SI/HI reported.\n\nASSESSMENT:\nSleep is improving; conflict at home remains a stressor.\n\nPLAN:\nContinue the breathing exercises nightly. Return next week."
+        $0.copied = true
+    }
+}
+
 #Preview("Settings, model missing") { SettingsView(setup: ModelSetup(isReady: false)) }
 
 #Preview("Settings, downloading") {

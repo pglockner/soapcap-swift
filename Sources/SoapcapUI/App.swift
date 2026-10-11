@@ -160,7 +160,8 @@ struct ContentView: View {
                 Button(m.copied ? "Copied" : "Keep (copy)") { m.keep() }.keyboardShortcut(.defaultAction)
                 Button("Regenerate") { m.draft() }
                 Spacer()
-                Button("Discard") { m.newSession() }
+                // Once the note is on the clipboard, leaving is no longer throwing it away.
+                Button(m.copied ? "New session" : "Discard") { m.newSession() }
             }
         }
     }
