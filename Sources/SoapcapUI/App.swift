@@ -147,7 +147,8 @@ struct ContentView: View {
             }
         }
         .alert("Not enough free memory", isPresented: Binding(get: { m.memoryQuestion != nil }, set: { if !$0 { m.memoryQuestion = nil } })) {
-            Button("Cancel", role: .cancel) {}
+            // Return should not start a draft the Mac has no room for.
+            Button("Cancel", role: .cancel) {}.keyboardShortcut(.defaultAction)
             Button("Draft anyway") { m.draft() }
         } message: {
             Text(m.memoryQuestion ?? "")
