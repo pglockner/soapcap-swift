@@ -160,11 +160,20 @@ public actor BonsaiBackend: NoteBackend {
         context = 0
         guard server.isRunning else { return }
         server.terminate()
-        for _ in 0..<30 where server.isRunning { try? await Task.sleep(for: .milliseconds(100)) }
+        for _ in 0..<30 where server.isRunning { await Self.wait(milliseconds: 100) }
         if server.isRunning { kill(server.processIdentifier, SIGKILL) }
         // Not waitUntilExit(): called from here it can wait forever on a
         // process that has already gone, which would hang the app at quit.
-        for _ in 0..<20 where server.isRunning { try? await Task.sleep(for: .milliseconds(50)) }
+        for _ in 0..<20 where server.isRunning { await Self.wait(milliseconds: 50) }
+    }
+
+    /// Waits even when the caller has been cancelled. Task.sleep returns at
+    /// once there, which would kill the server without giving it its 3
+    /// seconds and return before it had gone.
+    private static func wait(milliseconds: Int) async {
+        await withCheckedContinuation { done in
+            DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(milliseconds)) { done.resume() }
+        }
     }
 }
 

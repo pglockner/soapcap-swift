@@ -37,17 +37,26 @@ private final class FakeCapture: Capturing {
     var error: Error?
     var asked: [(format: NoteFormat, transcript: String, minutes: Int, systemLabel: String)] = []
     var releases = 0
+    /// How long the model takes to go, in nanoseconds.
+    var releaseDelay: UInt64 = 0
+    /// "draft" as each draft starts and "released" as each release ends.
+    var events: [String] = []
 
     func draft(format: NoteFormat, transcript: String, minutes: Int, systemLabel: String,
                progress: @escaping @Sendable (DraftProgress) -> Void) async throws -> DraftedNote {
         asked.append((format, transcript, minutes, systemLabel))
+        events.append("draft")
         progress(DraftProgress(title: "Drafting…", tokens: 7))
         try? await Task.sleep(nanoseconds: 150_000_000)
         if let error { throw error }
         return DraftedNote(text: "SUBJECTIVE:\nformat \(format.rawValue)\nNote about Bob", warnings: warnings)
     }
 
-    func release() async { releases += 1 }
+    func release() async {
+        releases += 1
+        try? await Task.sleep(nanoseconds: releaseDelay)
+        events.append("released")
+    }
 }
 
 private let hello = [Segment(speaker: "Therapist", start: 0, end: 1, id: 1, text: "hi Bob"),
@@ -329,21 +338,53 @@ final class SessionModelTests: XCTestCase {
         await waitFor("recording") { m.phase == .recording }
         m.stop()
         await waitFor("transcript") { m.phase == .transcript }
+        drafter.releaseDelay = 300_000_000
         m.draft()
         await waitFor("drafting") { m.isDrafting }
         m.stopDraft()
-        XCTAssertEqual(m.phase, .transcript)
+        XCTAssertEqual(m.phase, .working("Stopping…"))       // not the transcript until the model has gone
+        XCTAssertFalse(m.isDrafting)
         XCTAssertNil(m.memory)
-        await waitFor("released") { self.drafter.releases > 0 }
+        await waitFor("transcript") { m.phase == .transcript }
+        XCTAssertEqual(drafter.events, ["draft", "released"])
         try? await Task.sleep(nanoseconds: 300_000_000)      // the abandoned draft finishing changes nothing
         XCTAssertEqual(m.phase, .transcript)
         XCTAssertEqual(m.note, "")
+        XCTAssertEqual(drafter.releases, 1)
         m.draft()                                            // and drafting again still works
         await waitFor("note") { m.phase == .note }
         m.draft()
         await waitFor("drafting again") { m.isDrafting }
         m.stopDraft()
-        XCTAssertEqual(m.phase, .note)                       // the earlier note is kept
+        await waitFor("note again") { m.phase == .note }     // the earlier note is kept
+        XCTAssertTrue(m.note.contains("format soap"))
+    }
+
+    func testADraftWaitsForAModelThatIsStillStopping() async {
+        let m = SessionModel(makeCapture: { FakeCapture(hello) }, settings: settings, drafting: drafter, deidentifying: deidentifier)
+        m.start()
+        await waitFor("recording") { m.phase == .recording }
+        m.stop()
+        await waitFor("transcript") { m.phase == .transcript }
+        drafter.releaseDelay = 300_000_000
+        m.draft()
+        await waitFor("drafting") { m.isDrafting }
+        m.stopDraft()
+        m.draft()                                            // sooner than the window allows
+        await waitFor("note") { m.phase == .note }
+        XCTAssertEqual(drafter.events, ["draft", "released", "draft"])
+    }
+
+    func testAModelAskedToGoTwiceAtOnceIsReleasedOnceAndBothWait() async {
+        let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier)
+        drafter.releaseDelay = 200_000_000
+        async let first: Void = m.releaseModel()
+        async let second: Void = m.releaseModel()
+        _ = await (first, second)
+        XCTAssertEqual(drafter.events, ["released"])
+        XCTAssertEqual(drafter.releases, 1)
+        await m.releaseModel()                               // a later ask is a new release
+        XCTAssertEqual(drafter.releases, 2)
     }
 
     func testClosingAppsIsAdvisedOnlyForBonsaiWhenMemoryIsShort() {

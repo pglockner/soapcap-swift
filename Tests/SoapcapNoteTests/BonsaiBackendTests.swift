@@ -86,6 +86,26 @@ final class BonsaiBackendTests: XCTestCase {
         }
     }
 
+    func testGivingUpWhileTheModelLoadsStopsTheServer() async throws {
+        StubHTTP.answer = { _ in nil }                       // a model that never finishes loading
+        let bonsai = backend()
+        let loading = Task { try await bonsai.start(context: 8192) }
+        for _ in 0..<100 where log.isEmpty { try await Task.sleep(for: .milliseconds(20)) }
+        XCTAssertEqual(log.count, 1, "\(log)")
+        loading.cancel()
+        do { try await loading.value; XCTFail("loaded") } catch { XCTAssertTrue(error is CancellationError, "\(error)") }
+        XCTAssertEqual(log.last, "stopped")
+
+        // Given up on before it began: nothing is started at all.
+        let never = Task {
+            try? await Task.sleep(for: .seconds(5))          // ends as soon as the task is cancelled
+            try await bonsai.start(context: 8192)
+        }
+        never.cancel()
+        do { try await never.value; XCTFail("started") } catch { XCTAssertTrue(error is CancellationError, "\(error)") }
+        XCTAssertEqual(log.count, 2, "\(log)")
+    }
+
     func testAServerThatIgnoresAPoliteStopIsKilled() async throws {
         touch("stubborn")
         let bonsai = backend()

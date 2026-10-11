@@ -31,7 +31,10 @@ import SoapcapNote
     }
 
     func release() async {
-        await loaded?.backend.stop()
+        // Forgotten before it is stopped, so a draft that starts meanwhile
+        // gets a model of its own instead of one that is shutting down.
+        let backend = loaded?.backend
         loaded = nil
+        await backend?.stop()
     }
 }

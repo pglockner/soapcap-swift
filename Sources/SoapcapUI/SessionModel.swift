@@ -47,6 +47,7 @@ final class SessionModel: ObservableObject {
     private let drafting: Drafting
     private let deidentifying: Deidentifying
     private var draftTask: Task<Void, Never>?
+    private var releasing: Task<Void, Never>?
     private var capture: Capturing?
     private var recordedBefore: TimeInterval = 0
     private var runStart: Date?
@@ -209,6 +210,9 @@ final class SessionModel: ObservableObject {
         let gen = generation
         draftTask = Task {
             phase = .working("Drafting a \(format) note…")
+            // A model that is still stopping must be gone before another loads.
+            await releasing?.value
+            guard gen == generation else { return }
             isDrafting = true
             // A model that outgrows memory slows to a crawl; show it happening.
             let watch = Task {
@@ -225,6 +229,7 @@ final class SessionModel: ObservableObject {
                     Task { @MainActor in self.show(progress, generation: gen) }
                 }
             } catch {
+                guard gen == generation else { return }     // stopped: whoever stopped it frees the model
                 isDrafting = false
                 // Don't leave a half-started model holding memory (or, for
                 // Bonsai, its port) behind an error screen.
@@ -232,8 +237,8 @@ final class SessionModel: ObservableObject {
                 if gen == generation { phase = .error("Note drafting failed.\n\n\(error.localizedDescription)") }
                 return
             }
-            isDrafting = false
             guard gen == generation else { return }
+            isDrafting = false
             note = drafted.text
             var notices = drafted.warnings
             if deidentify && canDeidentify {
@@ -249,16 +254,22 @@ final class SessionModel: ObservableObject {
         }
     }
 
-    /// Gives up on the draft in flight and frees the model's memory, going
-    /// back to the transcript (or to the note being drafted again).
+    /// Gives up on the draft in flight and frees the model's memory, then
+    /// goes back to the transcript (or to the note being drafted again).
+    /// The screen waits for the model to go, so that another draft can't
+    /// start while the first one's model is still shutting down.
     func stopDraft() {
         guard isDrafting else { return }
         generation += 1
+        let gen = generation, back: Phase = note.isEmpty ? .transcript : .note
         isDrafting = false
         draftTask?.cancel(); draftTask = nil
-        Task { await releaseModel() }
         memory = nil
-        phase = note.isEmpty ? .transcript : .note
+        phase = .working("Stopping…")
+        Task {
+            await releaseModel()
+            if gen == generation { phase = back }
+        }
     }
 
     /// Progress arrives from the drafter's own thread, possibly after the
@@ -269,7 +280,12 @@ final class SessionModel: ObservableObject {
     }
 
     /// Frees the note model's memory; it is kept loaded between drafts.
-    func releaseModel() async { await drafting.release() }
+    /// However many ask at once, it is released once and each of them
+    /// returns only when it has gone.
+    func releaseModel() async {
+        if releasing == nil { releasing = Task { await drafting.release(); releasing = nil } }
+        await releasing?.value
+    }
 
     func keep() {
         let pb = NSPasteboard.general
