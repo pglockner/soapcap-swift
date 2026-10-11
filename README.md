@@ -110,6 +110,11 @@ Ollama's address is under Advanced.
 
 ## Not yet
 
+- [ ] Nothing to fetch by hand: the app sets up what it needs itself (a
+      note model and what runs it), saying how big and how long first. No
+      other repository, terminal or script
+- [ ] One way to run note models, in place of a separate Ollama install
+      and soapcap's Bonsai script
 - [ ] A signed, notarized build that installs without Xcode
 - [ ] Stretch: the `structured` and `combined` note styles (nobody is
       asking for them yet). Notes are drafted in the narrative style only
