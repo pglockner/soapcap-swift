@@ -31,7 +31,8 @@ public actor BonsaiBackend: NoteBackend {
     }
 
     public nonisolated let install: Install
-    public nonisolated let label = "Bonsai"
+    public static let displayName = "Bonsai"
+    public nonisolated let label = BonsaiBackend.displayName
     public nonisolated let cautions: [String] = []
     /// llama-server keeps its place only near the end of each prompt, so a
     /// transcript in the middle of one is read again by the next request.

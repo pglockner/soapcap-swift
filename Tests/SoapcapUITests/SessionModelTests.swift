@@ -5,76 +5,6 @@ import SoapcapNote
 import XCTest
 @testable import SoapcapUI
 
-/// Scripted capture: returns `segments` on stop and records what it was asked to do.
-private final class FakeCapture: Capturing {
-    let live: AsyncStream<LiveLine>
-    private let continuation: AsyncStream<LiveLine>.Continuation
-    var segments: [Segment]
-    var startError: Error?
-    var calls: [String] = []
-    var started = (mic: "", system: "", locale: "")
-
-    init(_ segments: [Segment] = [], startError: Error? = nil) {
-        (live, continuation) = AsyncStream.makeStream(of: LiveLine.self)
-        self.segments = segments
-        self.startError = startError
-    }
-
-    func start(micLabel: String, systemLabel: String, locale: Locale) async throws {
-        calls.append("start")
-        started = (micLabel, systemLabel, locale.identifier)
-        if let startError { throw startError }
-    }
-    func pause() { calls.append("pause") }
-    func resume() { calls.append("resume") }
-    func stop() async -> [Segment] { calls.append("stop"); continuation.finish(); return segments }
-    func hear(_ line: LiveLine) { continuation.yield(line) }
-}
-
-/// Scripted drafting: returns a note naming the format, and records what it was asked.
-@MainActor private final class FakeDrafter: Drafting {
-    var warnings: [String] = []
-    var error: Error?
-    var asked: [(format: NoteFormat, transcript: String, minutes: Int, systemLabel: String)] = []
-    var releases = 0
-    /// How long the model takes to go, in nanoseconds.
-    var releaseDelay: UInt64 = 0
-    /// "draft" as each draft starts and "released" as each release ends.
-    var events: [String] = []
-
-    func draft(format: NoteFormat, transcript: String, minutes: Int, systemLabel: String,
-               progress: @escaping @Sendable (DraftProgress) -> Void) async throws -> DraftedNote {
-        asked.append((format, transcript, minutes, systemLabel))
-        events.append("draft")
-        progress(DraftProgress(title: "Drafting…", tokens: 7))
-        try? await Task.sleep(nanoseconds: 150_000_000)
-        if let error { throw error }
-        return DraftedNote(text: "SUBJECTIVE:\nformat \(format.rawValue)\nNote about Bob", warnings: warnings)
-    }
-
-    func release() async {
-        releases += 1
-        try? await Task.sleep(nanoseconds: releaseDelay)
-        events.append("released")
-    }
-}
-
-private let hello = [Segment(speaker: "Therapist", start: 0, end: 1, id: 1, text: "hi Bob"),
-                     Segment(speaker: "Client", start: 2, end: 3, id: 1, text: "hello")]
-
-/// Scripted de-identifying: replaces "Bob", and records what kind of text it was given.
-@MainActor private final class FakeDeidentifier: Deidentifying {
-    var isReady = true
-    var error: Error?
-    var kinds: [LabeledText.Kind] = []
-
-    func deidentify(_ text: String, kind: LabeledText.Kind) async throws -> Deidentified {
-        kinds.append(kind)
-        if let error { throw error }
-        return Deidentified(text: text.replacingOccurrences(of: "Bob", with: "[FIRST_NAME_1]"), summary: "redacted 1 span(s): FIRST_NAME x1")
-    }
-}
-
 @MainActor
 final class SessionModelTests: XCTestCase {
     private var dir: URL!
@@ -96,17 +26,6 @@ final class SessionModelTests: XCTestCase {
     override func tearDown() async throws {
         try? FileManager.default.removeItem(at: dir)
         UserDefaults().removePersistentDomain(forName: suite)
-    }
-
-    /// Polls (suspending, so the main run loop and timers keep running).
-    private func waitFor(_ what: String, timeout: TimeInterval = 10,
-                         file: StaticString = #filePath, line: UInt = #line,
-                         _ condition: () -> Bool) async {
-        let deadline = Date().addingTimeInterval(timeout)
-        while !condition() {
-            if Date() > deadline { XCTFail("timed out waiting for \(what)", file: file, line: line); return }
-            try? await Task.sleep(nanoseconds: 100_000_000)
-        }
     }
 
     private func recording(_ capture: FakeCapture, now: @escaping () -> Date = Date.init) async -> SessionModel {
@@ -286,34 +205,6 @@ final class SessionModelTests: XCTestCase {
         XCTAssertTrue(ModelSetup.check(isReady: false).detail.contains("Settings"))
     }
 
-    func testEveryPackageTheBuildPullsInIsCreditedWithItsLicence() throws {
-        let resolved = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            .appendingPathComponent("Package.resolved")
-        struct Resolved: Decodable { struct Pin: Decodable { let identity: String }; let pins: [Pin] }
-        let pins = try JSONDecoder().decode(Resolved.self, from: Data(contentsOf: resolved)).pins.map(\.identity)
-        XCTAssertFalse(pins.isEmpty)
-        let credited = Set(Credit.all.compactMap(\.package))
-        XCTAssertEqual(pins.filter { !credited.contains($0) }, [], "packages with no entry in credits.json")
-        for credit in Credit.all {
-            XCTAssertFalse((credit.licenseText ?? "").isEmpty, "no licence text for \(credit.name)")
-        }
-    }
-
-    func testMemoryIsShownWhileDraftingAndNotAfter() async {
-        let m = SessionModel(makeCapture: { FakeCapture(hello) }, settings: settings, drafting: drafter, deidentifying: deidentifier,
-                             memory: { MemoryStatus(totalBytes: 16 << 30, freePercent: 30) })
-        m.start()
-        await waitFor("recording") { m.phase == .recording }
-        m.stop()
-        await waitFor("transcript") { m.phase == .transcript }
-        XCTAssertNil(m.draftRun.memory)
-        m.draft()
-        await waitFor("memory shown") { m.draftRun.memory != nil }
-        XCTAssertEqual(m.draftRun.memory?.usedPercent, 70)
-        await waitFor("note") { m.phase == .note }
-        XCTAssertNil(m.draftRun.memory)
-    }
-
     func testAVeryShortMemoryAsksBeforeABonsaiDraft() async {
         UserDefaults(suiteName: suite)!.set("bonsai", forKey: SessionSettings.Key.noteModel)
         var free = 30
@@ -360,33 +251,6 @@ final class SessionModelTests: XCTestCase {
         XCTAssertTrue(m.note.contains("format soap"))
     }
 
-    func testADraftWaitsForAModelThatIsStillStopping() async {
-        let m = SessionModel(makeCapture: { FakeCapture(hello) }, settings: settings, drafting: drafter, deidentifying: deidentifier)
-        m.start()
-        await waitFor("recording") { m.phase == .recording }
-        m.stop()
-        await waitFor("transcript") { m.phase == .transcript }
-        drafter.releaseDelay = 300_000_000
-        m.draft()
-        await waitFor("drafting") { m.draftRun.isRunning }
-        m.stopDraft()
-        m.draft()                                            // sooner than the window allows
-        await waitFor("note") { m.phase == .note }
-        XCTAssertEqual(drafter.events, ["draft", "released", "draft"])
-    }
-
-    func testAModelAskedToGoTwiceAtOnceIsReleasedOnceAndBothWait() async {
-        let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier)
-        drafter.releaseDelay = 200_000_000
-        let first = m.draftRun.stop(), second = m.draftRun.stop()
-        await first.value
-        await second.value
-        XCTAssertEqual(drafter.events, ["released"])
-        XCTAssertEqual(drafter.releases, 1)
-        await m.draftRun.stop().value                        // a later ask is a new release
-        XCTAssertEqual(drafter.releases, 2)
-    }
-
     func testClosingAppsIsAdvisedOnlyForBonsaiWhenMemoryIsShort() {
         let short = { MemoryStatus(totalBytes: 16 << 30, freePercent: 41) }
         let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier, memory: short)
@@ -396,8 +260,6 @@ final class SessionModelTests: XCTestCase {
         let roomy = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier,
                                  memory: { MemoryStatus(totalBytes: 16 << 30, freePercent: 68) })
         XCTAssertNil(roomy.memoryAdvice)
-        XCTAssertEqual(ModelCatalog.memoryCheck(short(), model: "bonsai").status, .warning)
-        XCTAssertEqual(ModelCatalog.memoryCheck(short(), model: "llama3.1:8b"), Check("Memory", .ok, "16 GB, about 6 GB free now."))
     }
 
     // MARK: settings

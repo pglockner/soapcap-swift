@@ -103,7 +103,7 @@ struct SettingsView: View {
             }
             Section {
                 Picker("Draft with", selection: Binding(get: { settings.noteModel }, set: { noteModel = $0 })) {
-                    ForEach(choices, id: \.self) { Text($0 == ModelCatalog.bonsai ? "Bonsai" : $0).tag($0) }
+                    ForEach(choices, id: \.self) { Text(ModelCatalog.displayName(of: $0)).tag($0) }
                 }
                 TextField("Session type", text: $sessionType, prompt: Text("telehealth"))
             } header: {

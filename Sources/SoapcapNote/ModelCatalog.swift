@@ -6,6 +6,11 @@ public enum ModelCatalog {
     public static let bonsai = "bonsai"
     public static let defaultModel = "llama3.1:8b"
 
+    /// What to call a model on screen.
+    public static func displayName(of model: String) -> String {
+        model == bonsai ? BonsaiBackend.displayName : model
+    }
+
     /// What the clinician should know about a model soapcap's prompts were
     /// tested with; nil for any other.
     public static func description(of model: String) -> String? {
@@ -28,13 +33,13 @@ public enum ModelCatalog {
     /// What to say before drafting with `model` when memory is short, or nil.
     public static func memoryAdvice(for model: String, memory: MemoryStatus?) -> String? {
         guard let memory, let need = memoryNeedGB(of: model) else { return nil }
-        return memory.advice(beforeLoading: model == bonsai ? "Bonsai" : model, needGB: need)
+        return memory.advice(beforeLoading: displayName(of: model), needGB: need)
     }
 
     /// What to ask before drafting with `model` when memory is very short, or nil.
     public static func memoryQuestion(for model: String, memory: MemoryStatus?) -> String? {
         guard let memory, let need = memoryNeedGB(of: model) else { return nil }
-        return memory.question(beforeLoading: model == bonsai ? "Bonsai" : model, needGB: need)
+        return memory.question(beforeLoading: displayName(of: model), needGB: need)
     }
 
     /// How much memory this Mac has and has free, as a line for the checks
