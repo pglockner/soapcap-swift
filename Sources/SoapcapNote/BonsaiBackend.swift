@@ -1,4 +1,5 @@
 import Foundation
+import SoapcapCore
 
 /// Bonsai 2 27B, served by a `llama-server` this backend starts for a note
 /// and stops afterwards. The server ships inside the app (see engine.sh);
@@ -16,22 +17,32 @@ public actor BonsaiBackend: NoteBackend {
             self.port = port
         }
 
-        static let weightsName = "Ternary-Bonsai-2-27B-PTQ1_0.gguf"
+        /// Bonsai 2 27B's weights, as soapcap tested them.
+        public static let weights = PinnedFile(
+            name: "Ternary-Bonsai-2-27B-PTQ1_0.gguf",
+            url: URL(string: "https://huggingface.co/prism-ml/Ternary-Bonsai-2-27B-gguf/resolve/65f27a86966957c534ea6ad12149286e01ca7cc0/Ternary-Bonsai-2-27B-PTQ1_0.gguf")!,
+            sha256: "53107f530aa52eb00912263ab1ee29bd199261c87cd7b4ad4ca1318c1fe33ee3", bytes: 5_946_648_928)
 
         /// Where the app keeps the note models it downloads.
         public static var modelsDirectory: URL {
             URL.applicationSupportDirectory.appending(path: "Soapcap/note-models", directoryHint: .isDirectory)
         }
 
+        /// The app's own copy of the weights, and the one soapcap's installer makes.
+        public static var ownWeights: URL { modelsDirectory.appendingPathComponent(weights.name) }
+        public static var soapcapWeights: URL { soapcapDirectory.appendingPathComponent(weights.name) }
+        static var soapcapDirectory: URL {
+            FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".local/share/soapcap/bonsai")
+        }
+
         /// The engine inside the app and the app's own copy of the weights,
         /// or else what soapcap's installer set up, used where it is.
         /// SOAPCAP_ENGINE names a different llama-server, for trying a build.
         public static var standard: Install {
-            let soapcap = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".local/share/soapcap/bonsai")
             let named = ProcessInfo.processInfo.environment["SOAPCAP_ENGINE"].map { [URL(fileURLWithPath: $0)] } ?? []
             return found(servers: named + [Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/llama-server"),
-                                           soapcap.appendingPathComponent("llama.cpp/build/bin/llama-server")],
-                         weights: [modelsDirectory.appendingPathComponent(weightsName), soapcap.appendingPathComponent(weightsName)])
+                                           soapcapDirectory.appendingPathComponent("llama.cpp/build/bin/llama-server")],
+                         weights: [ownWeights, soapcapWeights])
         }
 
         /// The first of each that is there. When none is, the first, so that
@@ -93,8 +104,11 @@ public actor BonsaiBackend: NoteBackend {
     }
 
     public func check() async throws {
-        guard install.isPresent else {
-            throw NoteError.notReady("Bonsai isn't set up. Expected llama-server at \(install.server.path) and the model at \(install.weights.path). Set it up with soapcap's tools/bonsai/install.sh.")
+        guard FileManager.default.fileExists(atPath: install.weights.path) else {
+            throw NoteError.notReady("\(label)'s model file isn't on this Mac. Get it in Settings (Cmd-comma).")
+        }
+        guard FileManager.default.isExecutableFile(atPath: install.server.path) else {
+            throw NoteError.notReady("The note engine is missing: expected llama-server at \(install.server.path).")
         }
         // Anything already answering here would silently draft the note with
         // whatever model it serves.

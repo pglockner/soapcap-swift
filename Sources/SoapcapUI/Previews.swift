@@ -1,5 +1,6 @@
 import SoapcapCapture
 import SoapcapCore
+import SoapcapNote
 import SwiftUI
 
 @MainActor private func sampleScreen(_ set: (SessionModel) -> Void) -> some View {
@@ -118,6 +119,22 @@ private let previewLines = [
         $0.copied = true
     }
 }
+
+/// A Bonsai download in a given state, on a path where nothing is installed.
+@MainActor private func bonsaiDownload(_ state: ModelDownload.State) -> ModelDownload {
+    let nowhere = URL(fileURLWithPath: "/nonexistent/soapcap-preview/bonsai.gguf")
+    let download = ModelDownload(file: BonsaiBackend.Install.weights, target: nowhere)
+    download.show(state)
+    return download
+}
+
+#Preview("Settings, Bonsai to download") { SettingsView(bonsai: bonsaiDownload(.missing)) }
+
+#Preview("Settings, Bonsai downloading") {
+    SettingsView(bonsai: bonsaiDownload(.working(FetchProgress(bytes: 2_100_000_000, total: 5_946_648_928, bytesPerSecond: 24_000_000))))
+}
+
+#Preview("Settings, Bonsai installed") { SettingsView(bonsai: bonsaiDownload(.ready)) }
 
 #Preview("Settings, model missing") { SettingsView(setup: ModelSetup(isReady: false)) }
 

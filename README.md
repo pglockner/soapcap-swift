@@ -38,7 +38,7 @@ the exception: macOS doesn't let its call audio be captured.
 |---|---|
 | macOS 26 (Tahoe) or newer, Apple silicon | |
 | Full Xcode, and cmake | To build. The Command Line Tools alone are not enough; cmake (`brew install cmake`) builds the note engine |
-| A note model | [Ollama](https://ollama.com) with a pulled model (`llama3.1:8b` is the tested default), or Bonsai. The app carries Bonsai's engine; its model file (5.9 GB) still comes from soapcap's `tools/bonsai/install.sh`. Recording works without one |
+| A note model | [Ollama](https://ollama.com) with a pulled model (`llama3.1:8b` is the tested default), or Bonsai, a 5.9 GB download from Settings. Recording works without one |
 | The de-identification model (optional) | OpenMed's PII model, about 130 MB, installed from Settings |
 
 ## Build and run
@@ -90,8 +90,10 @@ and frees the model's memory. Otherwise the model stays loaded until you
 discard the note, start a new session or quit.
 
 **Settings** (Cmd-comma). The two speaker labels, the language to
-transcribe in, the note model, the session type on the note's first line
-("53 minutes, telehealth"), and setting up the de-identification model.
+transcribe in, the note model, and the session type on the note's first
+line ("53 minutes, telehealth"). Bonsai and the de-identification model
+are downloaded here: each says how big it is first, a download that is
+stopped carries on where it left off, and **Remove** deletes Bonsai again.
 Ollama's address is under Advanced.
 
 ## Privacy
@@ -102,18 +104,19 @@ Ollama's address is under Advanced.
   window-restore snapshot.
 - **The copied note is marked concealed**, so clipboard managers that honor
   that convention skip it.
-- **One download, nothing uploaded.** Setting up the de-identification
-  model fetches it from huggingface.co and checks each file against a
-  pinned checksum, or copies soapcap's if that is on the Mac. It is the
-  only time the app goes online, and nothing from a session is sent.
+- **Downloads only, nothing uploaded.** Bonsai and the de-identification
+  model come from huggingface.co, and each file is checked against a pinned
+  checksum. A copy soapcap already installed is used instead. Those
+  downloads are the only time the app goes online, and nothing from a
+  session is sent.
 - **Ollama on another machine breaks the promise.** If its address is not
   this Mac, the transcript travels over the network, and the note says so.
 
 ## Not yet
 
-- [ ] Nothing to fetch by hand: the app sets up what it needs itself (a
-      note model and what runs it), saying how big and how long first. No
-      other repository, terminal or script
+- [ ] Nothing to fetch by hand: the app sets up what it needs itself,
+      saying how big and how long first. Bonsai is done; `llama3.1:8b`
+      still needs Ollama
 - [ ] One way to run note models, in place of a separate Ollama install
       and soapcap's Bonsai script
 - [ ] A signed, notarized build that installs without Xcode
@@ -136,9 +139,8 @@ Ollama's address is under Advanced.
 | Settings | `config.sh` | Its own Settings window |
 
 They share the prompts, the Objective frame and the checks applied to a
-draft, and the app's tests reuse soapcap's cases so the two agree. The app
-runs Bonsai with an engine of its own and, for now, the model file that
-soapcap's script downloads.
+draft, and the app's tests reuse soapcap's cases so the two agree. A Bonsai
+that soapcap installed is used where it is.
 
 ## Development
 
@@ -166,6 +168,9 @@ commit, into `.build/engine`. `build.sh` runs it and puts the result inside
 the app, which starts it for a draft and gives it a key only the app knows.
 `SOAPCAP_ENGINE` names a different `llama-server`, for trying a build with
 the probes.
+
+Bonsai's model file goes in
+`~/Library/Application Support/Soapcap/note-models`.
 
 ### De-identification model
 

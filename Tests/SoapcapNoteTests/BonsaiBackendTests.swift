@@ -74,7 +74,12 @@ final class BonsaiBackendTests: XCTestCase {
         }
         try FileManager.default.removeItem(at: install.weights)
         do { try await backend().check(); XCTFail("ready") } catch {
-            XCTAssertTrue(error.localizedDescription.contains("isn't set up"), error.localizedDescription)
+            XCTAssertEqual(error.localizedDescription, "Bonsai's model file isn't on this Mac. Get it in Settings (Cmd-comma).")
+        }
+        try Data().write(to: install.weights)
+        try FileManager.default.removeItem(at: install.server)
+        do { try await backend().check(); XCTFail("ready") } catch {
+            XCTAssertTrue(error.localizedDescription.hasPrefix("The note engine is missing"), error.localizedDescription)
         }
     }
 

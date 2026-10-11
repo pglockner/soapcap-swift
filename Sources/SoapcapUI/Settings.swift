@@ -72,6 +72,7 @@ struct SettingsView: View {
     @State private var languages: [Locale] = []
     @State private var models: [String] = []
     @ObservedObject var setup = ModelSetup.shared
+    @ObservedObject var bonsai = ModelDownload.bonsai
 
     private var settings: SessionSettings { SessionSettings() }
 
@@ -114,6 +115,13 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
             Section {
+                ModelDownloadRow(name: BonsaiBackend.displayName, needGB: ModelCatalog.memoryNeedGB(of: ModelCatalog.bonsai), download: bonsai)
+            } header: {
+                Text(BonsaiBackend.displayName)
+            } footer: {
+                Text(ModelCatalog.description(of: ModelCatalog.bonsai) ?? "").foregroundStyle(.secondary)
+            }
+            Section {
                 switch setup.state {
                 case .ready:
                     Label("The model is installed.", systemImage: "checkmark.circle.fill")
@@ -123,7 +131,7 @@ struct SettingsView: View {
                     if case .failed(let why) = setup.state { Text(why).foregroundStyle(.orange) }
                     Text(setup.canCopyFromSoapcap
                          ? "soapcap's copy of the model is on this Mac. It will be copied; nothing is downloaded."
-                         : "Needs OpenMed's PII model, a one-time 130 MB download from huggingface.co. This is the only time Soapcap uses the network, and nothing from a session is sent.")
+                         : "Needs OpenMed's PII model, a one-time 130 MB download from huggingface.co. Nothing from a session is sent.")
                         .fixedSize(horizontal: false, vertical: true)
                     Button(setup.canCopyFromSoapcap ? "Set up" : "Download model") { setup.install() }
                 }
@@ -148,7 +156,8 @@ struct SettingsView: View {
         .frame(width: 440)
         .fixedSize(horizontal: false, vertical: true)
         .task { languages = await Readiness.supportedLanguages() }
-        .task(id: ollamaHost) { models = await ModelCatalog.installed(host: settings.ollamaHost) }
+        // Asked again when Bonsai arrives or goes, so the list above follows.
+        .task(id: "\(ollamaHost) \(bonsai.isInstalled)") { models = await ModelCatalog.installed(host: settings.ollamaHost) }
     }
 }
 
