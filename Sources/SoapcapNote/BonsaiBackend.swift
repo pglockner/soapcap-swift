@@ -1,11 +1,11 @@
 import Foundation
 import SoapcapCore
 
-/// Bonsai 2 27B, served by a `llama-server` this backend starts for a note
-/// and stops afterwards. The server ships inside the app (see engine.sh);
-/// the weights are a download.
+/// A note model served by a `llama-server` this backend starts for a note
+/// and stops afterwards: Bonsai 2 27B unless told otherwise. The server
+/// ships inside the app (see engine.sh); the weights are a download.
 public actor BonsaiBackend: NoteBackend {
-    /// Where the two halves of a Bonsai setup are, and the local port to serve on.
+    /// Where the server and a model's weights are, and the local port to serve on.
     public struct Install: Equatable, Sendable {
         public var server: URL
         public var weights: URL
@@ -35,15 +35,28 @@ public actor BonsaiBackend: NoteBackend {
             FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".local/share/soapcap/bonsai")
         }
 
-        /// The engine inside the app and the app's own copy of the weights,
-        /// or else what soapcap's installer set up, used where it is.
+        /// Llama 3.1 8B Instruct at 4 bits, in bartowski's conversion: the
+        /// one compared, note for note, with the copy Ollama serves.
+        public static let llamaWeights = PinnedFile(
+            name: "Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+            url: URL(string: "https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/bf5b95e96dac0462e2a09145ec66cae9a3f12067/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf")!,
+            sha256: "7b064f5842bf9532c91456deda288a1b672397a54fa729aa665952863033557c", bytes: 4_920_739_232)
+        public static var ownLlamaWeights: URL { modelsDirectory.appendingPathComponent(llamaWeights.name) }
+
+        /// The engine inside the app, or else the one soapcap's installer built.
         /// SOAPCAP_ENGINE names a different llama-server, for trying a build.
-        public static var standard: Install {
+        static var servers: [URL] {
             let named = ProcessInfo.processInfo.environment["SOAPCAP_ENGINE"].map { [URL(fileURLWithPath: $0)] } ?? []
-            return found(servers: named + [Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/llama-server"),
-                                           soapcapDirectory.appendingPathComponent("llama.cpp/build/bin/llama-server")],
-                         weights: [ownWeights, soapcapWeights])
+            return named + [Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/llama-server"),
+                            soapcapDirectory.appendingPathComponent("llama.cpp/build/bin/llama-server")]
         }
+
+        /// Bonsai: the app's own copy of the weights, or else the one
+        /// soapcap's installer made, used where it is.
+        public static var standard: Install { found(servers: servers, weights: [ownWeights, soapcapWeights]) }
+
+        /// Llama 3.1 on the same engine, from the app's own copy of the weights.
+        public static var llama: Install { found(servers: servers, weights: [ownLlamaWeights]) }
 
         /// The first of each that is there. When none is, the first, so that
         /// what gets reported missing is the place the app would put it.
@@ -113,7 +126,7 @@ public actor BonsaiBackend: NoteBackend {
         // Anything already answering here would silently draft the note with
         // whatever model it serves.
         if !isRunning, await healthy() != nil {
-            throw NoteError.notReady("Something is already listening on port \(install.port). Stop it before drafting with Bonsai.")
+            throw NoteError.notReady("Something is already listening on port \(install.port). Stop it before drafting with \(label).")
         }
     }
 
@@ -151,7 +164,7 @@ public actor BonsaiBackend: NoteBackend {
         while Date() < deadline {
             guard server.isRunning else {
                 await stop()
-                throw NoteError.notReady("llama-server exited while loading Bonsai. Its last lines:\n\(log.tail)")
+                throw NoteError.notReady("llama-server exited while loading \(label). Its last lines:\n\(log.tail)")
             }
             // A draft given up on while loading must not leave the server behind.
             if Task.isCancelled { await stop(); throw CancellationError() }
@@ -159,7 +172,7 @@ public actor BonsaiBackend: NoteBackend {
             try? await Task.sleep(for: .seconds(pollInterval))
         }
         await stop()
-        throw NoteError.notReady("Bonsai didn't finish loading within \(Int(loadTimeout))s.")
+        throw NoteError.notReady("\(label) didn't finish loading within \(Int(loadTimeout))s.")
     }
 
     /// One chat request to the running server. Thinking is always off: with
@@ -184,16 +197,16 @@ public actor BonsaiBackend: NoteBackend {
 
         let data: Data
         do { (data, _) = try await session.data(for: request) } catch {
-            throw NoteError.requestFailed("The request to Bonsai failed: \(error.localizedDescription)")
+            throw NoteError.requestFailed("The request to \(label) failed: \(error.localizedDescription)")
         }
         let reply = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
         if let error = reply["error"] {
             let message = (error as? [String: Any])?["message"] as? String ?? "\(error)"
-            throw NoteError.requestFailed("Bonsai error: \(message)")
+            throw NoteError.requestFailed("\(label) error: \(message)")
         }
         let choice = (reply["choices"] as? [[String: Any]])?.first
         let text = (choice?["message"] as? [String: Any])?["content"] as? String ?? ""
-        guard !text.isEmpty else { throw NoteError.requestFailed("Bonsai returned no content.") }
+        guard !text.isEmpty else { throw NoteError.requestFailed("\(label) returned no content.") }
         return ModelReply(text: text, cutOff: choice?["finish_reason"] as? String == "length")
     }
 

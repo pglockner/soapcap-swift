@@ -7,6 +7,8 @@
    "url": "https://github.com/PrismML-Eng/llama.cpp", "license": "MIT", "licenseFile": "llama-cpp.txt"},
   {"name": "Bonsai 2 27B", "by": "Prism ML", "role": "A note model (Ternary-Bonsai-2-27B), built from Qwen3.8-27B. Downloaded separately, not shipped in the app. Created using Bonsai by Prism ML.",
    "url": "https://huggingface.co/prism-ml/Ternary-Bonsai-2-27B-gguf", "license": "Apache-2.0", "licenseFile": "bonsai.txt"},
+  {"name": "Llama 3.1 8B", "by": "Meta", "role": "A note model (Meta-Llama-3.1-8B-Instruct, in bartowski's 4-bit conversion). Downloaded separately, not shipped in the app. Built with Llama.",
+   "url": "https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF", "license": "Llama 3.1 Community", "licenseFile": "llama-3.1.txt"},
   {"name": "OpenMed PII model", "by": "OpenMed", "role": "The on-device model that finds names and other identifying details (OpenMed-PII-ClinicalE5-Small-33M-v1). Downloaded separately, not shipped in the app.",
    "url": "https://huggingface.co/OpenMed/OpenMed-PII-ClinicalE5-Small-33M-v1-mlx", "license": "Apache-2.0", "licenseFile": "openmed-model.txt"},
   {"name": "OpenMedKit", "by": "Maziyar Panahi", "role": "Runs the PII model inside the app.",

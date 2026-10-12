@@ -22,6 +22,9 @@ final class ModelDownload: ObservableObject {
     static let bonsai = ModelDownload(file: BonsaiBackend.Install.weights, target: BonsaiBackend.Install.ownWeights,
                                       elsewhere: BonsaiBackend.Install.soapcapWeights)
 
+    /// The default model's weights, for a Mac whose Ollama doesn't have it.
+    static let llama = ModelDownload(file: BonsaiBackend.Install.llamaWeights, target: BonsaiBackend.Install.ownLlamaWeights)
+
     @Published private(set) var state = State.missing
     let file: PinnedFile
     private let target: URL

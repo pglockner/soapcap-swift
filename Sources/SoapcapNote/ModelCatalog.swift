@@ -25,7 +25,9 @@ public enum ModelCatalog {
 
     /// Roughly how much memory a model takes once loaded, where that is
     /// known and the app is what loads it. Bonsai measured at 7.4 GB with
-    /// the smallest context the app uses and 8.5 GB with the largest.
+    /// the smallest context the app uses and 8.5 GB with the largest. The
+    /// default model gets no figure here yet, though the app's engine may
+    /// be what loads it: which of the two runs it isn't known in time.
     public static func memoryNeedGB(of model: String) -> Double? {
         model == bonsai ? 8 : nil
     }
@@ -51,24 +53,45 @@ public enum ModelCatalog {
         return Check("Memory", .ok, size)
     }
 
-    /// `bonsai` is its own backend; every other name is a model in Ollama.
-    public static func backend(for model: String, host: URL = OllamaBackend.defaultHost,
-                               bonsai install: BonsaiBackend.Install = .standard) -> any NoteBackend {
-        model == bonsai ? BonsaiBackend(install: install) : OllamaBackend(model: model, host: host)
+    /// Roughly what the default model takes on the app's engine, measured
+    /// with the smallest context the app uses.
+    public static let defaultModelMemoryGB = 6.5
+
+    /// What the Ollama at `host` has pulled; nothing when it doesn't answer.
+    public static func pulled(host: URL = OllamaBackend.defaultHost) async -> [String] {
+        (try? await OllamaBackend(model: "", host: host).models()) ?? []
     }
 
-    /// The models that could draft right now: Bonsai if it is set up, then
-    /// everything pulled into Ollama (tested or not).
-    public static func installed(host: URL = OllamaBackend.defaultHost,
-                                 bonsai install: BonsaiBackend.Install = .standard) async -> [String] {
-        let pulled = (try? await OllamaBackend(model: "", host: host).models()) ?? []
-        return (install.isPresent ? [bonsai] : []) + pulled.sorted()
+    /// `bonsai` runs on the app's engine. So does the default model, from
+    /// the app's own file, unless Ollama has it: a model Ollama already
+    /// holds is used where it is. Every other name is a model in Ollama.
+    public static func backend(for model: String, pulled: [String], host: URL = OllamaBackend.defaultHost,
+                               bonsai: BonsaiBackend.Install = .standard,
+                               llama: BonsaiBackend.Install = .llama) -> any NoteBackend {
+        if model == self.bonsai { return BonsaiBackend(install: bonsai) }
+        if model == defaultModel, !OllamaBackend.has(model, in: pulled) {
+            // Prompts in the order Ollama gets them, as the two were compared.
+            return BonsaiBackend(install: llama, label: model, resumesFromSharedOpening: false)
+        }
+        return OllamaBackend(model: model, host: host)
+    }
+
+    public static func backend(for model: String, host: URL = OllamaBackend.defaultHost) async -> any NoteBackend {
+        backend(for: model, pulled: model == bonsai ? [] : await pulled(host: host), host: host)
+    }
+
+    /// The models that could draft right now: Bonsai if it is set up, the
+    /// default model if the app has its file, and everything pulled into
+    /// Ollama (tested or not).
+    public static func installed(pulled: [String], bonsai: BonsaiBackend.Install = .standard,
+                                 llama: BonsaiBackend.Install = .llama) -> [String] {
+        let own = llama.isPresent && !OllamaBackend.has(defaultModel, in: pulled) ? [defaultModel] : []
+        return (bonsai.isPresent ? [self.bonsai] : []) + (own + pulled).sorted()
     }
 
     /// Whether `model` is ready to draft, as a line for the checks screen.
-    public static func check(_ model: String, host: URL = OllamaBackend.defaultHost,
-                             bonsai install: BonsaiBackend.Install = .standard) async -> Check {
-        let backend = backend(for: model, host: host, bonsai: install)
+    public static func check(_ model: String, host: URL = OllamaBackend.defaultHost) async -> Check {
+        let backend = await backend(for: model, host: host)
         do {
             try await backend.check()
             let caution = backend.cautions.first

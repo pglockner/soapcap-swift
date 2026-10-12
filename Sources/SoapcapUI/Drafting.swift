@@ -22,7 +22,8 @@ import SoapcapNote
                progress: @escaping @Sendable (DraftProgress) -> Void) async throws -> DraftedNote {
         let model = settings.noteModel, host = settings.ollamaHost
         if let loaded, loaded.model != model || loaded.host != host { await release() }
-        let backend = loaded?.backend ?? ModelCatalog.backend(for: model, host: host)
+        let backend: any NoteBackend
+        if let loaded { backend = loaded.backend } else { backend = await ModelCatalog.backend(for: model, host: host) }
         loaded = (model, host, backend)
         var drafter = NoteDrafter(backend: backend)
         drafter.systemLabel = systemLabel

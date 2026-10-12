@@ -71,8 +71,11 @@ struct SettingsView: View {
     @AppStorage(SessionSettings.Key.sessionType) private var sessionType = ""
     @State private var languages: [Locale] = []
     @State private var models: [String] = []
+    /// What Ollama has, so that a model it already holds isn't offered again.
+    @State private var pulled: [String] = []
     @ObservedObject var setup = ModelSetup.shared
     @ObservedObject var bonsai = ModelDownload.bonsai
+    @ObservedObject var llama = ModelDownload.llama
 
     private var settings: SessionSettings { SessionSettings() }
 
@@ -115,6 +118,18 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
             Section {
+                if OllamaBackend.has(ModelCatalog.defaultModel, in: pulled), llama.state == .missing {
+                    Label("Ollama has \(ModelCatalog.defaultModel), and Soapcap drafts with that copy.", systemImage: "checkmark.circle.fill")
+                } else {
+                    ModelDownloadRow(name: ModelCatalog.defaultModel, needGB: ModelCatalog.defaultModelMemoryGB, download: llama)
+                }
+            } header: {
+                Text(ModelCatalog.defaultModel)
+            } footer: {
+                Text((ModelCatalog.description(of: ModelCatalog.defaultModel) ?? "") + " Built with Llama: Meta's Llama 3.1, under its Community License.")
+                    .foregroundStyle(.secondary)
+            }
+            Section {
                 ModelDownloadRow(name: BonsaiBackend.displayName, needGB: ModelCatalog.memoryNeedGB(of: ModelCatalog.bonsai), download: bonsai)
             } header: {
                 Text(BonsaiBackend.displayName)
@@ -153,11 +168,15 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 440)
-        .fixedSize(horizontal: false, vertical: true)
+        // A fixed height that scrolls: with nothing downloaded yet the
+        // sections are taller than a laptop's screen.
+        .frame(width: 440, height: 640)
         .task { languages = await Readiness.supportedLanguages() }
-        // Asked again when Bonsai arrives or goes, so the list above follows.
-        .task(id: "\(ollamaHost) \(bonsai.isInstalled)") { models = await ModelCatalog.installed(host: settings.ollamaHost) }
+        // Asked again when a model arrives or goes, so the list above follows.
+        .task(id: "\(ollamaHost) \(bonsai.isInstalled) \(llama.isInstalled)") {
+            pulled = await ModelCatalog.pulled(host: settings.ollamaHost)
+            models = ModelCatalog.installed(pulled: pulled)
+        }
     }
 }
 
