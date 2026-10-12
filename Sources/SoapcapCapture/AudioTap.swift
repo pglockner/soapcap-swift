@@ -15,8 +15,12 @@ import CoreAudio
 ///   device (AirPods connecting, in or out of their call mode).
 final class AudioTap: @unchecked Sendable {
     private let system = AudioHardwareSystem.shared
-    /// Everything happens here, the buffers included.
+    /// Starting and stopping happen here, one at a time.
     private let queue = DispatchQueue(label: "soapcap.audio-tap")
+    /// Buffers arrive here. Core Audio hands each one over and waits for it
+    /// to be dealt with, so on the queue above a stop could be waiting for a
+    /// buffer that is waiting for the stop.
+    private let delivery = DispatchQueue(label: "soapcap.audio-tap.buffers")
     private var tap: AudioHardwareTap?
     private var device: AudioHardwareAggregateDevice?
     private var proc: AudioDeviceIOProcID?
@@ -75,7 +79,7 @@ final class AudioTap: @unchecked Sendable {
             ]) else { throw CaptureError.callAudioFailed("no device") }
             self.device = device
             // This is the call that waits for the permission question.
-            let status = AudioDeviceCreateIOProcIDWithBlock(&proc, device.id, queue) { _, input, _, _, _ in
+            let status = AudioDeviceCreateIOProcIDWithBlock(&proc, device.id, delivery) { _, input, _, _, _ in
                 if let buffer = AVAudioPCMBuffer(pcmFormat: format, bufferListNoCopy: input) { onBuffer(buffer) }
             }
             guard status == noErr, let proc else { throw CaptureError.callAudioFailed("error \(status)") }
