@@ -138,6 +138,8 @@ caution that it is untested.
 ## Not yet
 
 - [ ] A signed, notarized build that installs without Xcode
+- [ ] Register jukenzie.com, the domain the app's identifier
+      (`com.jukenzie.soapcap`) is named after, before the first public build
 - [ ] Stretch: the `structured` and `combined` note styles (nobody is
       asking for them yet). Notes are drafted in the narrative style only
 - [ ] Idea, not scoped: note structure from a settings file, so a note's
