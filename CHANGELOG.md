@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8 (2026-10-10 – 2026-10-12)
+
+- Fixed a note model's requests and replies being cached on disk: the transcript and the note were filed in the app's cache folder under `~/Library/Caches`. Nothing is cached now, and the app deletes its cache folder whenever it opens
+- Changed how the call is heard to a Core Audio tap in place of ScreenCaptureKit: macOS now asks about System Audio Recording only, never the screen, and the answer counts without reopening the app
+- Added `llama3.1:8b` as a 4.9 GB download in Settings, run on the app's own engine, so drafting no longer needs Ollama; a copy Ollama already has is used where it is
+- Changed the app's identifier to `com.jukenzie.soapcap`; settings and permissions under the old one are not carried over
+- Changed the checks screen into a setup screen that walks through the Microphone and System Audio Recording permissions, each with a button that says what macOS will show
+- Fixed the microphone being lost for the rest of a session when the input device changed, as when AirPods connect or are put away; it is now read through Core Audio and retried until it is back
+- Added a **Test** button for the note model, in Settings and on the checks screen: it drafts a note from a sample session and answers Good or Problem
+- Added **Uninstall Soapcap…** to the app menu, which removes the models the app downloaded, its settings and its permissions, then moves the app to the Trash
+
 ## 0.7 (2026-10-10)
 
 - Added the note engine inside the app: `llama-server`, built from PrismML's pinned source by `engine.sh`, so Bonsai no longer needs soapcap's build. Building the app now needs cmake
