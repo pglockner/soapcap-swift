@@ -42,7 +42,8 @@ struct ModelDownloadRow: View {
         if download.keptBytes > 0 { text += " \(ByteCount.text(download.keptBytes)) is already here from an earlier try." }
         if let free = download.freeBytes { text += " This Mac has \(ByteCount.text(free)) of disk free." }
         if let needGB {
-            text += String(format: " It takes about %.0f GB of memory while drafting", needGB)
+            // Rounded up: a need that is understated is the one that hurts.
+            text += String(format: " It takes about %.0f GB of memory while drafting", needGB.rounded(.up))
             if let memoryGB, memoryGB < needGB * 1.5 {
                 text += String(format: ", and this Mac has %.0f GB, so drafting with it will be very slow.", memoryGB)
             } else {
