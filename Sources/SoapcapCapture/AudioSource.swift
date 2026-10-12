@@ -3,7 +3,8 @@ import AVFoundation
 /// Somewhere audio comes from. Buffers arrive already converted to `format`,
 /// on whatever thread the source uses.
 protocol AudioSource: AnyObject {
-    /// Called with a short message if the source stops working mid-session.
+    /// Called with a short message if the source stops working mid-session,
+    /// and again if it comes back.
     var onProblem: ((String) -> Void)? { get set }
     func start(format: AVAudioFormat, onBuffer: @escaping (AVAudioPCMBuffer) -> Void) async throws
     func stop() async
