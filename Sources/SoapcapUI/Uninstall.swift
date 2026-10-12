@@ -8,17 +8,28 @@ struct Uninstaller {
     var bundleID = Bundle.main.bundleIdentifier ?? "com.jukenzie.soapcap"
     var library = FileManager.default.homeDirectoryForCurrentUser.appending(path: "Library")
     var app = Bundle.main.bundleURL
+    /// A cache macOS keeps for each user outside the Library. What it compiles
+    /// for an app's drawing goes there, in a folder named for the app.
+    var systemCache: URL? = {
+        var path = [CChar](repeating: 0, count: Int(PATH_MAX))
+        guard confstr(_CS_DARWIN_USER_CACHE_DIR, &path, path.count) > 0 else { return nil }
+        return URL(fileURLWithPath: String(cString: path), isDirectory: true)
+    }()
 
     /// Where macOS files what the app fetches. The app has no use for it, and
     /// versions before 0.8 let it hold a note model's requests and replies.
     var cache: URL { library.appending(path: "Caches/\(bundleID)") }
 
+    /// The models it downloaded.
+    var models: URL { library.appending(path: "Application Support/Soapcap") }
+
     /// Every place the app, or macOS on its behalf, may have put something.
     var places: [URL] {
-        [library.appending(path: "Application Support/Soapcap"),         // the models it downloaded
+        [models,
          cache,
          library.appending(path: "HTTPStorages/\(bundleID)"),
          library.appending(path: "Saved Application State/\(bundleID).savedState")]
+            + [systemCache?.appending(path: bundleID)].compactMap { $0 }
     }
 
     /// Deletes the cache. Done whenever the app opens, so that nothing
@@ -28,13 +39,11 @@ struct Uninstaller {
     /// Those of them that are there.
     var leftovers: [URL] { places.filter { FileManager.default.fileExists(atPath: $0.path) } }
 
-    /// How much disk the leftovers take.
+    /// How much disk the models take.
     var bytes: Int64 {
-        leftovers.reduce(0) { total, place in
-            let files = FileManager.default.enumerator(at: place, includingPropertiesForKeys: [.fileSizeKey])
-            return total + (files?.compactMap { ($0 as? URL).flatMap { try? $0.resourceValues(forKeys: [.fileSizeKey]).fileSize } }
-                .reduce(0) { $0 + Int64($1) } ?? 0)
-        }
+        let files = FileManager.default.enumerator(at: models, includingPropertiesForKeys: [.fileSizeKey])
+        return files?.compactMap { ($0 as? URL).flatMap { try? $0.resourceValues(forKeys: [.fileSizeKey]).fileSize } }
+            .reduce(0) { $0 + Int64($1) } ?? 0
     }
 
     var summary: String {

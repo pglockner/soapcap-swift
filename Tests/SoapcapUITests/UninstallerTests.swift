@@ -3,9 +3,14 @@ import XCTest
 
 final class UninstallerTests: XCTestCase {
     private var library: URL!
+    private var systemCache: URL { library.deletingLastPathComponent().appending(path: "C") }
 
     override func setUp() {
         library = FileManager.default.temporaryDirectory.appending(path: "soapcap-uninstall-tests-\(UUID().uuidString)/Library")
+    }
+
+    private func uninstaller() -> Uninstaller {
+        Uninstaller(bundleID: "test.soapcap", library: library, app: library.appending(path: "Soapcap.app"), systemCache: systemCache)
     }
 
     override func tearDown() { try? FileManager.default.removeItem(at: library.deletingLastPathComponent()) }
@@ -18,7 +23,7 @@ final class UninstallerTests: XCTestCase {
     }
 
     func testItRemovesWhatTheAppPutThereAndNothingElse() throws {
-        let uninstaller = Uninstaller(bundleID: "test.soapcap", library: library, app: library.appending(path: "Soapcap.app"))
+        let uninstaller = uninstaller()
         XCTAssertEqual(uninstaller.leftovers, [])
         XCTAssertEqual(uninstaller.bytes, 0)
 
@@ -26,20 +31,22 @@ final class UninstallerTests: XCTestCase {
         let pii = try write("Application Support/Soapcap/deidentify-model/weights.safetensors", bytes: 500)
         let cache = try write("Caches/test.soapcap/Cache.db", bytes: 40)
         let state = try write("Saved Application State/test.soapcap.savedState/windows.plist", bytes: 2)
-        // Not the app's: another app's support folder, and another app's cache.
-        let others = [try write("Application Support/Ollama/models/blob"), try write("Caches/com.example.other/Cache.db")]
+        let compiled = try write("../C/test.soapcap/com.apple.metal/functions.data", bytes: 7)
+        // Not the app's: another app's support folder, and other apps' caches.
+        let others = [try write("Application Support/Ollama/models/blob"), try write("Caches/com.example.other/Cache.db"),
+                      try write("../C/com.example.other/com.apple.metal/functions.data")]
 
-        XCTAssertEqual(uninstaller.leftovers.count, 3)
-        XCTAssertEqual(uninstaller.bytes, 3542)
+        XCTAssertEqual(uninstaller.leftovers.count, 4)
+        XCTAssertEqual(uninstaller.bytes, 3500, "the size shown is the models' alone")
         XCTAssertTrue(uninstaller.summary.contains("then moves Soapcap to the Trash"))
         XCTAssertEqual(uninstaller.removeData(), [])
-        for gone in [bonsai, pii, cache, state] { XCTAssertFalse(FileManager.default.fileExists(atPath: gone.path), gone.path) }
+        for gone in [bonsai, pii, cache, state, compiled] { XCTAssertFalse(FileManager.default.fileExists(atPath: gone.path), gone.path) }
         for kept in others { XCTAssertTrue(FileManager.default.fileExists(atPath: kept.path), kept.path) }
         XCTAssertEqual(uninstaller.leftovers, [])
     }
 
     func testRemovingTheCacheTakesAllOfItAndNothingElse() throws {
-        let uninstaller = Uninstaller(bundleID: "test.soapcap", library: library, app: library.appending(path: "Soapcap.app"))
+        let uninstaller = uninstaller()
         uninstaller.removeCache()       // nothing there yet: no harm done
 
         // What a version that cached a note model's replies left behind.
