@@ -28,7 +28,6 @@ private final class FakeEngine: InputEngine, @unchecked Sendable {
         note("start")
     }
     func stop() { note("stop") }
-    func renew() { note("renew") }
 }
 
 private final class Problems: @unchecked Sendable {
@@ -41,7 +40,7 @@ private final class Problems: @unchecked Sendable {
 final class MicrophoneSourceTests: XCTestCase {
     private let format = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 16000, channels: 1, interleaved: false)!
     /// What one try at a new device does to the engine.
-    private let retry = ["untap", "stop", "renew", "tap", "start"]
+    private let retry = ["untap", "stop", "tap", "start"]
 
     /// A source that tries a new device at once, once more 10 ms later, and
     /// from then on every 10 ms.
@@ -78,7 +77,7 @@ final class MicrophoneSourceTests: XCTestCase {
         }
     }
 
-    func testADeviceChangeRestartsOnTheNewInputWithANewEngine() async throws {
+    func testADeviceChangeRestartsOnTheNewInput() async throws {
         let engine = FakeEngine()
         let (source, problems) = try await started(engine)
         engine.log = []
@@ -131,7 +130,7 @@ final class MicrophoneSourceTests: XCTestCase {
         let change = engine.onConfigurationChange
         engine.startFails = true
         change?()
-        await wait(for: "tries to begin") { engine.log.contains("renew") }
+        await wait(for: "tries to begin") { engine.log.contains("tap") }
         await source.stop()                         // in the middle of trying
         XCTAssertNil(engine.onConfigurationChange)
         engine.log = []

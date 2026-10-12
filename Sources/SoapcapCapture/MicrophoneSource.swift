@@ -1,4 +1,5 @@
 import AVFoundation
+import CoreAudio
 
 /// The parts of an audio engine the microphone source uses, so the restart
 /// logic can be tested without a device.
@@ -12,8 +13,6 @@ protocol InputEngine: AnyObject {
     func removeTap()
     func start() throws
     func stop()
-    /// Starts over with an engine that looks at the input device afresh.
-    func renew()
 }
 
 /// The default input device. When it changes mid-session (AirPods connect or
@@ -71,10 +70,9 @@ final class MicrophoneSource: AudioSource {
     }
 
     /// Gets the microphone going again after the input device changed, and
-    /// does not give up. AirPods that connect mid-session refuse the first
-    /// try, made while they are still going into their call mode, and
-    /// nothing says when they are ready. So the tries are spaced out, and
-    /// each is made with a new engine.
+    /// does not give up. AirPods that connect mid-session can refuse the
+    /// first try, made while they are still going into their call mode, and
+    /// nothing says when they are ready. So the tries are spaced out.
     private func recover() async {
         var pauses = pauses[...]
         var lost = false
@@ -83,7 +81,6 @@ final class MicrophoneSource: AudioSource {
             if Task.isCancelled || handler == nil { return }
             engine.removeTap()
             engine.stop()
-            engine.renew()
             if listen() {
                 if lost { onProblem?("microphone back") }
                 return
@@ -96,36 +93,129 @@ final class MicrophoneSource: AudioSource {
     }
 }
 
+/// The default input device, read straight from Core Audio, the way
+/// `AudioTap` reads what the Mac plays. AVAudioEngine did this before: asked
+/// about its input at the moment AirPods left, a new engine never answered,
+/// and the session could not be stopped. Core Audio answers with an error.
 final class SystemInputEngine: InputEngine {
-    var onConfigurationChange: (() -> Void)?
-    private var engine = AVAudioEngine()
-    private var observer: NSObjectProtocol?
+    private static let system = AudioObjectID(kAudioObjectSystemObject)
+    private let lock = NSLock()
+    private let delivery = DispatchQueue(label: "soapcap.microphone.buffers")
+    private let events = DispatchQueue(label: "soapcap.microphone.events")
+    private var onChange: (() -> Void)?
+    private var handler: ((AVAudioPCMBuffer) -> Void)?
+    private var device = AudioObjectID(kAudioObjectUnknown)
+    private var format: AVAudioFormat?
+    private var proc: AudioDeviceIOProcID?
+    /// One block for every listener, so that each can be taken off again.
+    private var listener: AudioObjectPropertyListenerBlock?
 
-    init() { observe() }
-
-    deinit { if let observer { NotificationCenter.default.removeObserver(observer) } }
-
-    /// The engine posts this from a thread of its own, where it must not be
-    /// called back; whoever listens has to act elsewhere.
-    private func observe() {
-        if let observer { NotificationCenter.default.removeObserver(observer) }
-        observer = NotificationCenter.default.addObserver(
-            forName: .AVAudioEngineConfigurationChange, object: engine, queue: nil
-        ) { [weak self] _ in self?.onConfigurationChange?() }
+    var onConfigurationChange: (() -> Void)? {
+        get { lock.withLock { onChange } }
+        set { lock.withLock { onChange = newValue } }
     }
 
-    var inputSampleRate: Double { engine.inputNode.outputFormat(forBus: 0).sampleRate }
-
-    func installTap(_ handler: @escaping (AVAudioPCMBuffer) -> Void) {
-        engine.inputNode.installTap(onBus: 0, bufferSize: 4096, format: nil) { buffer, _ in handler(buffer) }
+    init() {
+        listener = { [weak self] _, _ in self?.somethingChanged() }
+        listen(to: kAudioHardwarePropertyDefaultInputDevice, of: Self.system, true)
     }
 
-    func removeTap() { engine.inputNode.removeTap(onBus: 0) }
-    func start() throws { try engine.start() }
-    func stop() { engine.stop() }
+    deinit {
+        stop()
+        listen(to: kAudioHardwarePropertyDefaultInputDevice, of: Self.system, false)
+    }
 
-    func renew() {
-        engine = AVAudioEngine()
-        observe()
+    var inputSampleRate: Double { Self.inputFormat(of: Self.defaultInput())?.sampleRate ?? 0 }
+
+    func installTap(_ handler: @escaping (AVAudioPCMBuffer) -> Void) { lock.withLock { self.handler = handler } }
+    func removeTap() { lock.withLock { handler = nil } }
+
+    func start() throws {
+        stop()
+        let device = Self.defaultInput()
+        guard let handler = lock.withLock({ handler }), let format = Self.inputFormat(of: device) else {
+            throw CaptureError.microphoneDenied
+        }
+        var proc: AudioDeviceIOProcID?
+        let made = AudioDeviceCreateIOProcIDWithBlock(&proc, device, delivery) { _, input, _, output, _ in
+            // A device that also plays is given silence to play.
+            for buffer in UnsafeMutableAudioBufferListPointer(output) {
+                if let data = buffer.mData { memset(data, 0, Int(buffer.mDataByteSize)) }
+            }
+            // The first buffer is the device's first input stream.
+            guard input.pointee.mNumberBuffers > 0 else { return }
+            var first = AudioBufferList(mNumberBuffers: 1, mBuffers: input.pointee.mBuffers)
+            if let buffer = AVAudioPCMBuffer(pcmFormat: format, bufferListNoCopy: &first) { handler(buffer) }
+        }
+        guard made == noErr, let proc else { throw CaptureError.microphoneDenied }
+        guard AudioDeviceStart(device, proc) == noErr else {
+            AudioDeviceDestroyIOProcID(device, proc)
+            throw CaptureError.microphoneDenied
+        }
+        lock.withLock { (self.device, self.format, self.proc) = (device, format, proc) }
+        listen(to: kAudioDevicePropertyDeviceIsAlive, of: device, true)
+        listen(to: kAudioDevicePropertyNominalSampleRate, of: device, true)
+    }
+
+    func stop() {
+        let (device, proc) = lock.withLock {
+            defer { (self.device, self.format, self.proc) = (AudioObjectID(kAudioObjectUnknown), nil, nil) }
+            return (self.device, self.proc)
+        }
+        guard let proc else { return }
+        listen(to: kAudioDevicePropertyDeviceIsAlive, of: device, false)
+        listen(to: kAudioDevicePropertyNominalSampleRate, of: device, false)
+        AudioDeviceStop(device, proc)
+        AudioDeviceDestroyIOProcID(device, proc)
+    }
+
+    /// Passes a change on only if it means starting again: another device
+    /// is the default input, or the one in use went away or changed its
+    /// format. AirPods change their rate as they go into their call mode,
+    /// which starting to listen causes; that alone must not start it again.
+    private func somethingChanged() {
+        let (device, format, onChange) = lock.withLock { (self.device, self.format, self.onChange) }
+        let now = Self.defaultInput()
+        if device != kAudioObjectUnknown, now == device, Self.inputFormat(of: device) == format { return }
+        onChange?()
+    }
+
+    private func listen(to selector: AudioObjectPropertySelector, of object: AudioObjectID, _ on: Bool) {
+        guard let listener else { return }
+        var address = Self.address(selector)
+        if on {
+            AudioObjectAddPropertyListenerBlock(object, &address, events, listener)
+        } else {
+            AudioObjectRemovePropertyListenerBlock(object, &address, events, listener)
+        }
+    }
+
+    private static func address(_ selector: AudioObjectPropertySelector,
+                                scope: AudioObjectPropertyScope = kAudioObjectPropertyScopeGlobal) -> AudioObjectPropertyAddress {
+        AudioObjectPropertyAddress(mSelector: selector, mScope: scope, mElement: kAudioObjectPropertyElementMain)
+    }
+
+    private static func defaultInput() -> AudioObjectID {
+        var device = AudioObjectID(kAudioObjectUnknown)
+        var size = UInt32(MemoryLayout<AudioObjectID>.size)
+        var address = address(kAudioHardwarePropertyDefaultInputDevice)
+        AudioObjectGetPropertyData(system, &address, 0, nil, &size, &device)
+        return device
+    }
+
+    /// The format of `device`'s first input stream; nil if it has none.
+    private static func inputFormat(of device: AudioObjectID) -> AVAudioFormat? {
+        guard device != kAudioObjectUnknown else { return nil }
+        var address = address(kAudioDevicePropertyStreams, scope: kAudioObjectPropertyScopeInput)
+        var size: UInt32 = 0
+        guard AudioObjectGetPropertyDataSize(device, &address, 0, nil, &size) == noErr else { return nil }
+        var streams = [AudioObjectID](repeating: 0, count: Int(size) / MemoryLayout<AudioObjectID>.size)
+        guard !streams.isEmpty, AudioObjectGetPropertyData(device, &address, 0, nil, &size, &streams) == noErr else { return nil }
+        var layout = AudioStreamBasicDescription()
+        size = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
+        address = Self.address(kAudioStreamPropertyVirtualFormat)
+        guard AudioObjectGetPropertyData(streams[0], &address, 0, nil, &size, &layout) == noErr,
+              layout.mSampleRate > 0, layout.mChannelsPerFrame > 0 else { return nil }
+        return AVAudioFormat(streamDescription: &layout)
     }
 }
