@@ -17,7 +17,7 @@ you build it with Xcode. For a finished tool, use soapcap.
 [Build and run](#build-and-run) ·
 [Using the app](#using-the-app) ·
 [Privacy](#privacy) ·
-[Not yet](#not-yet) ·
+[Roadmap](#roadmap) ·
 [soapcap and this app](#soapcap-and-this-app) ·
 [Development](#development)
 
@@ -135,15 +135,15 @@ caution that it is untested.
 - **Ollama on another machine breaks the promise.** If its address is not
   this Mac, the transcript travels over the network, and the note says so.
 
-## Not yet
+## Roadmap
 
-- [ ] A signed, notarized build that installs without Xcode
-- [ ] Register jukenzie.com, the domain the app's identifier
-      (`com.jukenzie.soapcap`) is named after, before the first public build
 - [ ] Before a release candidate, try by hand what nobody has yet:
       **Uninstall Soapcap…** (it also removes the downloaded models), a
       whole Bonsai download, refusing the microphone, a FaceTime call, and
       stopping a draft while Bonsai loads and with an Ollama model
+- [ ] Register jukenzie.com, the domain the app's identifier
+      (`com.jukenzie.soapcap`) is named after, before the first public build
+- [ ] A signed, notarized build that installs without Xcode
 - [ ] Stretch: the `structured` and `combined` note styles (nobody is
       asking for them yet). Notes are drafted in the narrative style only
 - [ ] Idea, not scoped: note structure from a settings file, so a note's
