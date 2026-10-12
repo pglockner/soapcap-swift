@@ -73,6 +73,8 @@ struct SettingsView: View {
     @State private var models: [String] = []
     /// What Ollama has, so that a model it already holds isn't offered again.
     @State private var pulled: [String] = []
+    /// Trying the chosen note model on the sample session.
+    let test: ModelTest
     @ObservedObject var setup = ModelSetup.shared
     @ObservedObject var bonsai = ModelDownload.bonsai
     @ObservedObject var llama = ModelDownload.llama
@@ -110,6 +112,7 @@ struct SettingsView: View {
                     ForEach(choices, id: \.self) { Text(ModelCatalog.displayName(of: $0)).tag($0) }
                 }
                 TextField("Session type", text: $sessionType, prompt: Text("telehealth"))
+                ModelTestView(test: test, model: settings.noteModel)
             } header: {
                 Text("Note")
             } footer: {
@@ -180,4 +183,4 @@ struct SettingsView: View {
     }
 }
 
-#Preview("Settings") { SettingsView() }
+#Preview("Settings") { SettingsView(test: SessionModel().modelTest) }

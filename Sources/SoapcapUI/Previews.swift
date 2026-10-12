@@ -148,16 +148,40 @@ private let previewLines = [
     return download
 }
 
-#Preview("Settings, Bonsai to download") { SettingsView(bonsai: bonsaiDownload(.missing)) }
+#Preview("Settings, Bonsai to download") { SettingsView(test: SessionModel().modelTest, bonsai: bonsaiDownload(.missing)) }
 
 #Preview("Settings, Bonsai downloading") {
-    SettingsView(bonsai: bonsaiDownload(.working(FetchProgress(bytes: 2_100_000_000, total: 5_946_648_928, bytesPerSecond: 24_000_000))))
+    SettingsView(test: SessionModel().modelTest, bonsai: bonsaiDownload(.working(FetchProgress(bytes: 2_100_000_000, total: 5_946_648_928, bytesPerSecond: 24_000_000))))
 }
 
-#Preview("Settings, Bonsai installed") { SettingsView(bonsai: bonsaiDownload(.ready)) }
+#Preview("Settings, Bonsai installed") { SettingsView(test: SessionModel().modelTest, bonsai: bonsaiDownload(.ready)) }
 
-#Preview("Settings, model missing") { SettingsView(setup: ModelSetup(isReady: false)) }
+#Preview("Settings, model missing") { SettingsView(test: SessionModel().modelTest, setup: ModelSetup(isReady: false)) }
 
 #Preview("Settings, downloading") {
-    SettingsView(setup: { let s = ModelSetup(isReady: false); s.show(.working(file: "weights.safetensors", fraction: 0.43)); return s }())
+    SettingsView(test: SessionModel().modelTest, setup: { let s = ModelSetup(isReady: false); s.show(.working(file: "weights.safetensors", fraction: 0.43)); return s }())
+}
+
+private let previewSampleNote = "9 minutes, telehealth\n\nSUBJECTIVE:\nThe client reported that the chest tightness came back twice this week.\n\nOBJECTIVE:\nOn time via video. Cooperative. Affect constricted; mood stressed. No SI/HI reported.\n\nASSESSMENT:\nSymptoms remain consistent with the generalized anxiety the client described.\n\nPLAN:\nPractise the breathing exercise twice a day; review in two weeks."
+
+@MainActor private func testedModel(_ state: ModelTest.State, note: String? = previewSampleNote) -> ModelTest {
+    let test = SessionModel().modelTest
+    test.show(state, note: note)
+    return test
+}
+
+#Preview("Settings, model tested good") { SettingsView(test: testedModel(.good(model: "llama3.1:8b", seconds: 48))) }
+
+#Preview("Settings, model being tested") { SettingsView(test: testedModel(.running("Drafting a soap note with llama3.1:8b…"), note: nil)) }
+
+#Preview("Checks, model tested with a problem") {
+    sampleScreen {
+        $0.phase = .checks([
+            Check("Microphone", .ok, "Soapcap can hear your side."),
+            Check("Call audio", .ok, "Soapcap can hear what the Mac is playing."),
+            Check("Note model", .ok, "llama3.1:8b is ready to draft notes."),
+            Check("Memory", .ok, "16 GB, about 10 GB free now."),
+        ])
+        $0.modelTest.show(.problem(model: "llama3.1:8b", reasons: ["ASSESSMENT is empty or \"Not addressed\""]), note: previewSampleNote)
+    }
 }

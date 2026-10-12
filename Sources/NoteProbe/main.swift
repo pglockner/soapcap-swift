@@ -1,6 +1,7 @@
 // Drafts a note from a transcript file and prints it. A development aid for
 // checking drafting without the window:
 //   swift run NoteProbe FILE [soap|dap|birp] [MODEL] [MINUTES]
+// FILE can be `sample`, for the sample session that ships with the app.
 // MODEL is `bonsai`, a model's name as Settings shows it (run as the app
 // would: by Ollama if Ollama has it, or else the default model from the
 // app's own file), or `gguf:PATH` to run a model file with the app's engine
@@ -11,7 +12,8 @@ import SoapcapNote
 func say(_ s: String) { FileHandle.standardError.write(Data((s + "\n").utf8)) }
 
 let args = Array(CommandLine.arguments.dropFirst())
-guard let path = args.first, let transcript = try? String(contentsOfFile: path, encoding: .utf8) else {
+let isSample = args.first == "sample"
+guard let path = args.first, let transcript = isSample ? try? SampleSession.transcript() : try? String(contentsOfFile: path, encoding: .utf8) else {
     say("usage: NoteProbe FILE [soap|dap|birp] [MODEL] [MINUTES]")
     exit(2)
 }
@@ -32,7 +34,7 @@ let title = Title()
 do {
     let started = Date()
     let note = try await drafter.draft(format: format, transcript: transcript.trimmingCharacters(in: .newlines),
-                                       minutes: args.dropFirst(3).first.flatMap { Int($0) }) { progress in
+                                       minutes: args.dropFirst(3).first.flatMap { Int($0) } ?? (isSample ? SampleSession.minutes : nil)) { progress in
         if progress.title != title.last { title.last = progress.title; say(progress.title) }
     }
     await backend.stop()

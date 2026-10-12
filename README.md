@@ -101,6 +101,13 @@ a download that is stopped carries on where it left off, and **Remove**
 deletes a note model again. `llama3.1:8b` is not offered when Ollama
 already has it. Ollama's address is under Advanced.
 
+**Testing a note model.** **Test**, under the model's name in Settings and
+on the Note model line of the checks screen, drafts a note from a made-up
+session with the chosen model. It answers Good when every section came out
+filled, or Problem with what was wrong, and the note can be read either
+way. It takes as long as drafting a note does, nothing is kept, and it is
+not offered while a session is being recorded.
+
 **Uninstalling.** The app menu's **Uninstall Soapcap…** removes the models
 the app downloaded, its settings and its permissions, then moves the app to
 the Trash. A Bonsai or an Ollama that something else installed is left
@@ -168,9 +175,9 @@ Three probes run a piece of the app without the window:
   transcript. `swift run CaptureProbe check` only says whether the Mac's
   audio can be heard. From a terminal, the permissions are the terminal's.
 - `swift run NoteProbe FILE [soap|dap|birp] [MODEL] [MINUTES]` drafts a
-  note from a transcript file; `Samples/notes` has one. The model is run
-  the way the app would run it, and `gguf:PATH` runs any model file on the
-  app's engine.
+  note from a transcript file, or from the sample session with `sample` in
+  place of the file. The model is run the way the app would run it, and
+  `gguf:PATH` runs any model file on the app's engine.
 - `swift run -c release DeidentifyProbe FILE [note]` de-identifies a file.
   `--install` sets up the model first; `--windows` tries other passes.
 
@@ -256,10 +263,17 @@ SOAPCAP_MODEL_TESTS=1 swift test --filter SampleNoteTests
 SOAPCAP_NETWORK_TESTS=1 swift test --filter FetcherNetworkTests
 ```
 
-The first drafts the note of the sample session in `Samples/notes` with
-the default model and checks that it comes out whole: the baseline check
-that a model on this Mac is working. It takes about a minute. The second
+The first drafts the sample session's note with the default model and
+checks that it comes out whole, as the app's Test button does: the baseline
+check that a model on this Mac is working. It takes about a minute. Give
+the variable a model's name instead of `1` to try that one. The second
 stops and resumes a real 130 MB download.
+
+The sample session is soapcap's `03-selfreport-diagnosis-9min`, an
+entirely fictional nine-minute session, in
+`Sources/SoapcapNote/Resources/samples`. It says a model is working, not
+how good its notes are: a note's wording changes from one draft to the
+next, so there is no expected text to compare with.
 
 ## Credits
 

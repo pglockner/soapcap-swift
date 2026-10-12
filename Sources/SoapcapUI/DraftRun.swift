@@ -26,6 +26,9 @@ final class DraftRun: ObservableObject {
     /// isn't left holding memory (or, for Bonsai, its port).
     func draft(format: NoteFormat, transcript: String, minutes: Int, systemLabel: String,
                progress: @escaping @Sendable (DraftProgress) -> Void) async throws -> DraftedNote? {
+        // One model, one draft: a new draft ends the one in flight, which
+        // then returns nil, as it does when stopped.
+        if self.task != nil { stop() }
         let task = Task {
             // A model that is still stopping must be gone before another loads.
             await releasing?.value

@@ -40,7 +40,7 @@ public struct SoapcapApp: App {
             }
         }
         Window("Acknowledgements", id: "acknowledgements") { AcknowledgementsView() }
-        Settings { SettingsView() }
+        Settings { SettingsView(test: model.modelTest) }
     }
 }
 
@@ -53,12 +53,13 @@ struct ContentView: View {
             case .idle: idle
             case .recording: recording
             case .paused: paused
-            case .working(let msg): WorkingView(message: msg, run: m.draftRun, stop: { m.stopDraft() })
+            case .working(let msg): WorkingView(message: msg, run: m.draftRun, test: m.modelTest, stop: { m.stopDraft() })
             case .transcript: transcript
             case .note: note
             case .error(let msg): error(msg)
             case .checks(let checks):
-                ChecksView(checks: checks, perform: { m.perform($0) }, again: { m.diagnose() }, back: { m.newSession() })
+                ChecksView(checks: checks, test: m.modelTest, model: m.settings.noteModel,
+                           perform: { m.perform($0) }, again: { m.diagnose() }, back: { m.newSession() })
             }
         }
         // Against the top left however wide the window is; a screen narrower

@@ -15,7 +15,7 @@ final class SessionModel: ObservableObject {
     /// How many lines the recording screen's live strip keeps.
     static let liveLimit = 12
 
-    @Published var phase: Phase = .idle
+    @Published var phase: Phase = .idle { didSet { modelTest.isBlocked = phase == .recording || phase == .paused } }
     @Published var deidentify: Bool { didSet { settings.deidentify = deidentify } }
     @Published var format: String { didSet { settings.format = format } }
     @Published var transcript = ""
@@ -32,6 +32,8 @@ final class SessionModel: ObservableObject {
     @Published var memoryQuestion: String?
     /// The note model: whether it is working, and the memory in use meanwhile.
     let draftRun: DraftRun
+    /// Trying the note model on the sample session, from Settings or the checks screen.
+    let modelTest: ModelTest
 
     /// Whether the de-identification model is installed, so the toggle is offered.
     @Published private(set) var canDeidentify = false
@@ -60,6 +62,7 @@ final class SessionModel: ObservableObject {
         self.now = now
         self.settings = settings
         draftRun = DraftRun(drafting: drafting ?? ModelDrafting(settings: settings), memory: memory)
+        modelTest = ModelTest(run: draftRun, settings: settings)
         self.deidentifying = deidentifying ?? ModelDeidentifying()
         readMemory = memory
         gatherChecks = checks ?? {
@@ -86,6 +89,7 @@ final class SessionModel: ObservableObject {
 
     func start() {
         guard phase == .idle else { return }
+        modelTest.stop()        // a session has the Mac to itself
         notice = ""; warning = ""; copied = false; liveLines = []; recordedBefore = 0; elapsed = 0
         phase = .working("Starting…")
         labels = (settings.micLabel, settings.systemLabel)
@@ -231,7 +235,7 @@ final class SessionModel: ObservableObject {
     /// The screen waits for the model to go, so that another draft can't
     /// start while the first one's model is still shutting down.
     func stopDraft() {
-        guard draftRun.isRunning else { return }
+        guard draftRun.isRunning, !modelTest.isRunning else { return }
         generation += 1
         let gen = generation, back: Phase = note.isEmpty ? .transcript : .note
         let stopping = draftRun.stop()

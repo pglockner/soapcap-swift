@@ -55,6 +55,19 @@ final class DraftRunTests: XCTestCase {
         XCTAssertEqual(drafter.events, ["draft", "released", "draft"])
     }
 
+    func testANewDraftEndsTheOneInFlightAndWaitsForItsModelToGo() async throws {
+        drafter.releaseDelay = 200_000_000
+        let run = DraftRun(drafting: drafter, memory: { nil })
+        let first = draft(run)
+        await waitFor("drafting") { run.isRunning }
+        let second = draft(run)                              // a session's draft while a test of the model runs
+        let ended = try await first.value, drafted = try await second.value
+        XCTAssertNil(ended, "the first is over, as if stopped")
+        XCTAssertNotNil(drafted)
+        XCTAssertEqual(drafter.events, ["draft", "released", "draft"])
+        XCTAssertFalse(run.isRunning)
+    }
+
     func testAModelAskedToGoTwiceAtOnceIsReleasedOnceAndBothWait() async {
         drafter.releaseDelay = 200_000_000
         let run = DraftRun(drafting: drafter, memory: { nil })

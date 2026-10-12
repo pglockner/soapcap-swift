@@ -23,8 +23,10 @@ app="${SOAPCAP_OUT:-$here/build}/Soapcap.app"
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources" "$app/Contents/Helpers"
 cp Assets/soapcap.icns "$app/Contents/Resources/soapcap.icns"
-# The note prompts are data files; the app reads them from its Resources.
+# The note prompts and the sample session are data files; the app reads
+# them from its Resources.
 cp -R Sources/SoapcapNote/Resources/prompts "$app/Contents/Resources/prompts"
+cp -R Sources/SoapcapNote/Resources/samples "$app/Contents/Resources/samples"
 bin=$(swift build -c release --show-bin-path)
 cp "$bin/Soapcap" "$app/Contents/MacOS/Soapcap"
 # The note-model engine: started by the app for a draft, never run by hand.
@@ -32,7 +34,7 @@ cp "$here/.build/engine/llama-server" "$app/Contents/Helpers/llama-server"
 # Resource bundles of the packages the app links (one holds the Metal library
 # the de-identification model runs on). They are looked up in Resources.
 for bundle in "$bin"/*.bundle; do
-  case "$(basename "$bundle")" in soapcap-swift_SoapcapNote.bundle) continue ;; esac  # its prompts are copied above
+  case "$(basename "$bundle")" in soapcap-swift_SoapcapNote.bundle) continue ;; esac  # its files are copied above
   [ -f "$bundle/Contents/Info.plist" ] && cp -R "$bundle" "$app/Contents/Resources/"
 done
 # Without the Metal library the app quits the first time it de-identifies,

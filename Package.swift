@@ -20,7 +20,7 @@ let package = Package(
                 swiftSettings: [.swiftLanguageMode(.v5)]),
         // Note drafting: prompts, the model backends, and the checks on what comes back.
         .target(name: "SoapcapNote", dependencies: ["SoapcapCore"], path: "Sources/SoapcapNote",
-                resources: [.copy("Resources/prompts")]),
+                resources: [.copy("Resources/prompts"), .copy("Resources/samples")]),
         // De-identifying: the text rules around a detector, with no model of its own.
         .target(name: "SoapcapDeidentify", path: "Sources/SoapcapDeidentify"),
         // The model behind de-identifying. The only target that pulls in OpenMedKit.

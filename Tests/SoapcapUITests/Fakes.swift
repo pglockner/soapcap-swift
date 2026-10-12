@@ -35,6 +35,8 @@ final class FakeCapture: Capturing {
 @MainActor final class FakeDrafter: Drafting {
     var warnings: [String] = []
     var error: Error?
+    /// The note to hand back; a one-section note naming the format when nil.
+    var text: String?
     var asked: [(format: NoteFormat, transcript: String, minutes: Int, systemLabel: String)] = []
     var releases = 0
     /// How long the model takes to go, in nanoseconds.
@@ -49,7 +51,7 @@ final class FakeCapture: Capturing {
         progress(DraftProgress(title: "Drafting…", tokens: 7))
         try? await Task.sleep(nanoseconds: 150_000_000)
         if let error { throw error }
-        return DraftedNote(text: "SUBJECTIVE:\nformat \(format.rawValue)\nNote about Bob", warnings: warnings)
+        return DraftedNote(text: text ?? "SUBJECTIVE:\nformat \(format.rawValue)\nNote about Bob", warnings: warnings)
     }
 
     func release() async {
