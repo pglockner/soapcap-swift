@@ -54,7 +54,7 @@ public enum Readiness {
                          fix: Check.Fix(label: "Allow call audio", action: .askForCallAudio))
         case .refused:
             return Check("Call audio", .failed,
-                         "Soapcap can't hear what the Mac is playing, so the other side of a call would be missing. Turn on Soapcap under System Audio Recording Only, then choose Check again.",
+                         "Soapcap can't hear what the Mac is playing, so the other side of a call would be missing. Turn on Soapcap under System Audio Recording Only. If macOS offers Quit & Reopen, Later will do. Then choose Check again.",
                          fix: Check.Fix(label: "Open System Audio settings", url: callAudioPane))
         }
     }
