@@ -156,7 +156,7 @@ struct ContentView: View {
             HStack {
                 Picker("Format", selection: $m.format) {
                     ForEach(SessionModel.formats, id: \.self) { Text($0.uppercased()) }
-                }.pickerStyle(.segmented).frame(width: 220)
+                }.pickerStyle(.segmented).fixedSize()
                 Button("Draft note") { m.draftIfRoom() }.keyboardShortcut(.defaultAction)
                 Spacer()
                 Button("New session") { m.newSession() }
