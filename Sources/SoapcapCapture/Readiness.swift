@@ -11,8 +11,10 @@ public enum Readiness {
     /// The pane where the call-audio permission is turned on.
     public static let callAudioPane = pane("Privacy_AudioCapture")
 
-    /// True when the app may use the microphone and hear the call. Never
-    /// makes macOS ask: a permission not asked for yet counts as missing.
+    /// True when the app may use the microphone and hear the call. A
+    /// permission not asked for yet counts as missing, and is not asked for
+    /// here. (After `tccutil reset` the app doesn't know it has to ask
+    /// again, so macOS puts its question at this point.)
     public static func hasPermissions() async -> Bool {
         guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else { return false }
         return await CallAudio.access() == .allowed

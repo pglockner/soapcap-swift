@@ -15,7 +15,7 @@ public enum CallAudioAccess: Equatable, Sendable {
 public enum CallAudio {
     static let askedKey = "callAudioAsked"
 
-    /// The answer, without ever making macOS ask.
+    /// The answer, without making macOS ask for the first time.
     public static func access(defaults: UserDefaults = .standard,
                               hears: () async -> Bool = hearsItself) async -> CallAudioAccess {
         guard defaults.bool(forKey: askedKey) else { return .notAsked }
