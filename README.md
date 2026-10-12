@@ -137,8 +137,7 @@ caution that it is untested.
 
 ## Roadmap
 
-- [ ] Before a release candidate, try by hand what nobody has yet:
-      **Uninstall Soapcap…** (it also removes the downloaded models), a
+- [ ] Before a release candidate, try by hand what nobody has yet: a
       whole Bonsai download, a FaceTime call, and stopping a draft while
       Bonsai loads and with an Ollama model
 - [ ] Register jukenzie.com, the domain the app's identifier
