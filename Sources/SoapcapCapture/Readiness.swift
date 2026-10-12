@@ -1,5 +1,4 @@
 import AVFoundation
-import CoreGraphics
 import SoapcapCore
 import Speech
 
@@ -10,23 +9,24 @@ public enum Readiness {
     }
 
     /// The pane where the call-audio permission is turned on.
-    public static let callAudioPane = pane("Privacy_ScreenCapture")
+    public static let callAudioPane = pane("Privacy_AudioCapture")
 
-    /// True when the app may use the microphone and hear the call.
-    public static var hasPermissions: Bool {
-        AVCaptureDevice.authorizationStatus(for: .audio) == .authorized && CGPreflightScreenCaptureAccess()
+    /// True when the app may use the microphone and hear the call. Never
+    /// makes macOS ask: a permission not asked for yet counts as missing.
+    public static func hasPermissions() async -> Bool {
+        guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else { return false }
+        return await CallAudio.access() == .allowed
     }
 
     /// Has macOS put its question about the microphone.
     public static func askForMicrophone() async { _ = await AVCaptureDevice.requestAccess(for: .audio) }
 
-    /// Has macOS list this app under Screen & System Audio Recording, asking
-    /// about it the first time. The grant counts once the app is reopened.
-    public static func askForCallAudio() { _ = CGRequestScreenCaptureAccess() }
+    /// Has macOS put its question about system audio. The answer counts at once.
+    public static func askForCallAudio() async { await CallAudio.ask() }
 
     public static func checks(locale: Locale = Locale(identifier: Locale.current.identifier)) async -> [Check] {
         [microphone(AVCaptureDevice.authorizationStatus(for: .audio)),
-         callAudio(granted: CGPreflightScreenCaptureAccess())] + (await speech(locale: locale))
+         callAudio(await CallAudio.access())] + (await speech(locale: locale))
     }
 
     static func microphone(_ status: AVAuthorizationStatus) -> Check {
@@ -42,12 +42,19 @@ public enum Readiness {
         }
     }
 
-    static func callAudio(granted: Bool) -> Check {
-        granted
-            ? Check("Call audio", .ok, "Soapcap can hear what the Mac is playing.")
-            : Check("Call audio", .failed,
-                    "Needed to hear the other side. macOS files this under Screen & System Audio Recording; no picture is taken.\n1. If macOS asks, choose Open System Settings, not Deny.\n2. Turn Soapcap on in the list. macOS wants Touch ID or your password for that.\n3. Choose Quit & Reopen.\nIf Soapcap is already on in the list, remove it and add it again.",
-                    fix: Check.Fix(label: "Allow call audio", action: .askForCallAudio))
+    static func callAudio(_ access: CallAudioAccess) -> Check {
+        switch access {
+        case .allowed:
+            return Check("Call audio", .ok, "Soapcap can hear what the Mac is playing.")
+        case .notAsked:
+            return Check("Call audio", .warning,
+                         "Needed to hear the other side. macOS will ask whether Soapcap may record your system audio; choose Allow. Only sound is heard, never the screen, and none of it is kept.",
+                         fix: Check.Fix(label: "Allow call audio", action: .askForCallAudio))
+        case .refused:
+            return Check("Call audio", .failed,
+                         "Soapcap can't hear what the Mac is playing, so the other side of a call would be missing. Turn on Soapcap under System Audio Recording Only, then choose Check again.",
+                         fix: Check.Fix(label: "Open System Audio settings", url: callAudioPane))
+        }
     }
 
     static func speech(locale: Locale) async -> [Check] {

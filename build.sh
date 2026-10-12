@@ -57,11 +57,14 @@ cat > "$app/Contents/Info.plist" <<PLIST
   <key>NSHighResolutionCapable</key><true/>
   <key>NSMicrophoneUsageDescription</key>
   <string>Soapcap transcribes your microphone on-device during a session.</string>
+  <key>NSAudioCaptureUsageDescription</key>
+  <string>Soapcap transcribes what this Mac plays, the other side of a call, on-device during a session.</string>
 </dict></plist>
 PLIST
 # Every build runs under the hardened runtime, as a notarized one must, so
 # that what it forbids shows up here first. The microphone needs the
-# entitlement. Apple's timestamp is only wanted on a build for release.
+# entitlement; hearing the Mac's audio needs none. Apple's timestamp is only
+# wanted on a build for release.
 case "$identity" in "Developer ID Application"*) stamp=--timestamp ;; *) stamp=--timestamp=none ;; esac
 # Code inside the app is signed first; the app's signature then covers it.
 codesign --force --options runtime $stamp --sign "$identity" --identifier "$id.llama-server" "$app/Contents/Helpers/llama-server"

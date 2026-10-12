@@ -222,17 +222,16 @@ final class SessionModelTests: XCTestCase {
         fixer.open = { seen.did.append("open \($0.absoluteString)") }
         fixer.askForMicrophone = { seen.did.append("ask microphone") }
         fixer.askForCallAudio = { seen.did.append("ask call audio") }
-        fixer.reopen = { seen.did.append("reopen") }
         let after = [Check("Microphone", .ok, "granted")]
         let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier,
                              fixer: fixer, checks: { after })
         m.perform(.askForMicrophone)
         await waitFor("checked again") { m.phase == .checks(after) }     // the answer shows without another click
+        m.newSession()
         m.perform(.askForCallAudio)
+        await waitFor("checked once more") { m.phase == .checks(after) }  // and so does this one, with no reopening
         m.perform(.open(URL(string: "https://ollama.com")!))
-        m.reopen()
-        XCTAssertEqual(seen.did, ["ask microphone", "ask call audio", "open \(Readiness.callAudioPane.absoluteString)",
-                                  "open https://ollama.com", "reopen"])
+        XCTAssertEqual(seen.did, ["ask microphone", "ask call audio", "open https://ollama.com"])
     }
 
     func testTheDeidentifyCheckFollowsTheModelFiles() {

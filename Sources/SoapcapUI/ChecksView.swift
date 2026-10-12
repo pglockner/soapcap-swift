@@ -6,7 +6,6 @@ struct ChecksView: View {
     let checks: [Check]
     /// Does what a row's button stands for.
     let perform: (Check.Fix.Action) -> Void
-    let reopen: () -> Void
     let again: () -> Void
     let back: () -> Void
     @Environment(\.openSettings) private var openSettings
@@ -44,12 +43,8 @@ struct ChecksView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            if isSetup {
-                Text("macOS counts a new permission once the app has been reopened.").font(.caption).foregroundStyle(.secondary)
-            }
             HStack {
                 if isSetup {
-                    Button("Reopen Soapcap") { reopen() }.keyboardShortcut(.defaultAction)
                     Button("Check again") { again() }
                     Spacer()
                     Button("Not now") { back() }

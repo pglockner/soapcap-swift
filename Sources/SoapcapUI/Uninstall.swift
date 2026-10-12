@@ -30,7 +30,7 @@ struct Uninstaller {
     }
 
     var summary: String {
-        "This removes the models Soapcap downloaded (\(ByteCount.text(bytes))), its settings, and its Microphone and Screen Recording permissions, then moves Soapcap to the Trash.\n\nA Bonsai or an Ollama that something else installed is left alone."
+        "This removes the models Soapcap downloaded (\(ByteCount.text(bytes))), its settings, and its Microphone and System Audio Recording permissions, then moves Soapcap to the Trash.\n\nA Bonsai or an Ollama that something else installed is left alone."
     }
 
     /// Deletes the leftovers, and returns any that would not go.

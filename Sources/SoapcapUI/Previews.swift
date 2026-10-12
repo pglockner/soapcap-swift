@@ -78,8 +78,8 @@ private let previewLines = [
         $0.phase = .checks([
             Check("Microphone", .warning, "Needed to hear your side. macOS will ask whether Soapcap may use the microphone; choose Allow.",
                   fix: .init(label: "Allow the microphone", action: .askForMicrophone)),
-            Check("Call audio", .failed,
-                  "Needed to hear the other side. macOS files this under Screen & System Audio Recording; no picture is taken.\n1. If macOS asks, choose Open System Settings, not Deny.\n2. Turn Soapcap on in the list. macOS wants Touch ID or your password for that.\n3. Choose Quit & Reopen.\nIf Soapcap is already on in the list, remove it and add it again.",
+            Check("Call audio", .warning,
+                  "Needed to hear the other side. macOS will ask whether Soapcap may record your system audio; choose Allow. Only sound is heard, never the screen, and none of it is kept.",
                   fix: .init(label: "Allow call audio", action: .askForCallAudio)),
             Check("Speech recognition", .ok, "Ready for en-US, on this Mac only."),
             Check("Note model", .ok, "llama3.1:8b is ready to draft notes."),

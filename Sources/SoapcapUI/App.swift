@@ -58,8 +58,7 @@ struct ContentView: View {
             case .note: note
             case .error(let msg): error(msg)
             case .checks(let checks):
-                ChecksView(checks: checks, perform: { m.perform($0) }, reopen: { m.reopen() },
-                           again: { m.diagnose() }, back: { m.newSession() })
+                ChecksView(checks: checks, perform: { m.perform($0) }, again: { m.diagnose() }, back: { m.newSession() })
             }
         }
         // Against the top left however wide the window is; a screen narrower

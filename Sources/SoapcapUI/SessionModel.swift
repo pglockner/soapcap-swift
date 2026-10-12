@@ -271,23 +271,16 @@ final class SessionModel: ObservableObject {
 
     /// What the setup screen's buttons reach outside this window.
     struct Fixer {
-        var hasPermissions: () -> Bool = { Readiness.hasPermissions }
+        var hasPermissions: () async -> Bool = { await Readiness.hasPermissions() }
         var open: (URL) -> Void = { NSWorkspace.shared.open($0) }
         var askForMicrophone: () async -> Void = { await Readiness.askForMicrophone() }
-        var askForCallAudio: () -> Void = { Readiness.askForCallAudio() }
-        var reopen: () -> Void = {
-            let again = NSWorkspace.OpenConfiguration()
-            again.createsNewApplicationInstance = true
-            NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: again) { _, _ in
-                DispatchQueue.main.async { NSApp.terminate(nil) }
-            }
-        }
+        var askForCallAudio: () async -> Void = { await Readiness.askForCallAudio() }
     }
 
     /// On a first launch, or after a permission was taken away, the checks
     /// screen is the place to start.
     func setUpIfNeeded() {
-        if phase == .idle, !fixer.hasPermissions() { diagnose() }
+        Task { if !(await fixer.hasPermissions()), phase == .idle { diagnose() } }
     }
 
     /// Does what a button on the checks screen stands for.
@@ -298,17 +291,11 @@ final class SessionModel: ObservableObject {
         case .askForMicrophone:
             Task { await fixer.askForMicrophone(); diagnose() }      // the answer shows at once
         case .askForCallAudio:
-            // The first time macOS asks; after that it stays quiet, so the
-            // list is opened either way.
-            fixer.askForCallAudio()
-            fixer.open(Readiness.callAudioPane)
+            Task { await fixer.askForCallAudio(); diagnose() }
         case .showSettings:
             break       // the window opens its own Settings
         }
     }
-
-    /// Quits and opens the app again, which is when macOS counts a new permission.
-    func reopen() { fixer.reopen() }
 
     func newSession() {
         generation += 1

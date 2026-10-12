@@ -14,12 +14,28 @@ final class ReadinessTests: XCTestCase {
         XCTAssertEqual(Readiness.microphone(.restricted).status, .failed)
     }
 
-    func testCallAudioWithoutTheGrantPointsAtScreenRecording() {
-        XCTAssertEqual(Readiness.callAudio(granted: true).status, .ok)
-        let off = Readiness.callAudio(granted: false)
-        XCTAssertEqual(off.status, .failed)
-        XCTAssertEqual(off.fix?.action, .askForCallAudio)
-        XCTAssertTrue(Readiness.callAudioPane.absoluteString.hasSuffix("Privacy_ScreenCapture"))
+    func testCallAudioAsksFirstAndPointsAtSystemAudioAfterARefusal() {
+        XCTAssertEqual(Readiness.callAudio(.allowed).status, .ok)
+        let new = Readiness.callAudio(.notAsked)
+        XCTAssertEqual(new.status, .warning)
+        XCTAssertEqual(new.fix?.action, .askForCallAudio)
+        let refused = Readiness.callAudio(.refused)
+        XCTAssertEqual(refused.status, .failed)
+        XCTAssertEqual(refused.fix?.action, .open(Readiness.callAudioPane))     // macOS won't ask a second time
+        XCTAssertTrue(Readiness.callAudioPane.absoluteString.hasSuffix("Privacy_AudioCapture"))
+    }
+
+    func testCallAudioIsNotListenedForUntilMacOSHasBeenAsked() async throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "soapcap-call-audio-\(UUID().uuidString)"))
+        var listened = 0
+        let hears = { listened += 1; return true }
+        let before = await CallAudio.access(defaults: defaults, hears: hears)
+        XCTAssertEqual(before, .notAsked)
+        XCTAssertEqual(listened, 0)                 // listening is what makes macOS ask
+        let answer = await CallAudio.ask(defaults: defaults, hears: hears)
+        XCTAssertEqual(answer, .allowed)
+        let refused = await CallAudio.access(defaults: defaults, hears: { false })
+        XCTAssertEqual(refused, .refused)           // silence where the tone should be
     }
 
     func testAnUnsupportedLanguageFails() async {

@@ -6,7 +6,9 @@ public enum CaptureError: Error, LocalizedError, Equatable {
     case unsupportedLocale(String)
     case noAudioFormat
     case microphoneDenied
-    case screenRecordingDenied
+    case callAudioDenied
+    /// Core Audio would not set up listening to the Mac's output.
+    case callAudioFailed(String)
 
     public var errorDescription: String? {
         switch self {
@@ -15,8 +17,10 @@ public enum CaptureError: Error, LocalizedError, Equatable {
         case .noAudioFormat: "No audio format is available for speech recognition."
         case .microphoneDenied:
             "Soapcap can't use the microphone. Turn it on for Soapcap in System Settings > Privacy & Security > Microphone, then quit and reopen Soapcap."
-        case .screenRecordingDenied:
-            "Soapcap can't hear the call. Turn on Soapcap in System Settings > Privacy & Security > Screen & System Audio Recording, then quit and reopen Soapcap."
+        case .callAudioDenied:
+            "Soapcap can't hear the call. Turn on Soapcap in System Settings > Privacy & Security > Screen & System Audio Recording, under System Audio Recording Only, then start again."
+        case .callAudioFailed(let why):
+            "Soapcap couldn't start listening to what the Mac is playing (\(why))."
         }
     }
 }

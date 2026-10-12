@@ -55,14 +55,14 @@ app's permissions on every rebuild.
 ## Using the app
 
 **First run.** Soapcap opens on a setup screen that walks through the two
-permissions macOS asks for, Microphone and Screen Recording. Each has a
-button that says what you are about to see, and **Reopen Soapcap** finishes
-the job, because macOS counts a new permission once the app is reopened.
-Screen Recording is how macOS lets an app hear what the Mac is playing; no
-picture is taken. **Check permissions** brings the same screen back later,
-with speech recognition for your language, the note model, the
-de-identification model and free memory, each with a button that puts it
-right.
+permissions macOS asks for, Microphone and System Audio Recording. Each has
+a button that says what you are about to see, and the answer counts at
+once. System Audio Recording is how macOS lets an app hear what the Mac is
+playing: sound only, never the screen. macOS can't tell an app whether it
+has that permission, so Soapcap finds out by playing itself a tone you
+won't hear. **Check permissions** brings the same screen back later, with
+speech recognition for your language, the note model, the de-identification
+model and free memory, each with a button that puts it right.
 
 **Record.** Use headphones and turn on Do Not Disturb. The window shows the
 last few lines heard from each side. **Pause** stops listening and stops
@@ -163,7 +163,8 @@ the commit count.
 Three probes run a piece of the app without the window:
 
 - `swift run CaptureProbe 15` records for 15 seconds and prints the
-  transcript.
+  transcript. `swift run CaptureProbe check` only says whether the Mac's
+  audio can be heard. From a terminal, the permissions are the terminal's.
 - `swift run NoteProbe FILE [soap|dap|birp] [MODEL] [MINUTES]` drafts a
   note from a transcript file. `bonsai` as the model uses Bonsai;
   `gguf:PATH` runs a model file with Bonsai's server.
@@ -202,11 +203,11 @@ SOAPCAP_SIGN_IDENTITY="Apple Development: you@example.com (TEAMID)" ./build.sh
 ```
 
 With an ad-hoc signature, macOS treats each rebuild as a different app and
-drops its Microphone and Screen Recording grants. To reset a stuck grant,
-which also happens after switching from ad hoc to a certificate:
+drops its Microphone and System Audio Recording grants. To reset a stuck
+grant, which also happens after switching from ad hoc to a certificate:
 
 ```sh
-tccutil reset ScreenCapture com.jukenzie.soapcap
+tccutil reset AudioCapture com.jukenzie.soapcap
 tccutil reset Microphone com.jukenzie.soapcap
 ```
 

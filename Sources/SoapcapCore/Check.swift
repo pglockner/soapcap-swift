@@ -11,7 +11,7 @@ public struct Check: Equatable, Sendable, Identifiable {
             case open(URL)
             /// Has macOS ask for the microphone.
             case askForMicrophone
-            /// Has macOS ask to hear the call, which it files under Screen Recording.
+            /// Has macOS ask to hear the call, and reports the answer.
             case askForCallAudio
             /// Opens this app's own Settings window.
             case showSettings

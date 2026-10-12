@@ -1,6 +1,8 @@
 // Records for a few seconds and prints what was heard. A development aid for
 // checking capture without the window: `swift run CaptureProbe [seconds] [pause]`.
-// With `pause`, the middle third of the time is paused.
+// With `pause`, the middle third of the time is paused. `CaptureProbe check`
+// only says whether the Mac's audio can be heard. Run from a terminal, it is
+// the terminal that macOS asks about, not Soapcap.
 import Foundation
 import SoapcapCapture
 import SoapcapCore
@@ -8,6 +10,11 @@ import SoapcapCore
 let seconds = CommandLine.arguments.dropFirst().compactMap(Double.init).first ?? 10
 let pauses = CommandLine.arguments.contains("pause")
 func say(_ s: String) { FileHandle.standardError.write(Data((s + "\n").utf8)) }
+
+if CommandLine.arguments.contains("check") {
+    say("call audio: \(await CallAudio.ask())")
+    exit(0)
+}
 
 let session = CaptureSession()
 do { try await session.start() } catch {
