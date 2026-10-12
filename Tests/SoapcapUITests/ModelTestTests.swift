@@ -5,7 +5,7 @@ import XCTest
 
 @MainActor
 final class ModelTestTests: XCTestCase {
-    private let suite = "soapcap-model-test-\(UUID().uuidString)"
+    private let defaults = MemoryDefaults()
     private let whole = "9 minutes, telehealth\n\nSUBJECTIVE:\nSlept badly.\n\nOBJECTIVE:\nOn time via video.\n\nASSESSMENT:\nAnxious.\n\nPLAN:\nMeet again."
     private var drafter: FakeDrafter!
     private var run: DraftRun!
@@ -15,10 +15,8 @@ final class ModelTestTests: XCTestCase {
         drafter = FakeDrafter()
         drafter.text = whole
         run = DraftRun(drafting: drafter, memory: { nil })
-        settings = SessionSettings(defaults: UserDefaults(suiteName: suite)!)
+        settings = SessionSettings(defaults: defaults)
     }
-
-    override func tearDown() async throws { UserDefaults().removePersistentDomain(forName: suite) }
 
     /// A test whose clock moves 48 s between its two readings.
     private func modelTest(cautions: [String] = []) -> ModelTest {
@@ -56,7 +54,7 @@ final class ModelTestTests: XCTestCase {
     }
 
     func testWhatAModelsNotesAreAlwaysCautionedAboutIsNoProblem() async {
-        UserDefaults(suiteName: suite)!.set("qwen3:8b", forKey: SessionSettings.Key.noteModel)
+        defaults.set("qwen3:8b", forKey: SessionSettings.Key.noteModel)
         drafter.warnings = ["qwen3:8b hasn't been tested"]
         let test = modelTest(cautions: ["qwen3:8b hasn't been tested"])
         test.start()

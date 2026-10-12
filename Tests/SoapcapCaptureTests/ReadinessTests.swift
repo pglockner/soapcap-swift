@@ -3,6 +3,14 @@ import SoapcapCore
 import XCTest
 @testable import SoapcapCapture
 
+/// Settings kept in memory, so that a test run leaves no file in
+/// ~/Library/Preferences. The UI tests have the same stand-in.
+private final class MemoryDefaults: UserDefaults {
+    private var values: [String: Any] = [:]
+    override func object(forKey key: String) -> Any? { values[key] }
+    override func set(_ value: Any?, forKey key: String) { values[key] = value }
+}
+
 final class ReadinessTests: XCTestCase {
     func testMicrophoneStatusMapsToACheck() {
         XCTAssertEqual(Readiness.microphone(.authorized).status, .ok)
@@ -26,7 +34,7 @@ final class ReadinessTests: XCTestCase {
     }
 
     func testCallAudioIsNotListenedForUntilMacOSHasBeenAsked() async throws {
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: "soapcap-call-audio-\(UUID().uuidString)"))
+        let defaults = MemoryDefaults()
         var listened = 0
         let hears = { listened += 1; return true }
         let before = await CallAudio.access(defaults: defaults, hears: hears)

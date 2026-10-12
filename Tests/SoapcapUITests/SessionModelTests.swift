@@ -8,7 +8,7 @@ import XCTest
 @MainActor
 final class SessionModelTests: XCTestCase {
     private var dir: URL!
-    private var suite = ""
+    private var defaults: UserDefaults!
     private var settings: SessionSettings!
     private var drafter: FakeDrafter!
     private var deidentifier: FakeDeidentifier!
@@ -17,15 +17,14 @@ final class SessionModelTests: XCTestCase {
         dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("soapcap-app-tests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        suite = "soapcap-tests-\(UUID().uuidString)"
-        settings = SessionSettings(defaults: UserDefaults(suiteName: suite)!)
+        defaults = MemoryDefaults()
+        settings = SessionSettings(defaults: defaults)
         drafter = FakeDrafter()
         deidentifier = FakeDeidentifier()
     }
 
     override func tearDown() async throws {
         try? FileManager.default.removeItem(at: dir)
-        UserDefaults().removePersistentDomain(forName: suite)
     }
 
     private func recording(_ capture: FakeCapture, now: @escaping () -> Date = Date.init) async -> SessionModel {
@@ -241,7 +240,7 @@ final class SessionModelTests: XCTestCase {
     }
 
     func testAVeryShortMemoryAsksBeforeABonsaiDraft() async {
-        UserDefaults(suiteName: suite)!.set("bonsai", forKey: SessionSettings.Key.noteModel)
+        defaults.set("bonsai", forKey: SessionSettings.Key.noteModel)
         var free = 30
         let m = SessionModel(makeCapture: { FakeCapture(hello) }, settings: settings, drafting: drafter, deidentifying: deidentifier,
                              memory: { MemoryStatus(totalBytes: 16 << 30, freePercent: free, swapUsedBytes: 7 << 30, swapTotalBytes: 8 << 30) })
@@ -290,7 +289,7 @@ final class SessionModelTests: XCTestCase {
         let short = { MemoryStatus(totalBytes: 16 << 30, freePercent: 41) }
         let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier, memory: short)
         XCTAssertNil(m.memoryAdvice)                         // llama3.1:8b: Ollama loads it, not the app
-        UserDefaults(suiteName: suite)!.set("bonsai", forKey: SessionSettings.Key.noteModel)
+        defaults.set("bonsai", forKey: SessionSettings.Key.noteModel)
         XCTAssertTrue(m.memoryAdvice?.contains("Close other apps") == true, m.memoryAdvice ?? "nil")
         let roomy = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier,
                                  memory: { MemoryStatus(totalBytes: 16 << 30, freePercent: 68) })
