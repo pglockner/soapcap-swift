@@ -51,6 +51,7 @@ struct ContentView: View {
     @EnvironmentObject var m: SessionModel
     /// Read here so that this window follows a change of model made in Settings.
     @AppStorage(SessionSettings.Key.noteModel) private var noteModel = ""
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -77,13 +78,13 @@ struct ContentView: View {
 
     private var idle: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Ready to record").font(.title2.bold())
+            Text("Ready to transcribe").font(.title2.bold())
             Text("Use headphones, and turn on Do Not Disturb.").foregroundStyle(.secondary)
             if m.canDeidentify {
                 Toggle("De-identify the transcript, and the note once it's drafted", isOn: $m.deidentify)
             }
             HStack {
-                Button("Start recording") { m.start() }.keyboardShortcut(.defaultAction)
+                Button("Start transcribing") { m.start() }.keyboardShortcut(.defaultAction)
                 Button("Check permissions") { m.diagnose() }
             }
             Spacer()
@@ -93,9 +94,12 @@ struct ContentView: View {
     private var recording: some View {
         VStack(spacing: 16) {
             Spacer()
-            HStack { Circle().fill(.red).frame(width: 12, height: 12)
-                Text(String(format: "Recording  %02d:%02d", m.elapsed / 60, m.elapsed % 60))
-                    .font(.title2).monospacedDigit() }
+            // Nothing is recorded: the app listens, and what it hears becomes text.
+            HStack { Image(systemName: "microphone.fill").foregroundStyle(.red)
+                    .symbolEffect(.breathe, isActive: !reduceMotion)
+                Text(String(format: "Transcribing  %02d:%02d", m.elapsed / 60, m.elapsed % 60))
+                    .monospacedDigit() }
+                .font(.title2)
             HStack {
                 Button("Pause") { m.pause() }
                 Button("Stop") { m.stop() }.keyboardShortcut(.defaultAction)
@@ -109,7 +113,7 @@ struct ContentView: View {
         VStack(spacing: 16) {
             Spacer()
             HStack { Image(systemName: "pause.circle.fill").foregroundStyle(.orange)
-                Text(String(format: "Paused  %02d:%02d recorded", m.elapsed / 60, m.elapsed % 60))
+                Text(String(format: "Paused  %02d:%02d transcribed", m.elapsed / 60, m.elapsed % 60))
                     .font(.title2).monospacedDigit() }
             Text("Nothing is being captured.").foregroundStyle(.secondary)
             HStack {
@@ -174,7 +178,7 @@ struct ContentView: View {
             scrollText(m.note)
             if !m.notice.isEmpty { Text(m.notice).font(.caption).foregroundStyle(.orange) }
             HStack {
-                Button(m.copied ? "Copied" : "Copy note") { m.keep() }.keyboardShortcut(.defaultAction)
+                Button(m.copied ? "Copied" : "Keep") { m.keep() }.keyboardShortcut(.defaultAction)
                 Button("Regenerate") { m.draft() }
                 Spacer()
                 // Once the note is on the clipboard, leaving is no longer throwing it away.

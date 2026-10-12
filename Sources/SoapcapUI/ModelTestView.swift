@@ -20,7 +20,7 @@ struct ModelTestView: View {
         VStack(alignment: .leading, spacing: 6) {
             if case .running(let title) = test.state {
                 ProgressView { Text(title) }.controlSize(.small)
-                if let memory = run.memory { MemoryLine(memory: memory) }
+                if let memory = run.memory, memory.level == .critical { MemoryLine(memory: memory) }
                 Button("Stop") { test.stop() }
             } else {
                 verdict

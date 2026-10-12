@@ -1,7 +1,7 @@
 import Foundation
 
 public enum Redactor {
-    public static let nothingFound = "no entities detected"
+    public static let nothingFound = "no identifying details found"
 
     /// The text with each span replaced by a numbered token, and a one-line
     /// summary. One token per (category, exact text), numbered by first
@@ -26,7 +26,8 @@ public enum Redactor {
             position = span.range.upperBound
         }
         out += text[position...]
-        let summary = "redacted \(spans.count) span(s): " + counts.map { "\($0.label) x\($0.count)" }.joined(separator: ", ")
+        let kinds = counts.map { $0.label.lowercased().replacing("_", with: " ") }.joined(separator: ", ")
+        let summary = "\(spans.count) identifying detail\(spans.count == 1 ? "" : "s") replaced (\(kinds))"
         return (out, summary)
     }
 }

@@ -34,7 +34,7 @@ private let previewLines = [
     sampleScreen {
         $0.phase = .transcript
         $0.transcript = previewLines.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n")
-        $0.notice = "transcript: redacted 2 span(s): FIRST_NAME x1, DATE x1"
+        $0.notice = "Transcript: 2 identifying details replaced (first name, date)"
     }
 }
 
@@ -128,7 +128,7 @@ private let previewLines = [
     sampleScreen {
         $0.phase = .note
         $0.note = "53 minutes, telehealth\n\nSUBJECTIVE:\nThe client reported sleeping better since starting the breathing exercises.\n\nOBJECTIVE:\nOn time via video. Engaged. Affect congruent; mood stressed. Speech clear. Thought process linear. Insight good; judgment intact. No psychomotor abnormalities. No SI/HI reported.\n\nASSESSMENT:\nSleep is improving; conflict at home remains a stressor.\n\nPLAN:\nContinue the breathing exercises nightly. Return next week."
-        $0.notice = "qwen3:14b hasn't been tested with soapcap's prompts — proofread it with extra care."
+        $0.notice = "No Client lines in the transcript — the Objective is left for you to complete."
     }
 }
 
@@ -200,7 +200,11 @@ private let previewSampleNote = "9 minutes, telehealth\n\nSUBJECTIVE:\nThe clien
     sampleScreen {
         $0.phase = .transcript
         $0.transcript = previewLines.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n")
-        $0.notice = "transcript: redacted 2 span(s): FIRST_NAME x1, DATE x1"
+        $0.notice = "Transcript: 2 identifying details replaced (first name, date)"
     }
     .preferredColorScheme(.dark)
+}
+
+#Preview("Transcribing, just started") {
+    sampleScreen { $0.phase = .recording; $0.elapsed = 4 }
 }

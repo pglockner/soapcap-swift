@@ -2,7 +2,7 @@ import Foundation
 
 public struct Deidentified: Equatable, Sendable {
     public let text: String
-    /// One line, e.g. "redacted 4 span(s): FIRST_NAME x3, PHONE x1".
+    /// One line, e.g. "4 identifying details replaced (first name, phone)".
     public let summary: String
 
     public init(text: String, summary: String) {

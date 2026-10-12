@@ -83,7 +83,7 @@ let hello = [Segment(speaker: "Therapist", start: 0, end: 1, id: 1, text: "hi Bo
     func deidentify(_ text: String, kind: LabeledText.Kind) async throws -> Deidentified {
         kinds.append(kind)
         if let error { throw error }
-        return Deidentified(text: text.replacingOccurrences(of: "Bob", with: "[FIRST_NAME_1]"), summary: "redacted 1 span(s): FIRST_NAME x1")
+        return Deidentified(text: text.replacingOccurrences(of: "Bob", with: "[FIRST_NAME_1]"), summary: "1 identifying detail replaced (first name)")
     }
 }
 

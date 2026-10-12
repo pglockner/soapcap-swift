@@ -18,6 +18,7 @@ struct LiveStrip: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .font(.callout)
             .padding(8)
         }

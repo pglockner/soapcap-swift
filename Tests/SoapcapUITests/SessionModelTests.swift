@@ -115,11 +115,11 @@ final class SessionModelTests: XCTestCase {
         m.stop()
         await waitFor("transcript") { m.phase == .transcript }
         XCTAssertEqual(m.transcript, "Therapist: hi [FIRST_NAME_1]\nClient: hello")
-        XCTAssertEqual(m.notice, "transcript: redacted 1 span(s): FIRST_NAME x1")
+        XCTAssertEqual(m.notice, "Transcript: 1 identifying detail replaced (first name)")
         m.draft()
         await waitFor("note") { m.phase == .note }
         XCTAssertEqual(m.note, "SUBJECTIVE:\nformat soap\nNote about [FIRST_NAME_1]")
-        XCTAssertEqual(m.notice, "note: redacted 1 span(s): FIRST_NAME x1")
+        XCTAssertEqual(m.notice, "Note: 1 identifying detail replaced (first name)")
         XCTAssertEqual(deidentifier.kinds, [.transcript, .note])
         XCTAssertEqual(m.warning, "")
     }

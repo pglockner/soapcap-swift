@@ -178,7 +178,7 @@ final class SessionModel: ObservableObject {
             phase = .working("De-identifying the transcript…")
             if let d = await deidentified(transcript, kind: .transcript, what: "transcript") {
                 transcript = d.text
-                notice = [oneSided, "transcript: \(d.summary)"].filter { !$0.isEmpty }.joined(separator: "\n")
+                notice = [oneSided, "Transcript: \(d.summary)"].filter { !$0.isEmpty }.joined(separator: "\n")
             }
         }
         phase = .transcript
@@ -222,7 +222,7 @@ final class SessionModel: ObservableObject {
                 warning = ""
                 let d = await deidentified(note, kind: .note, what: "note")
                 guard gen == generation else { return }
-                if let d { note = d.text; notices.append("note: \(d.summary)") }
+                if let d { note = d.text; notices.append("Note: \(d.summary)") }
             }
             notice = notices.joined(separator: "\n")
             copied = false

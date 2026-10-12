@@ -44,7 +44,7 @@ final class RedactorTests: XCTestCase {
                      Span(text.range(of: "Ana", options: .backwards)!, "FIRST_NAME")]
         let (out, summary) = Redactor.redact(text, spans)
         XCTAssertEqual(out, "[FIRST_NAME_1] met [FIRST_NAME_2]. [FIRST_NAME_1] left.")
-        XCTAssertEqual(summary, "redacted 3 span(s): FIRST_NAME x3")
+        XCTAssertEqual(summary, "3 identifying details replaced (first name)")
     }
 
     func testANestedSpanIsDropped() {
@@ -61,13 +61,13 @@ final class RedactorTests: XCTestCase {
 
     func testNothingFound() {
         XCTAssertEqual(Redactor.redact("hello", []).text, "hello")
-        XCTAssertEqual(Redactor.redact("hello", []).summary, "no entities detected")
+        XCTAssertEqual(Redactor.redact("hello", []).summary, "no identifying details found")
     }
 
     func testTheSummaryCountsEachCategoryInOrderOfAppearance() {
         let text = "Ana, 555-0199, Ben"
         let spans = [span(text, "Ben", "FIRST_NAME"), span(text, "555-0199", "PHONE"), span(text, "Ana", "FIRST_NAME")]
-        XCTAssertEqual(Redactor.redact(text, spans).summary, "redacted 3 span(s): FIRST_NAME x2, PHONE x1")
+        XCTAssertEqual(Redactor.redact(text, spans).summary, "3 identifying details replaced (first name, phone)")
     }
 }
 
@@ -124,7 +124,7 @@ final class DeidentifierTests: XCTestCase {
             .deidentify("Sarah: hi there, with Camila.\nClient: Sarah said so.", kind: .transcript)
         XCTAssertEqual(seen.text, "hi there, with Camila.\nSarah said so.")
         XCTAssertEqual(result.text, "Sarah: hi there, with [FIRST_NAME_1].\nClient: [FIRST_NAME_2] said so.")
-        XCTAssertEqual(result.summary, "redacted 2 span(s): FIRST_NAME x2")
+        XCTAssertEqual(result.summary, "2 identifying details replaced (first name)")
     }
 
     func testInANoteTheTextBeforeAColonIsRedactedToo() async throws {
@@ -136,7 +136,7 @@ final class DeidentifierTests: XCTestCase {
 
     func testNothingFoundLeavesTheTextUnchanged() async throws {
         let result = try await Deidentifier(detector: ScriptedDetector()).deidentify("Therapist: How was your week", kind: .transcript)
-        XCTAssertEqual(result, Deidentified(text: "Therapist: How was your week", summary: "no entities detected"))
+        XCTAssertEqual(result, Deidentified(text: "Therapist: How was your week", summary: "no identifying details found"))
     }
 
     func testAFailingDetectorThrowsInsteadOfPassingTextThrough() async {
