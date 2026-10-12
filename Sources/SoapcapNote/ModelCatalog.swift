@@ -11,16 +11,11 @@ public enum ModelCatalog {
         model == bonsai ? BonsaiBackend.displayName : model
     }
 
-    /// What the clinician should know about a model soapcap's prompts were
-    /// tested with; nil for any other.
-    public static func description(of model: String) -> String? {
-        switch model {
-        case "llama3.1:8b":
-            "Fast, usually under a minute. Often assumes a client's pronoun from their name; proofread pronouns and the Objective."
-        case bonsai:
-            "More careful: best at pronouns and at not inventing in-session reactions. Slower, a few minutes a note."
-        default: nil
-        }
+    /// What the clinician should know about each of the two models.
+    public static func description(of model: String) -> String {
+        model == bonsai
+            ? "More careful: best at pronouns and at not inventing in-session reactions. Slower, a few minutes a note."
+            : "Fast, usually under a minute. Often assumes a client's pronoun from their name; proofread pronouns and the Objective."
     }
 
     /// Roughly how much memory a model takes once loaded, where that is
@@ -80,13 +75,13 @@ public enum ModelCatalog {
         backend(for: model, pulled: model == bonsai ? [] : await pulled(host: host), host: host)
     }
 
-    /// The models that could draft right now: Bonsai if it is set up, the
-    /// default model if the app has its file, and everything pulled into
-    /// Ollama (tested or not).
+    /// The models that could draft right now: Bonsai if it is set up, and
+    /// the default model if the app or Ollama has its file. They are the two
+    /// the prompts were tested with, and no other is offered.
     public static func installed(pulled: [String], bonsai: BonsaiBackend.Install = .standard,
                                  llama: BonsaiBackend.Install = .llama) -> [String] {
-        let own = llama.isPresent && !OllamaBackend.has(defaultModel, in: pulled) ? [defaultModel] : []
-        return (bonsai.isPresent ? [self.bonsai] : []) + (own + pulled).sorted()
+        let hasDefault = llama.isPresent || OllamaBackend.has(defaultModel, in: pulled)
+        return (bonsai.isPresent ? [self.bonsai] : []) + (hasDefault ? [defaultModel] : [])
     }
 
     /// Whether `model` is ready to draft, as a line for the checks screen.

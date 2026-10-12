@@ -126,9 +126,8 @@ final class OllamaBackendTests: XCTestCase {
         XCTAssertEqual(StubHTTP.sent.last?.body["model"] as? String, "llama3.1:8b")
     }
 
-    func testCautionsCoverAnUntestedModelAndAHostThatIsNotThisMac() {
+    func testTheOnlyCautionIsAboutAHostThatIsNotThisMac() {
         XCTAssertEqual(backend().cautions, [])
-        XCTAssertEqual(backend("qwen3:14b").cautions.count, 1)
         XCTAssertEqual(backend(host: "http://192.168.1.20:11434").cautions.count, 1)
         XCTAssertTrue(OllamaBackend.isLocal(URL(string: "http://127.0.0.1:11434")!))
         XCTAssertTrue(OllamaBackend.isLocal(URL(string: "http://[::1]:11434")!))

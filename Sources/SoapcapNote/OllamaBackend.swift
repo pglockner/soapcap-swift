@@ -3,8 +3,6 @@ import Foundation
 /// Any model pulled into Ollama, over its HTTP API.
 public actor OllamaBackend: NoteBackend {
     public static let defaultHost = URL(string: "http://localhost:11434")!
-    /// The models soapcap's prompts were tested with.
-    public static let tested = ["llama3.1:8b"]
 
     public nonisolated let model: String
     public nonisolated let host: URL
@@ -20,14 +18,7 @@ public actor OllamaBackend: NoteBackend {
     public nonisolated var label: String { model }
 
     public nonisolated var cautions: [String] {
-        var out: [String] = []
-        if !Self.tested.contains(model) {
-            out.append("\(model) hasn't been tested with soapcap's prompts — proofread it with extra care.")
-        }
-        if !Self.isLocal(host) {
-            out.append("\(host.absoluteString) is not this Mac — the transcript was sent to that machine over the network.")
-        }
-        return out
+        Self.isLocal(host) ? [] : ["\(host.absoluteString) is not this Mac — the transcript was sent to that machine over the network."]
     }
 
     /// The promise is that a transcript never leaves this Mac; the host setting can break it.

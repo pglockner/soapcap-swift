@@ -54,12 +54,12 @@ final class ModelTestTests: XCTestCase {
     }
 
     func testWhatAModelsNotesAreAlwaysCautionedAboutIsNoProblem() async {
-        defaults.set("qwen3:8b", forKey: SessionSettings.Key.noteModel)
-        drafter.warnings = ["qwen3:8b hasn't been tested"]
-        let test = modelTest(cautions: ["qwen3:8b hasn't been tested"])
+        let elsewhere = "http://192.168.1.20:11434 is not this Mac"
+        drafter.warnings = [elsewhere]
+        let test = modelTest(cautions: [elsewhere])
         test.start()
         await waitFor("a verdict") { !test.isRunning }
-        XCTAssertEqual(test.state, .good(model: "qwen3:8b", seconds: 48))
+        XCTAssertEqual(test.state, .good(model: "llama3.1:8b", seconds: 48))
     }
 
     func testAModelThatCannotDraftIsAProblemThatSaysWhy() async {

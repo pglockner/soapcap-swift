@@ -15,8 +15,8 @@ final class SampleSessionTests: XCTestCase {
 
     func testAWholeNoteWithNothingToCautionAboutHasNoProblems() {
         XCTAssertEqual(SampleSession.problems(in: DraftedNote(text: whole)), [])
-        let untested = "qwen3:8b hasn't been tested"
-        XCTAssertEqual(SampleSession.problems(in: DraftedNote(text: whole, warnings: [untested]), cautions: [untested]), [])
+        let elsewhere = "http://192.168.1.20:11434 is not this Mac"
+        XCTAssertEqual(SampleSession.problems(in: DraftedNote(text: whole, warnings: [elsewhere]), cautions: [elsewhere]), [])
     }
 
     func testAnEmptySectionOrACautionFromTheDrafterIsAProblem() {

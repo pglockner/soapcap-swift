@@ -50,10 +50,11 @@ struct SessionSettings {
     /// The model that drafts notes: `bonsai`, or a model pulled into Ollama.
     var noteModel: String { Self.noteModel(stored: defaults.string(forKey: Key.noteModel) ?? "") }
 
-    /// What a stored choice of model means; none is the default model.
+    /// What a stored choice of model means: Bonsai, or else the default
+    /// model. A name left from when any model in Ollama could be chosen
+    /// counts as none.
     static func noteModel(stored: String) -> String {
-        let chosen = stored.trimmingCharacters(in: .whitespaces)
-        return chosen.isEmpty ? ModelCatalog.defaultModel : chosen
+        stored.trimmingCharacters(in: .whitespaces) == ModelCatalog.bonsai ? ModelCatalog.bonsai : ModelCatalog.defaultModel
     }
 
     /// Where Ollama is. Anything but this Mac sends the transcript over the network.
@@ -126,9 +127,7 @@ struct SettingsView: View {
             } header: {
                 Text("Note")
             } footer: {
-                Text(ModelCatalog.description(of: chosenModel)
-                     ?? "Not tested with these prompts; proofread its notes closely.")
-                    .foregroundStyle(.secondary)
+                Text(ModelCatalog.description(of: chosenModel)).foregroundStyle(.secondary)
             }
             Section {
                 if OllamaBackend.has(ModelCatalog.defaultModel, in: pulled), llama.state == .missing {
@@ -139,7 +138,7 @@ struct SettingsView: View {
             } header: {
                 Text(ModelCatalog.defaultModel)
             } footer: {
-                Text((ModelCatalog.description(of: ModelCatalog.defaultModel) ?? "") + " Built with Llama: Meta's Llama 3.1, under its Community License.")
+                Text(ModelCatalog.description(of: ModelCatalog.defaultModel) + " Built with Llama: Meta's Llama 3.1, under its Community License.")
                     .foregroundStyle(.secondary)
             }
             Section {
@@ -147,7 +146,7 @@ struct SettingsView: View {
             } header: {
                 Text(BonsaiBackend.displayName)
             } footer: {
-                Text(ModelCatalog.description(of: ModelCatalog.bonsai) ?? "").foregroundStyle(.secondary)
+                Text(ModelCatalog.description(of: ModelCatalog.bonsai)).foregroundStyle(.secondary)
             }
             Section {
                 switch setup.state {

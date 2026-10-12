@@ -82,8 +82,8 @@ the result before sharing it. If it fails, the text is shown under a red
 - A SOAP note's Objective is a fixed mental-status frame filled in by a
   separate pass. It never says "No SI/HI reported" if risk language was
   seen.
-- Cautions about a draft (an untested model, a section still missing)
-  appear under the note and are never copied with it.
+- Cautions about a draft (a section still missing, say) appear under the
+  note and are never copied with it.
 - **Keep** copies the note. **Regenerate** drafts it again.
 
 **While drafting.** The window shows memory in use, turning yellow and then
@@ -116,8 +116,8 @@ alone.
 **Note models.** `llama3.1:8b` is fast, usually under a minute a note.
 Bonsai is more careful and slower, a few minutes a note. Both run on an
 engine inside the app, except that `llama3.1:8b` is left to Ollama when
-Ollama has it. Any other model pulled into Ollama can be chosen too, with a
-caution that it is untested.
+Ollama has it. They are the two the prompts were tested with, and no other
+model is offered.
 
 ## Privacy
 

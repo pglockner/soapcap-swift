@@ -42,8 +42,10 @@ final class ModelCatalogTests: XCTestCase {
 
         XCTAssertEqual(ModelCatalog.installed(pulled: [], bonsai: missing, llama: missing), [])
         XCTAssertEqual(ModelCatalog.installed(pulled: [], bonsai: here, llama: here), ["bonsai", "llama3.1:8b"])
-        XCTAssertEqual(ModelCatalog.installed(pulled: ["qwen3:8b", "llama3.1:8b"], bonsai: missing, llama: here), ["llama3.1:8b", "qwen3:8b"])
-        XCTAssertEqual(ModelCatalog.installed(pulled: ["qwen3:8b"], bonsai: missing, llama: here), ["llama3.1:8b", "qwen3:8b"])
+        // Whatever else Ollama has is not offered: only the two tested models are.
+        XCTAssertEqual(ModelCatalog.installed(pulled: ["qwen3:8b", "llama3.1:8b"], bonsai: missing, llama: here), ["llama3.1:8b"])
+        XCTAssertEqual(ModelCatalog.installed(pulled: ["qwen3:8b"], bonsai: missing, llama: missing), [])
+        XCTAssertEqual(ModelCatalog.installed(pulled: ["llama3.1:8b"], bonsai: missing, llama: missing), ["llama3.1:8b"])   // Ollama's copy
     }
 
     func testMemoryAdviceIsOnlyForAModelTheAppLoadsItself() {
