@@ -83,7 +83,7 @@ public actor BonsaiBackend: NoteBackend {
     /// Measured on a 22-minute session: the Objective pass took 97 s
     /// re-reading it and 43 s resuming after it.
     public nonisolated let resumesFromSharedOpening: Bool
-    private let session: URLSession
+    nonisolated let session: URLSession
     /// How long to wait for the model to load, and how often to ask.
     private let loadTimeout: TimeInterval
     private let pollInterval: TimeInterval
@@ -98,7 +98,7 @@ public actor BonsaiBackend: NoteBackend {
     /// The defaults are Bonsai's. The same server runs any GGUF model, so a
     /// different one is a different `install`, with its own name.
     public init(install: Install = .standard, label: String = BonsaiBackend.displayName,
-                resumesFromSharedOpening: Bool = true, session: URLSession = .shared,
+                resumesFromSharedOpening: Bool = true, session: URLSession = .keepingNothing,
                 loadTimeout: TimeInterval = 180, pollInterval: TimeInterval = 1) {
         self.install = install
         self.label = label

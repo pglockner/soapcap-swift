@@ -9,13 +9,21 @@ struct Uninstaller {
     var library = FileManager.default.homeDirectoryForCurrentUser.appending(path: "Library")
     var app = Bundle.main.bundleURL
 
+    /// Where macOS files what the app fetches. The app has no use for it, and
+    /// versions before 0.8 let it hold a note model's requests and replies.
+    var cache: URL { library.appending(path: "Caches/\(bundleID)") }
+
     /// Every place the app, or macOS on its behalf, may have put something.
     var places: [URL] {
         [library.appending(path: "Application Support/Soapcap"),         // the models it downloaded
-         library.appending(path: "Caches/\(bundleID)"),
+         cache,
          library.appending(path: "HTTPStorages/\(bundleID)"),
          library.appending(path: "Saved Application State/\(bundleID).savedState")]
     }
+
+    /// Deletes the cache. Done whenever the app opens, so that nothing
+    /// fetched in one run is still on disk in the next.
+    func removeCache() { try? FileManager.default.removeItem(at: cache) }
 
     /// Those of them that are there.
     var leftovers: [URL] { places.filter { FileManager.default.fileExists(atPath: $0.path) } }

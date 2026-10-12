@@ -37,4 +37,18 @@ final class UninstallerTests: XCTestCase {
         for kept in others { XCTAssertTrue(FileManager.default.fileExists(atPath: kept.path), kept.path) }
         XCTAssertEqual(uninstaller.leftovers, [])
     }
+
+    func testRemovingTheCacheTakesAllOfItAndNothingElse() throws {
+        let uninstaller = Uninstaller(bundleID: "test.soapcap", library: library, app: library.appending(path: "Soapcap.app"))
+        uninstaller.removeCache()       // nothing there yet: no harm done
+
+        // What a version that cached a note model's replies left behind.
+        let cached = [try write("Caches/test.soapcap/Cache.db"), try write("Caches/test.soapcap/Cache.db-wal"),
+                      try write("Caches/test.soapcap/fsCachedData/reply")]
+        let kept = [try write("Application Support/Soapcap/note-models/bonsai.gguf"), try write("Caches/com.example.other/Cache.db")]
+
+        uninstaller.removeCache()
+        for gone in cached { XCTAssertFalse(FileManager.default.fileExists(atPath: gone.path), gone.path) }
+        for there in kept { XCTAssertTrue(FileManager.default.fileExists(atPath: there.path), there.path) }
+    }
 }

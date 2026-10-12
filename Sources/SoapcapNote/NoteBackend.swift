@@ -55,3 +55,16 @@ public protocol NoteBackend: Sendable {
 public extension NoteBackend {
     var resumesFromSharedOpening: Bool { false }
 }
+
+public extension URLSession {
+    /// What the note backends reach their models through. It keeps nothing
+    /// it sends or receives. The shared session files requests and replies
+    /// in the app's cache folder on disk, and a request to a note model is
+    /// the transcript.
+    static let keepingNothing: URLSession = {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.urlCache = nil
+        configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+        return URLSession(configuration: configuration)
+    }()
+}

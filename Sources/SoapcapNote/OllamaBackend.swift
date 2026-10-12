@@ -8,10 +8,10 @@ public actor OllamaBackend: NoteBackend {
 
     public nonisolated let model: String
     public nonisolated let host: URL
-    private let session: URLSession
+    nonisolated let session: URLSession
     private var context = 4096
 
-    public init(model: String, host: URL = OllamaBackend.defaultHost, session: URLSession = .shared) {
+    public init(model: String, host: URL = OllamaBackend.defaultHost, session: URLSession = .keepingNothing) {
         self.model = model
         self.host = host
         self.session = session

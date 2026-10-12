@@ -7,6 +7,9 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor static var beforeQuit: (() async -> Void)?
 
+    /// Nothing an earlier run fetched is kept.
+    func applicationWillFinishLaunching(_ notification: Notification) { Uninstaller().removeCache() }
+
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         guard let beforeQuit = Self.beforeQuit else { return .terminateNow }
         Task { @MainActor in

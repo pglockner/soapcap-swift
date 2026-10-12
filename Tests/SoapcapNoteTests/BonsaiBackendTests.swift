@@ -193,4 +193,8 @@ final class BonsaiBackendTests: XCTestCase {
             XCTAssertEqual(error as? NoteError, .requestFailed("Bonsai returned no content."))
         }
     }
+
+    func testNothingSentOrReceivedIsCachedUnlessAnotherSessionIsGiven() {
+        XCTAssertTrue(BonsaiBackend(install: install).session === URLSession.keepingNothing)
+    }
 }

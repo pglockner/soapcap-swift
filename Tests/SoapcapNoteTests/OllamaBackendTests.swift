@@ -134,4 +134,11 @@ final class OllamaBackendTests: XCTestCase {
         XCTAssertTrue(OllamaBackend.isLocal(URL(string: "http://[::1]:11434")!))
         XCTAssertFalse(OllamaBackend.isLocal(URL(string: "http://nas.lan:11434")!))
     }
+
+    /// A request is the transcript and a reply is the note. The session
+    /// every app shares would file both in the cache folder on disk.
+    func testNothingSentOrReceivedIsCachedUnlessAnotherSessionIsGiven() {
+        XCTAssertNil(URLSession.keepingNothing.configuration.urlCache)
+        XCTAssertTrue(OllamaBackend(model: "llama3.1:8b").session === URLSession.keepingNothing)
+    }
 }
