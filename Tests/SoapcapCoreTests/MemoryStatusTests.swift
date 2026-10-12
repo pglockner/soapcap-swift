@@ -16,9 +16,9 @@ final class MemoryStatusTests: XCTestCase {
     }
 
     func testTheSummaryAddsSwapOnlyWhenCritical() {
-        XCTAssertEqual(MemoryStatus(totalBytes: 16 * gb, freePercent: 20, swapUsedBytes: gb, swapTotalBytes: 2 * gb).summary, "memory 86%")
+        XCTAssertEqual(MemoryStatus(totalBytes: 16 * gb, freePercent: 20, swapUsedBytes: gb, swapTotalBytes: 2 * gb).summary, "Memory 86%")
         XCTAssertEqual(MemoryStatus(totalBytes: 16 * gb, freePercent: 6, swapUsedBytes: 2254 << 20, swapTotalBytes: 5 * gb).summary,
-                       "memory 107%   swap 44% (2.2 GB)")
+                       "Memory 107%, swap 44% (2.2 GB)")
     }
 
     func testAdviceComesOnlyWhenTheModelWontFitWithRoomToSpare() {

@@ -27,7 +27,7 @@ public struct SoapcapApp: App {
     public init() {}
 
     public var body: some Scene {
-        WindowGroup("soapcap session") {
+        WindowGroup("Soapcap") {
             ContentView().environmentObject(model)
                 .frame(minWidth: 560, minHeight: 420)
                 .onReceive(ModelSetup.shared.$state) { state in
@@ -94,8 +94,8 @@ struct ContentView: View {
         VStack(spacing: 16) {
             Spacer()
             HStack { Circle().fill(.red).frame(width: 12, height: 12)
-                Text(String(format: "recording  %02d:%02d", m.elapsed / 60, m.elapsed % 60))
-                    .font(.system(.title2, design: .monospaced)) }
+                Text(String(format: "Recording  %02d:%02d", m.elapsed / 60, m.elapsed % 60))
+                    .font(.title2).monospacedDigit() }
             HStack {
                 Button("Pause") { m.pause() }
                 Button("Stop") { m.stop() }.keyboardShortcut(.defaultAction)
@@ -109,8 +109,8 @@ struct ContentView: View {
         VStack(spacing: 16) {
             Spacer()
             HStack { Image(systemName: "pause.circle.fill").foregroundStyle(.orange)
-                Text(String(format: "paused  %02d:%02d recorded", m.elapsed / 60, m.elapsed % 60))
-                    .font(.system(.title2, design: .monospaced)) }
+                Text(String(format: "Paused  %02d:%02d recorded", m.elapsed / 60, m.elapsed % 60))
+                    .font(.title2).monospacedDigit() }
             Text("Nothing is being captured.").foregroundStyle(.secondary)
             HStack {
                 Button("Resume") { m.resume() }.keyboardShortcut(.defaultAction)
@@ -151,7 +151,7 @@ struct ContentView: View {
             }
             HStack {
                 Picker("Format", selection: $m.format) {
-                    ForEach(SessionModel.formats, id: \.self) { Text($0) }
+                    ForEach(SessionModel.formats, id: \.self) { Text($0.uppercased()) }
                 }.pickerStyle(.segmented).frame(width: 220)
                 Button("Draft note") { m.draftIfRoom() }.keyboardShortcut(.defaultAction)
                 Spacer()
@@ -174,7 +174,7 @@ struct ContentView: View {
             scrollText(m.note)
             if !m.notice.isEmpty { Text(m.notice).font(.caption).foregroundStyle(.orange) }
             HStack {
-                Button(m.copied ? "Copied" : "Keep (copy)") { m.keep() }.keyboardShortcut(.defaultAction)
+                Button(m.copied ? "Copied" : "Copy note") { m.keep() }.keyboardShortcut(.defaultAction)
                 Button("Regenerate") { m.draft() }
                 Spacer()
                 // Once the note is on the clipboard, leaving is no longer throwing it away.
@@ -185,8 +185,12 @@ struct ContentView: View {
 
     private func error(_ msg: String) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            ScrollView { Text(msg).font(.system(.body, design: .monospaced)).foregroundStyle(.orange)
-                .textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
+            ScrollView {
+                Label { Text(msg).textSelection(.enabled) } icon: {
+                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
             HStack {
                 Button("Back") { m.newSession() }
                 Button("Check permissions") { m.diagnose() }

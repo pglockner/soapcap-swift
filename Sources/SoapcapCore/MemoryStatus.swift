@@ -32,12 +32,12 @@ public struct MemoryStatus: Equatable, Sendable {
     public var totalGB: Double { Double(totalBytes) / Self.gigabyte }
     public var availableGB: Double { totalGB * Double(freePercent) / 100 }
 
-    /// "memory 82%"; from 90% it adds the swap in use, which is what pushes
-    /// the figure up: "memory 104%   swap 42% (2.1 GB)".
+    /// "Memory 82%"; from 90% it adds the swap in use, which is what pushes
+    /// the figure up: "Memory 104%, swap 42% (2.1 GB)".
     public var summary: String {
-        var text = "memory \(usedPercent)%"
+        var text = "Memory \(usedPercent)%"
         if level == .critical, swapTotalBytes > 0 {
-            text += String(format: "   swap %d%% (%.1f GB)", Int(swapUsedBytes * 100 / swapTotalBytes), Double(swapUsedBytes) / Self.gigabyte)
+            text += String(format: ", swap %d%% (%.1f GB)", Int(swapUsedBytes * 100 / swapTotalBytes), Double(swapUsedBytes) / Self.gigabyte)
         }
         return text
     }

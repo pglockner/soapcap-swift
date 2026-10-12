@@ -28,7 +28,7 @@ struct MemoryLine: View {
 
     var body: some View {
         Text(memory.summary)
-            .font(.system(.caption, design: .monospaced))
+            .font(.caption).monospacedDigit()
             .foregroundStyle(color)
     }
 

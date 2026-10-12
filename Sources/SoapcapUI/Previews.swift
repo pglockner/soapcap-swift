@@ -185,3 +185,22 @@ private let previewSampleNote = "9 minutes, telehealth\n\nSUBJECTIVE:\nThe clien
         $0.modelTest.show(.problem(model: "llama3.1:8b", reasons: ["ASSESSMENT is empty or \"Not addressed\""]), note: previewSampleNote)
     }
 }
+
+#Preview("Error") {
+    sampleScreen {
+        $0.phase = .error("Soapcap can't use the microphone. Turn it on for Soapcap in System Settings > Privacy & Security > Microphone, then quit and reopen Soapcap.")
+    }
+}
+
+#Preview("Recording, dark") {
+    sampleScreen { $0.phase = .recording; $0.elapsed = 754; $0.liveLines = previewLines }.preferredColorScheme(.dark)
+}
+
+#Preview("Transcript, dark") {
+    sampleScreen {
+        $0.phase = .transcript
+        $0.transcript = previewLines.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n")
+        $0.notice = "transcript: redacted 2 span(s): FIRST_NAME x1, DATE x1"
+    }
+    .preferredColorScheme(.dark)
+}
