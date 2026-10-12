@@ -46,6 +46,8 @@ public struct SoapcapApp: App {
 
 struct ContentView: View {
     @EnvironmentObject var m: SessionModel
+    /// Read here so that this window follows a change of model made in Settings.
+    @AppStorage(SessionSettings.Key.noteModel) private var noteModel = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -58,8 +60,10 @@ struct ContentView: View {
             case .note: note
             case .error(let msg): error(msg)
             case .checks(let checks):
-                ChecksView(checks: checks, test: m.modelTest, model: m.settings.noteModel,
+                ChecksView(checks: checks, test: m.modelTest, model: SessionSettings.noteModel(stored: noteModel),
                            perform: { m.perform($0) }, again: { m.diagnose() }, back: { m.newSession() })
+                    // The line about the note model is about the one just chosen.
+                    .onChange(of: noteModel) { m.diagnose() }
             }
         }
         // Against the top left however wide the window is; a screen narrower

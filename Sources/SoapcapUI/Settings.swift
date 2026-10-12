@@ -48,7 +48,13 @@ struct SessionSettings {
     }
 
     /// The model that drafts notes: `bonsai`, or a model pulled into Ollama.
-    var noteModel: String { text(Key.noteModel).isEmpty ? ModelCatalog.defaultModel : text(Key.noteModel) }
+    var noteModel: String { Self.noteModel(stored: defaults.string(forKey: Key.noteModel) ?? "") }
+
+    /// What a stored choice of model means; none is the default model.
+    static func noteModel(stored: String) -> String {
+        let chosen = stored.trimmingCharacters(in: .whitespaces)
+        return chosen.isEmpty ? ModelCatalog.defaultModel : chosen
+    }
 
     /// Where Ollama is. Anything but this Mac sends the transcript over the network.
     var ollamaHost: URL {
@@ -81,10 +87,14 @@ struct SettingsView: View {
 
     private var settings: SessionSettings { SessionSettings() }
 
+    /// The chosen model, read from `noteModel` itself and not from the
+    /// stored settings: a window is drawn again only for a setting its body
+    /// has read, and otherwise the picker went on showing the model it had.
+    private var chosenModel: String { SessionSettings.noteModel(stored: noteModel) }
+
     /// The installed models, plus the chosen one even if it has since gone.
     private var choices: [String] {
-        let chosen = settings.noteModel
-        return models.contains(chosen) ? models : [chosen] + models
+        models.contains(chosenModel) ? models : [chosenModel] + models
     }
 
     var body: some View {
@@ -108,15 +118,15 @@ struct SettingsView: View {
                 }
             }
             Section {
-                Picker("Draft with", selection: Binding(get: { settings.noteModel }, set: { noteModel = $0 })) {
+                Picker("Draft with", selection: Binding(get: { chosenModel }, set: { noteModel = $0 })) {
                     ForEach(choices, id: \.self) { Text(ModelCatalog.displayName(of: $0)).tag($0) }
                 }
                 TextField("Session type", text: $sessionType, prompt: Text("telehealth"))
-                ModelTestView(test: test, model: settings.noteModel)
+                ModelTestView(test: test, model: chosenModel)
             } header: {
                 Text("Note")
             } footer: {
-                Text(ModelCatalog.description(of: settings.noteModel)
+                Text(ModelCatalog.description(of: chosenModel)
                      ?? "Not tested with these prompts; proofread its notes closely.")
                     .foregroundStyle(.secondary)
             }
