@@ -18,7 +18,7 @@ build=$(git rev-list --count HEAD 2>/dev/null || echo 1)
 swift build -c release
 ./engine.sh
 identity="${SOAPCAP_SIGN_IDENTITY:--}"
-id="${SOAPCAP_BUNDLE_ID:-local.soapcap.session}"
+id="${SOAPCAP_BUNDLE_ID:-com.jukenzie.soapcap}"
 app="${SOAPCAP_OUT:-$here/build}/Soapcap.app"
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources" "$app/Contents/Helpers"

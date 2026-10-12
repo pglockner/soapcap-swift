@@ -5,7 +5,7 @@ import SwiftUI
 /// What the app leaves on a Mac, and removing it. A model that soapcap or
 /// Ollama installed is not the app's and is never touched.
 struct Uninstaller {
-    var bundleID = Bundle.main.bundleIdentifier ?? "local.soapcap.session"
+    var bundleID = Bundle.main.bundleIdentifier ?? "com.jukenzie.soapcap"
     var library = FileManager.default.homeDirectoryForCurrentUser.appending(path: "Library")
     var app = Bundle.main.bundleURL
 

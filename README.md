@@ -206,8 +206,8 @@ drops its Microphone and Screen Recording grants. To reset a stuck grant,
 which also happens after switching from ad hoc to a certificate:
 
 ```sh
-tccutil reset ScreenCapture local.soapcap.session
-tccutil reset Microphone local.soapcap.session
+tccutil reset ScreenCapture com.jukenzie.soapcap
+tccutil reset Microphone com.jukenzie.soapcap
 ```
 
 Every build runs under the hardened runtime. For a build that opens on
