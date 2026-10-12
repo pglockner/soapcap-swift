@@ -183,7 +183,7 @@ the probes.
 
 The note models' files go in
 `~/Library/Application Support/Soapcap/note-models`. `llama3.1:8b` is Meta's
-Llama 3.1 8B Instruct in bartowski's 4-bit conversion, under the Llama 3.1
+Llama 3.1 8B Instruct in second-state's 4-bit conversion, under the Llama 3.1
 Community License.
 
 ### De-identification model

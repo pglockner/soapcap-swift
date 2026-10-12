@@ -35,12 +35,14 @@ public actor BonsaiBackend: NoteBackend {
             FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".local/share/soapcap/bonsai")
         }
 
-        /// Llama 3.1 8B Instruct at 4 bits, in bartowski's conversion: the
-        /// one compared, note for note, with the copy Ollama serves.
+        /// Llama 3.1 8B Instruct at 4 bits, in second-state's conversion.
+        /// Of the files that need no sign-up it is the nearest to the copy
+        /// Ollama serves, which the prompts were tested with: 276 of its
+        /// 292 tensors are the same bytes, and so is the chat template.
         public static let llamaWeights = PinnedFile(
-            name: "Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf",
-            url: URL(string: "https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/bf5b95e96dac0462e2a09145ec66cae9a3f12067/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf")!,
-            sha256: "7b064f5842bf9532c91456deda288a1b672397a54fa729aa665952863033557c", bytes: 4_920_739_232)
+            name: "Llama-3.1-8B-Instruct-Q4_K_M.gguf",
+            url: URL(string: "https://huggingface.co/second-state/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/6d6118a261564da05fd7e651f4bc069eb7c38c20/Llama-3.1-8B-Instruct-Q4_K_M.gguf")!,
+            sha256: "599024f21235045ea4ad7aecc5d46e794920e201d669328f577b1971cf98c904", bytes: 4_920_739_200)
         public static var ownLlamaWeights: URL { modelsDirectory.appendingPathComponent(llamaWeights.name) }
 
         /// The engine inside the app, or else the one soapcap's installer built.
