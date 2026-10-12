@@ -1,4 +1,5 @@
 import AVFoundation
+import CoreAudio
 import os
 
 /// Whether macOS lets this app hear what the Mac is playing.
@@ -59,28 +60,50 @@ public enum CallAudio {
 }
 
 /// A steady tone on the Mac's output, quiet enough to go unnoticed even if
-/// nothing were silencing it.
+/// nothing were silencing it. Written straight into the output device, as
+/// the microphone is read straight from its own.
 private final class Tone {
     static let level: Float = 0.001
-    private let engine = AVAudioEngine()
+    private let queue = DispatchQueue(label: "soapcap.tone")
+    private var device = AudioDevice.none
+    private var proc: AudioDeviceIOProcID?
 
     func start() -> Bool {
-        guard let format = AVAudioFormat(standardFormatWithSampleRate: 48000, channels: 1) else { return false }
-        let step = 2 * Float.pi * 440 / 48000
+        let device = AudioDevice.default(.output)
+        // Samples are written as 32-bit floats, which is what Core Audio
+        // takes from apps for any device it mixes sound for.
+        guard let format = AudioDevice.format(of: device, .output), format.commonFormat == .pcmFormatFloat32 else { return false }
+        let step = 2 * Float.pi * 440 / Float(format.sampleRate)
         var phase: Float = 0
-        let source = AVAudioSourceNode(format: format) { _, _, frames, buffers in
-            for buffer in UnsafeMutableAudioBufferListPointer(buffers) {
-                guard let samples = buffer.mData?.assumingMemoryBound(to: Float.self) else { continue }
-                for i in 0..<Int(frames) { samples[i] = Self.level * sin(phase + Float(i) * step) }
+        var proc: AudioDeviceIOProcID?
+        let made = AudioDeviceCreateIOProcIDWithBlock(&proc, device, queue) { _, _, _, output, _ in
+            for (index, buffer) in UnsafeMutableAudioBufferListPointer(output).enumerated() {
+                guard let data = buffer.mData else { continue }
+                // The tone goes to the device's first stream; any other gets silence.
+                guard index == 0 else { memset(data, 0, Int(buffer.mDataByteSize)); continue }
+                let channels = max(Int(buffer.mNumberChannels), 1)
+                let frames = Int(buffer.mDataByteSize) / (MemoryLayout<Float>.size * channels)
+                let samples = data.assumingMemoryBound(to: Float.self)
+                for frame in 0..<frames {
+                    let sample = Self.level * sin(phase + Float(frame) * step)
+                    for channel in 0..<channels { samples[frame * channels + channel] = sample }
+                }
+                phase = (phase + Float(frames) * step).truncatingRemainder(dividingBy: 2 * .pi)
             }
-            phase = (phase + Float(frames) * step).truncatingRemainder(dividingBy: 2 * .pi)
-            return noErr
         }
-        engine.attach(source)
-        engine.connect(source, to: engine.mainMixerNode, format: format)
-        do { try engine.start() } catch { return false }
+        guard made == noErr, let proc else { return false }
+        guard AudioDeviceStart(device, proc) == noErr else {
+            AudioDeviceDestroyIOProcID(device, proc)
+            return false
+        }
+        (self.device, self.proc) = (device, proc)
         return true
     }
 
-    func stop() { engine.stop() }
+    func stop() {
+        guard let proc else { return }
+        AudioDeviceStop(device, proc)
+        AudioDeviceDestroyIOProcID(device, proc)
+        self.proc = nil
+    }
 }

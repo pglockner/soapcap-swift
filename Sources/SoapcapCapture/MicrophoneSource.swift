@@ -98,13 +98,12 @@ final class MicrophoneSource: AudioSource {
 /// about its input at the moment AirPods left, a new engine never answered,
 /// and the session could not be stopped. Core Audio answers with an error.
 final class SystemInputEngine: InputEngine {
-    private static let system = AudioObjectID(kAudioObjectSystemObject)
     private let lock = NSLock()
     private let delivery = DispatchQueue(label: "soapcap.microphone.buffers")
     private let events = DispatchQueue(label: "soapcap.microphone.events")
     private var onChange: (() -> Void)?
     private var handler: ((AVAudioPCMBuffer) -> Void)?
-    private var device = AudioObjectID(kAudioObjectUnknown)
+    private var device = AudioDevice.none
     private var format: AVAudioFormat?
     private var proc: AudioDeviceIOProcID?
     /// One block for every listener, so that each can be taken off again.
@@ -117,23 +116,23 @@ final class SystemInputEngine: InputEngine {
 
     init() {
         listener = { [weak self] _, _ in self?.somethingChanged() }
-        listen(to: kAudioHardwarePropertyDefaultInputDevice, of: Self.system, true)
+        listen(to: kAudioHardwarePropertyDefaultInputDevice, of: AudioDevice.system, true)
     }
 
     deinit {
         stop()
-        listen(to: kAudioHardwarePropertyDefaultInputDevice, of: Self.system, false)
+        listen(to: kAudioHardwarePropertyDefaultInputDevice, of: AudioDevice.system, false)
     }
 
-    var inputSampleRate: Double { Self.inputFormat(of: Self.defaultInput())?.sampleRate ?? 0 }
+    var inputSampleRate: Double { AudioDevice.format(of: AudioDevice.default(.input), .input)?.sampleRate ?? 0 }
 
     func installTap(_ handler: @escaping (AVAudioPCMBuffer) -> Void) { lock.withLock { self.handler = handler } }
     func removeTap() { lock.withLock { handler = nil } }
 
     func start() throws {
         stop()
-        let device = Self.defaultInput()
-        guard let handler = lock.withLock({ handler }), let format = Self.inputFormat(of: device) else {
+        let device = AudioDevice.default(.input)
+        guard let handler = lock.withLock({ handler }), let format = AudioDevice.format(of: device, .input) else {
             throw CaptureError.microphoneDenied
         }
         var proc: AudioDeviceIOProcID?
@@ -159,7 +158,7 @@ final class SystemInputEngine: InputEngine {
 
     func stop() {
         let (device, proc) = lock.withLock {
-            defer { (self.device, self.format, self.proc) = (AudioObjectID(kAudioObjectUnknown), nil, nil) }
+            defer { (self.device, self.format, self.proc) = (AudioDevice.none, nil, nil) }
             return (self.device, self.proc)
         }
         guard let proc else { return }
@@ -175,47 +174,17 @@ final class SystemInputEngine: InputEngine {
     /// which starting to listen causes; that alone must not start it again.
     private func somethingChanged() {
         let (device, format, onChange) = lock.withLock { (self.device, self.format, self.onChange) }
-        let now = Self.defaultInput()
-        if device != kAudioObjectUnknown, now == device, Self.inputFormat(of: device) == format { return }
+        if device != AudioDevice.none, AudioDevice.default(.input) == device, AudioDevice.format(of: device, .input) == format { return }
         onChange?()
     }
 
     private func listen(to selector: AudioObjectPropertySelector, of object: AudioObjectID, _ on: Bool) {
         guard let listener else { return }
-        var address = Self.address(selector)
+        var address = AudioDevice.address(selector)
         if on {
             AudioObjectAddPropertyListenerBlock(object, &address, events, listener)
         } else {
             AudioObjectRemovePropertyListenerBlock(object, &address, events, listener)
         }
-    }
-
-    private static func address(_ selector: AudioObjectPropertySelector,
-                                scope: AudioObjectPropertyScope = kAudioObjectPropertyScopeGlobal) -> AudioObjectPropertyAddress {
-        AudioObjectPropertyAddress(mSelector: selector, mScope: scope, mElement: kAudioObjectPropertyElementMain)
-    }
-
-    private static func defaultInput() -> AudioObjectID {
-        var device = AudioObjectID(kAudioObjectUnknown)
-        var size = UInt32(MemoryLayout<AudioObjectID>.size)
-        var address = address(kAudioHardwarePropertyDefaultInputDevice)
-        AudioObjectGetPropertyData(system, &address, 0, nil, &size, &device)
-        return device
-    }
-
-    /// The format of `device`'s first input stream; nil if it has none.
-    private static func inputFormat(of device: AudioObjectID) -> AVAudioFormat? {
-        guard device != kAudioObjectUnknown else { return nil }
-        var address = address(kAudioDevicePropertyStreams, scope: kAudioObjectPropertyScopeInput)
-        var size: UInt32 = 0
-        guard AudioObjectGetPropertyDataSize(device, &address, 0, nil, &size) == noErr else { return nil }
-        var streams = [AudioObjectID](repeating: 0, count: Int(size) / MemoryLayout<AudioObjectID>.size)
-        guard !streams.isEmpty, AudioObjectGetPropertyData(device, &address, 0, nil, &size, &streams) == noErr else { return nil }
-        var layout = AudioStreamBasicDescription()
-        size = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
-        address = Self.address(kAudioStreamPropertyVirtualFormat)
-        guard AudioObjectGetPropertyData(streams[0], &address, 0, nil, &size, &layout) == noErr,
-              layout.mSampleRate > 0, layout.mChannelsPerFrame > 0 else { return nil }
-        return AVAudioFormat(streamDescription: &layout)
     }
 }
