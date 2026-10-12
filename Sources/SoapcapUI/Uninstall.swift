@@ -71,7 +71,8 @@ struct UninstallCommand: View {
         question.alertStyle = .warning
         question.messageText = "Uninstall Soapcap?"
         question.informativeText = uninstaller.summary
-        question.addButton(withTitle: "Cancel")                 // the first button is what Return chooses
+        // Beside a destructive button macOS gives Return to neither; Escape is Cancel's.
+        question.addButton(withTitle: "Cancel")
         question.addButton(withTitle: "Uninstall").hasDestructiveAction = true
         guard question.runModal() == .alertSecondButtonReturn else { return }
         Task { @MainActor in
@@ -87,6 +88,9 @@ struct UninstallCommand: View {
                         last.informativeText = "Everything Soapcap downloaded is gone. Drag Soapcap itself to the Trash to finish."
                         last.runModal()
                     }
+                    // The draft is stopped already. A quit that waited for it again would
+                    // wait for ever: nothing more on the main queue runs until this returns.
+                    AppDelegate.beforeQuit = nil
                     NSApp.terminate(nil)
                 }
             }
