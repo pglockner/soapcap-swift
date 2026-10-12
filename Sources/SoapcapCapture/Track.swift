@@ -65,7 +65,10 @@ final class Track: @unchecked Sendable {
     func finish() async -> [Segment] {
         await source.stop()
         input.continuation.finish()
+        // A track that never started has nothing to finish, and a recognizer
+        // that was never started never says it has.
+        guard let results else { return [] }
         try? await analyzer.finalizeAndFinishThroughEndOfInput()
-        return await results?.value ?? []
+        return await results.value
     }
 }
