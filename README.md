@@ -146,6 +146,8 @@ caution that it is untested.
       Guidelines for macOS (Liquid Glass materials, SF Symbols), checked
       with Accessibility Inspector for VoiceOver and contrast
 - [ ] A signed, notarized build that installs without Xcode
+- [ ] Try **Uninstall Soapcap…** again from that build: from Applications,
+      and opened straight from the download
 - [ ] Stretch: the `structured` and `combined` note styles (nobody is
       asking for them yet). Notes are drafted in the narrative style only
 - [ ] Idea, not scoped: note structure from a settings file, so a note's
