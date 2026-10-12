@@ -10,6 +10,9 @@
 - Fixed the microphone being lost for the rest of a session when the input device changed, as when AirPods connect or are put away; it is now read through Core Audio and retried until it is back
 - Added a **Test** button for the note model, in Settings and on the checks screen: it drafts a note from a sample session and answers Good or Problem
 - Added **Uninstall Soapcap…** to the app menu, which removes the models the app downloaded, its settings and its permissions, then moves the app to the Trash
+- Fixed **Uninstall Soapcap…** leaving the app open: it removed everything and moved the app to the Trash, then stayed on screen as if nothing had happened. It now quits (0.8.1)
+- Fixed **Start recording** staying on "Starting…" for ever when a recording could not start, as with the microphone refused; it now says what is wrong (0.8.1)
+- Changed **Uninstall Soapcap…** to also remove the cache macOS keeps for the app under `/var/folders`; the size it shows now counts the models alone (0.8.1)
 
 ## 0.7 (2026-10-10)
 
