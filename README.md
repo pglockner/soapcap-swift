@@ -143,6 +143,9 @@ caution that it is untested.
       stopping a draft while Bonsai loads and with an Ollama model
 - [ ] Register jukenzie.com, the domain the app's identifier
       (`com.jukenzie.soapcap`) is named after, before the first public build
+- [ ] A design pass over every screen, to Apple's Human Interface
+      Guidelines for macOS (Liquid Glass materials, SF Symbols), checked
+      with Accessibility Inspector for VoiceOver and contrast
 - [ ] A signed, notarized build that installs without Xcode
 - [ ] Stretch: the `structured` and `combined` note styles (nobody is
       asking for them yet). Notes are drafted in the narrative style only
