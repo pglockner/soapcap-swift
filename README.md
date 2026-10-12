@@ -168,8 +168,9 @@ Three probes run a piece of the app without the window:
   transcript. `swift run CaptureProbe check` only says whether the Mac's
   audio can be heard. From a terminal, the permissions are the terminal's.
 - `swift run NoteProbe FILE [soap|dap|birp] [MODEL] [MINUTES]` drafts a
-  note from a transcript file. `bonsai` as the model uses Bonsai;
-  `gguf:PATH` runs a model file with Bonsai's server.
+  note from a transcript file; `Samples/notes` has one. The model is run
+  the way the app would run it, and `gguf:PATH` runs any model file on the
+  app's engine.
 - `swift run -c release DeidentifyProbe FILE [note]` de-identifies a file.
   `--install` sets up the model first; `--windows` tries other passes.
 
@@ -245,8 +246,20 @@ swift test
 | `SoapcapPIITests` | The real PII model on the transcripts in `Samples/deidentify`; skipped when the model isn't installed |
 | `SoapcapUITests` | The session flow against scripted stand-ins; starting and stopping the note model; settings; credits |
 
-Live capture, real model output, the permission grants, signing and the
-window itself are not covered. They need a person.
+Live capture, the permission grants, signing and the window itself are not
+covered. They need a person.
+
+Two tests run only when asked, and are skipped otherwise:
+
+```sh
+SOAPCAP_MODEL_TESTS=1 swift test --filter SampleNoteTests
+SOAPCAP_NETWORK_TESTS=1 swift test --filter FetcherNetworkTests
+```
+
+The first drafts the note of the sample session in `Samples/notes` with
+the default model and checks that it comes out whole: the baseline check
+that a model on this Mac is working. It takes about a minute. The second
+stops and resumes a real 130 MB download.
 
 ## Credits
 

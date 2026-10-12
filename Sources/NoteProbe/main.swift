@@ -1,8 +1,10 @@
 // Drafts a note from a transcript file and prints it. A development aid for
 // checking drafting without the window:
 //   swift run NoteProbe FILE [soap|dap|birp] [MODEL] [MINUTES]
-// MODEL is a model in Ollama, `bonsai`, or `gguf:PATH` to run a model file
-// with Bonsai's llama-server and the prompts in the order Ollama gets them.
+// MODEL is `bonsai`, a model's name as Settings shows it (run as the app
+// would: by Ollama if Ollama has it, or else the default model from the
+// app's own file), or `gguf:PATH` to run a model file with the app's engine
+// and the prompts in the order Ollama gets them.
 import Foundation
 import SoapcapNote
 
@@ -16,14 +18,12 @@ guard let path = args.first, let transcript = try? String(contentsOfFile: path, 
 let format = args.dropFirst().first.flatMap(NoteFormat.init) ?? .soap
 let model = args.dropFirst(2).first ?? "llama3.1:8b"
 let backend: any NoteBackend
-if model == "bonsai" {
-    backend = BonsaiBackend()
-} else if model.hasPrefix("gguf:") {
+if model.hasPrefix("gguf:") {
     let weights = URL(fileURLWithPath: String(model.dropFirst(5)))
     backend = BonsaiBackend(install: .init(server: BonsaiBackend.Install.standard.server, weights: weights),
                             label: "llama-server", resumesFromSharedOpening: false)
 } else {
-    backend = OllamaBackend(model: model)
+    backend = await ModelCatalog.backend(for: model)
 }
 let drafter = NoteDrafter(backend: backend)
 
