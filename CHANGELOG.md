@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10 (2026-10-12)
+
+- Added the minute of the session to the transcript's margin, and a ruler of minutes down its side: each mark goes to that minute, the minutes on screen are picked out, and the ruler takes the finest spacing its height has room for
+- Changed a DAP note's Data and a BIRP note's Behavior to say they need completing by hand when only one side was heard, as a SOAP note's Subjective and Objective already did; before, such a note was left wholly to the model, with no caution under it
+- Changed the transcript to show each turn a speaker took as its own line, a little apart from the next, with the speaker's name in bold; a selection now runs within one turn
+- Added a mark on the ruler where the session was paused: clicking it goes to that minute, and pointing at it says when
+- Changed the Ready screen to be laid out like the session it leads to: centred, with the clock standing at 00:00 where it will run and the reminders at the foot, so that nothing moves when a session starts
+
 ## 0.9 (2026-10-12)
 
 - Added a bar across the top of the window: the app's name, the steps Record, Transcript and Note with the one in hand picked out, and buttons for the checks and Settings. From the note the transcript can be gone back to, and the note again
