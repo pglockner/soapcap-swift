@@ -4,6 +4,9 @@ import SwiftUI
 /// The last few lines heard, to show that both sides are coming through.
 /// The full transcript is shown once the session ends.
 struct LiveStrip: View {
+    /// The room it takes at the foot of the window.
+    static let height: CGFloat = 96
+
     let lines: [LiveLine]
 
     var body: some View {
@@ -23,7 +26,7 @@ struct LiveStrip: View {
             .padding(8)
         }
         .defaultScrollAnchor(.bottom)
-        .frame(height: 96)
+        .frame(height: Self.height)
         .readingBox()
     }
 }

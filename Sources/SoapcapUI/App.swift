@@ -95,19 +95,25 @@ struct ContentView: View {
         .toolbar(removing: .title)
     }
 
+    /// Laid out as the session it leads to: the clock where it will run, and
+    /// what to see to first where the lines heard will appear.
     private var idle: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Ready for a session").font(.title2.bold())
-            Text("Use headphones, and turn on Do Not Disturb.").foregroundStyle(.secondary)
-            if m.canDeidentify {
-                Toggle("De-identify the transcript, and the note once it's drafted", isOn: $m.deidentify)
-            }
+        VStack(spacing: 16) {
+            Spacer()
+            SessionClock(title: "Ready for a session", symbol: "microphone", tint: .secondary, elapsed: 0, isWaiting: true)
             HStack {
                 Button("Start session") { m.start() }.keyboardShortcut(.defaultAction)
                 Button("Check permissions") { m.diagnose() }
             }
             Spacer()
-        }
+            VStack(spacing: 10) {
+                Text("Use headphones, and turn on Do Not Disturb.").foregroundStyle(.secondary)
+                if m.canDeidentify {
+                    Toggle("De-identify the transcript, and the note once it's drafted", isOn: $m.deidentify)
+                }
+            }
+            .frame(height: LiveStrip.height)
+        }.frame(maxWidth: .infinity)
     }
 
     private var recording: some View {

@@ -10,6 +10,8 @@ struct SessionClock: View {
     let elapsed: Int
     /// Whether the symbol moves, as it does while the app is listening.
     var isLive = false
+    /// Whether the session has yet to start: the time stands back until it runs.
+    var isWaiting = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -25,6 +27,7 @@ struct SessionClock: View {
                 .font(.system(size: 56, weight: .light))
                 .monospacedDigit()
                 .contentTransition(.numericText())
+                .foregroundStyle(isWaiting ? .tertiary : .primary)
         }
         .accessibilityElement(children: .combine)
     }
