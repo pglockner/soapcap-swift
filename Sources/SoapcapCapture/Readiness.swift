@@ -11,21 +11,16 @@ public enum Readiness {
     /// The pane where the call-audio permission is turned on.
     public static let callAudioPane = pane("Privacy_AudioCapture")
 
-    /// True when the app may use the microphone and hear the call. A
-    /// permission not asked for yet counts as missing, and is not asked for
-    /// here. (After `tccutil reset` the app doesn't know it has to ask
-    /// again, so macOS puts its question at this point.)
-    public static func hasPermissions() async -> Bool {
-        guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else { return false }
-        return await CallAudio.access() == .allowed
-    }
-
     /// Has macOS put its question about the microphone.
     public static func askForMicrophone() async { _ = await AVCaptureDevice.requestAccess(for: .audio) }
 
     /// Has macOS put its question about system audio. The answer counts at once.
     public static func askForCallAudio() async { await CallAudio.ask() }
 
+    /// The two permissions and speech recognition. A permission not asked
+    /// for yet counts as missing, and is not asked for here. (After
+    /// `tccutil reset` the app doesn't know it has to ask again for call
+    /// audio, so macOS puts its question at this point.)
     public static func checks(locale: Locale = Locale(identifier: Locale.current.identifier)) async -> [Check] {
         [microphone(AVCaptureDevice.authorizationStatus(for: .audio)),
          callAudio(await CallAudio.access())] + (await speech(locale: locale))

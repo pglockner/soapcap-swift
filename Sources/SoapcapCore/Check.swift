@@ -40,4 +40,22 @@ public struct Check: Equatable, Sendable, Identifiable {
         self.detail = detail
         self.fix = fix
     }
+
+    /// The titles of the two checks that are permissions from macOS.
+    public static let permissions = ["Microphone", "Call audio"]
+}
+
+extension Sequence<Check> {
+    /// Whether a permission is still to be given. Until both are, there is
+    /// no session to be had.
+    public var lackPermission: Bool {
+        contains { Check.permissions.contains($0.title) && $0.status != .ok }
+    }
+
+    /// Whether something stands in the way of a session or its note: a
+    /// permission still to give, or a check that failed. A warning alone
+    /// (de-identifying not set up, memory short just now) does not.
+    public var needAttention: Bool {
+        lackPermission || contains { $0.status == .failed }
+    }
 }

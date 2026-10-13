@@ -21,9 +21,7 @@ struct ChecksView: View {
     }
 
     /// While a permission is missing this screen is the way in, not a report.
-    private var isSetup: Bool {
-        checks.contains { ["Microphone", "Call audio"].contains($0.title) && $0.status != .ok }
-    }
+    private var isSetup: Bool { checks.lackPermission }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {

@@ -25,9 +25,14 @@ struct SessionBar: ToolbarContent {
             StageBar(stage: m.stage, canGo: { m.canGo(to: $0) }, go: { m.go(to: $0) })
         }
         ToolbarItemGroup(placement: .primaryAction) {
-            Button("Check", systemImage: "checklist") { m.diagnose() }
+            // A warning sign in orange when the last check found something
+            // in the way: a different shape, not only a different colour.
+            Button("Check", systemImage: m.needsAttention ? "exclamationmark.triangle.fill" : "checklist") { m.diagnose() }
+                .foregroundStyle(m.needsAttention ? AnyShapeStyle(.orange) : AnyShapeStyle(.primary))
                 .disabled(!m.canCheck)
-                .help("Check that Soapcap can hear both sides and draft a note")
+                .help(m.needsAttention ? "Something needs attention. Click to see what"
+                      : "Check that Soapcap can hear both sides and draft a note")
+                .accessibilityValue(m.needsAttention ? "needs attention" : "")
             SettingsLink { Label("Settings", systemImage: "gearshape") }
                 .help("Settings")
         }

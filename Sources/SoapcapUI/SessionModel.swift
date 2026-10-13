@@ -62,6 +62,10 @@ final class SessionModel: ObservableObject {
     /// Trying the note model on the sample session, from Settings or the checks screen.
     let modelTest: ModelTest
 
+    /// Whether something stands in the way of a session or its note, as of
+    /// the last time the checks were gathered: when the app opened, or
+    /// whenever Check was last chosen.
+    @Published var needsAttention = false
     /// Whether the de-identification model is installed, so the toggle is offered.
     @Published private(set) var canDeidentify = false
     let settings: SessionSettings
@@ -385,22 +389,27 @@ final class SessionModel: ObservableObject {
         Task {
             phase = .working("Checking…")
             let checks = await gatherChecks()
+            needsAttention = checks.needAttention
             if gen == generation { phase = .checks(checks) }
         }
     }
 
     /// What the setup screen's buttons reach outside this window.
     struct Fixer {
-        var hasPermissions: () async -> Bool = { await Readiness.hasPermissions() }
         var open: (URL) -> Void = { NSWorkspace.shared.open($0) }
         var askForMicrophone: () async -> Void = { await Readiness.askForMicrophone() }
         var askForCallAudio: () async -> Void = { await Readiness.askForCallAudio() }
     }
 
-    /// On a first launch, or after a permission was taken away, the checks
-    /// screen is the place to start.
+    /// Looks the Mac over as the app opens. On a first launch, or after a
+    /// permission was taken away, the checks screen is the place to start.
+    /// Anything else in the way is left for the Ready screen to point at.
     func setUpIfNeeded() {
-        Task { if !(await fixer.hasPermissions()), phase == .idle { diagnose() } }
+        Task {
+            let checks = await gatherChecks()
+            needsAttention = checks.needAttention
+            if checks.lackPermission, phase == .idle { phase = .checks(checks) }
+        }
     }
 
     /// Does what a button on the checks screen stands for.

@@ -60,9 +60,12 @@ a button that says what you are about to see, and the answer counts at
 once. System Audio Recording is how macOS lets an app hear what the Mac is
 playing: sound only, never the screen. macOS can't tell an app whether it
 has that permission, so Soapcap finds out by playing itself a tone you
-won't hear. **Check permissions** brings the same screen back later, with
+won't hear. **Check**, in the bar, brings the same screen back later, with
 speech recognition for your language, the note model, the de-identification
-model and free memory, each with a button that puts it right.
+model and free memory, each with a button that puts it right. The app looks
+these over whenever it opens: if a permission or the note model is missing,
+Check turns into an orange warning sign and the Ready screen offers to show
+what needs attention.
 
 **The three steps.** The bar across the top says where a session is:
 Record, Transcript, Note. Once there is a note, Transcript and Note are

@@ -314,3 +314,7 @@ private let previewSampleNote = "9 minutes, telehealth\n\nSUBJECTIVE:\nThe clien
         $0.pauses = [SessionPause(at: 15, length: 95)]
     }
 }
+
+#Preview("Ready, with something needing attention") {
+    sampleScreen { $0.needsAttention = true }
+}

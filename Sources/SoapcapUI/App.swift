@@ -103,7 +103,17 @@ struct ContentView: View {
             SessionClock(title: "Ready for a session", symbol: "microphone", tint: .secondary, elapsed: 0, isWaiting: true)
             HStack {
                 Button("Start session") { m.start() }.keyboardShortcut(.defaultAction)
-                Button("Check permissions") { m.diagnose() }
+                // Only when the last look over the Mac found something in
+                // the way; the bar's Check is there for the rest of the time.
+                if m.needsAttention {
+                    Button { m.diagnose() } label: {
+                        Label {
+                            Text("See what needs attention")
+                        } icon: {
+                            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                        }
+                    }
+                }
             }
             Spacer()
             VStack(spacing: 10) {

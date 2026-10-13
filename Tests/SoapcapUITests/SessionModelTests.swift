@@ -324,18 +324,43 @@ final class SessionModelTests: XCTestCase {
 
     func testALaunchWithoutPermissionsStartsOnTheSetupScreen() async {
         let needed = [Check("Microphone", .warning, "ask")]
-        var fixer = SessionModel.Fixer()
-        fixer.hasPermissions = { false }
         let first = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier,
-                                 fixer: fixer, checks: { needed })
+                                 checks: { needed })
         first.setUpIfNeeded()
         await waitFor("setup") { first.phase == .checks(needed) }
-        fixer.hasPermissions = { true }
+        XCTAssertTrue(first.needsAttention)
+
+        // With both permissions given, a missing note model doesn't take
+        // the screen: the Ready screen points at it.
+        let given = [Check("Microphone", .ok, "fine"), Check("Call audio", .ok, "fine")]
         let later = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier,
-                                 fixer: fixer, checks: { needed })
+                                 checks: { given + [Check("Note model", .failed, "not on this Mac")] })
         later.setUpIfNeeded()
-        try? await Task.sleep(nanoseconds: 200_000_000)
+        await waitFor("looked over") { later.needsAttention }
         XCTAssertEqual(later.phase, .idle)
+
+        // A warning alone is nothing to stop for.
+        let fine = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier,
+                                checks: { given + [Check("De-identify", .warning, "optional"), Check("Memory", .warning, "short just now")] })
+        fine.setUpIfNeeded()
+        try? await Task.sleep(nanoseconds: 200_000_000)
+        XCTAssertEqual(fine.phase, .idle)
+        XCTAssertFalse(fine.needsAttention)
+    }
+
+    func testWhatNeedsAttentionFollowsTheLastCheck() async {
+        var found = [Check("Microphone", .ok, "fine"), Check("Call audio", .failed, "off")]
+        let m = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier,
+                             checks: { found })
+        XCTAssertFalse(m.needsAttention)
+        m.diagnose()
+        await waitFor("checks") { m.phase == .checks(found) }
+        XCTAssertTrue(m.needsAttention)
+        // Put right, and checked again.
+        found = [Check("Microphone", .ok, "fine"), Check("Call audio", .ok, "fine")]
+        m.diagnose()
+        await waitFor("checks again") { m.phase == .checks(found) }
+        XCTAssertFalse(m.needsAttention)
     }
 
     func testTheSetupButtonsAskMacOSAndOpenTheRightPlace() async {
