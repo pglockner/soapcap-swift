@@ -86,8 +86,8 @@ struct StageBar: View {
     }
 }
 
-/// A step that can be gone to: it lights up under the pointer, and the
-/// pointer becomes a hand, as it does over a link.
+/// A step that can be gone to. It sits on a quiet pill, as a button at rest
+/// does, which deepens under the pointer; the pointer becomes a hand.
 private struct StepButton<Label: View>: View {
     let action: () -> Void
     @ViewBuilder let label: Label
@@ -96,13 +96,13 @@ private struct StepButton<Label: View>: View {
     var body: some View {
         Button(action: action) {
             label
-                .padding(.horizontal, 7).padding(.vertical, 3)
-                .background(.primary.opacity(isHovered ? 0.1 : 0), in: Capsule())
+                .padding(.horizontal, 8).padding(.vertical, 3)
+                .background(.primary.opacity(isHovered ? 0.18 : 0.09), in: Capsule())
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
         .pointerStyle(.link)
-        .padding(.horizontal, -7)
+        .padding(.horizontal, -4)
     }
 }
