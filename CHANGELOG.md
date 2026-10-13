@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.9 (2026-10-12)
+
+- Added a bar across the top of the window: the app's name, the steps Record, Transcript and Note with the one in hand picked out, and buttons for the checks and Settings. From the note the transcript can be gone back to, and the note again
+- Fixed a draft that failed costing the transcript: the only way off the error was Back, which began a new session. Back now returns to the transcript
+- Added a question before work that hasn't been kept is lost: drafting again over a note not yet kept, and discarding a session, both ask first
+- Changed the note models offered to the two the prompts were tested with, `llama3.1:8b` and Bonsai; another model pulled into Ollama can no longer be chosen
+- Added the session's time to the menu bar while a session runs, with Pause and Resume
+- Changed the drafting screen to list the draft's steps as they are done, with charts of memory in use and of swap, in place of a spinner
+- Changed Stop to red, and Return no longer presses it. Discard and Uninstall are red too, and **Uninstall Soapcap…** moved from the app menu to the bottom of Settings
+- Changed a SOAP note's Subjective to say it needs completing by hand when only one side was heard; the app writes it, as it does the Objective, because a model sometimes reported what no client had said
+- Fixed the app and the README saying FaceTime calls can't be captured: with the Core Audio tap they are transcribed like any other call
+
 ## 0.8 (2026-10-10 – 2026-10-12)
 
 - Fixed a note model's requests and replies being cached on disk: the transcript and the note were filed in the app's cache folder under `~/Library/Caches`. Nothing is cached now, and the app deletes its cache folder whenever it opens
