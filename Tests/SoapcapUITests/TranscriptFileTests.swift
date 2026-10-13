@@ -4,7 +4,8 @@ import XCTest
 @testable import SoapcapUI
 
 /// What Save transcript writes. Nothing here opens a save panel or writes a
-/// file: the text and the bytes are looked at in memory.
+/// file: the text is looked at in memory. The panel and the writing itself
+/// are SwiftUI's, and need a person to try.
 final class TranscriptFileTests: XCTestCase {
     func testTheFileIsLaidOutByMinutesWithItsPauses() {
         let file = TranscriptFile(transcript: "Therapist: hi\nClient: hello\nTherapist: go on\nClient: well",
