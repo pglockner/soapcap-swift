@@ -29,8 +29,8 @@ you build it with Xcode. For a finished tool, use soapcap.
 </picture>
 
 The app listens to **what the Mac is playing** and to **your microphone**,
-so it works with any conferencing tool and never talks to one. FaceTime is
-the exception: macOS doesn't let its call audio be captured.
+so it works with any conferencing tool, FaceTime included, and never talks
+to one.
 
 ## Requirements
 
@@ -140,8 +140,8 @@ model is offered.
 ## Roadmap
 
 - [ ] Before a release candidate, try by hand what nobody has yet: a
-      whole Bonsai download, a FaceTime call, and stopping a draft while
-      Bonsai loads and with an Ollama model
+      whole Bonsai download, and stopping a draft while Bonsai loads and
+      with an Ollama model
 - [ ] Register jukenzie.com, the domain the app's identifier
       (`com.jukenzie.soapcap`) is named after, before the first public build
 - [ ] A design pass over every screen, to Apple's Human Interface

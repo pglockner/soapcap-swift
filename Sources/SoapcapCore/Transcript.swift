@@ -42,7 +42,9 @@ public enum Transcript {
                              dedupe: Dedupe? = Dedupe()) -> [Turn] {
         var ordered = segments
             .map { s in var s = s; s.text = s.text.trimmingCharacters(in: .whitespacesAndNewlines); return s }
-            .filter { !$0.text.isEmpty }
+            // A segment with no word in it says nothing: the recognizer
+            // sometimes hears a breath or a click as a lone full stop.
+            .filter { $0.text.contains { $0.isLetter || $0.isNumber } }
             .sorted { ($0.start, $0.id) < ($1.start, $1.id) }
         if let dedupe { ordered = removingEchoes(ordered, mic: mic, system: system, dedupe) }
         return ordered.reduce(into: [Turn]()) { turns, s in
@@ -70,12 +72,12 @@ public enum Transcript {
     }
 
     /// A warning when the microphone was heard but the other side never was,
-    /// which is what a FaceTime call looks like; nil otherwise.
+    /// as when the app can't hear what the Mac is playing; nil otherwise.
     public static func oneSidedNotice(_ segments: [Segment], mic: String, system: String) -> String? {
         guard segments.contains(where: { $0.speaker == mic }),
               !segments.contains(where: { $0.speaker == system }) else { return nil }
         return "Heard your side (\(mic)) but nothing from the other party (\(system)). "
-            + "FaceTime calls can't be captured; Zoom, Meet, Teams and Doxy.me can."
+            + "Use Check to see whether Soapcap can hear what the Mac is playing."
     }
 
     /// The distinct lowercased ASCII words of `text`.

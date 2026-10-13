@@ -54,6 +54,13 @@ final class TranscriptTests: XCTestCase {
                        "Therapist: Hello\nClient: fine")
     }
 
+    func testASegmentWithNoWordInItIsDropped() {
+        // A breath or a click, heard as a lone full stop.
+        XCTAssertEqual(Transcript.render([seg("Client", 1, 2, 1, "Start."), seg("Therapist", 2, 3, 2, "."),
+                                          seg("Client", 3, 4, 3, "Just so you know."), seg("Therapist", 4, 5, 4, "OK, 5.")]),
+                       "Client: Start. Just so you know.\nTherapist: OK, 5.")
+    }
+
     func testDecodesYapJSONWithMissingFields() throws {
         let json = #"{"segments":[{"end":2.0,"id":1,"start":0.5,"text":"A recorded line"},{"text":"bare"}]}"#
         let segments = try Segment.decode(yapJSON: Data(json.utf8))
