@@ -48,6 +48,18 @@ final class MinuteIndexTests: XCTestCase {
         XCTAssertEqual(marks([75, 130], every: 1), [[0, 1], [2, 2]])
     }
 
+    func testAPauseHasAMarkOfItsOwnWhereItFell() throws {
+        let times = (0...12).map { $0 * 60 + 10 }
+        // Given out of order and twice: 7:45, 5:00 on the minute, 7:45 again.
+        let index = try XCTUnwrap(MinuteIndex(text: times.map { _ in "a" }.joined(separator: "\n"), times: times, pauses: [465, 300, 465]))
+        XCTAssertEqual(index.marks(every: 5), [
+            .init(minute: 0, block: 0), .init(minute: 5, block: 5), .init(minute: 5, block: 5, pausedAt: 300),
+            .init(minute: 7, block: 7, pausedAt: 465), .init(minute: 10, block: 10),
+        ])
+        // A pause is not a stretch of the session, so it is never one of the marks picked out.
+        XCTAssertEqual(MinuteIndex.shown(index.marks(every: 5), visible: 6...8), [5])
+    }
+
     func testTheMarksOnScreenArePickedOut() throws {
         let marks = try XCTUnwrap(index((0...52).map { $0 * 60 + 10 })).marks(every: 5)
         XCTAssertEqual(MinuteIndex.shown(marks, visible: 0...1), [0])

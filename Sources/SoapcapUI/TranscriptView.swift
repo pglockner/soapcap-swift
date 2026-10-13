@@ -6,9 +6,11 @@ struct TranscriptView: View {
     let text: String
     /// When each line began, in seconds of the session.
     let times: [Int]
+    /// When the session was paused, in the same seconds.
+    var pauses: [Int] = []
 
     var body: some View {
-        if let index = MinuteIndex(text: text, times: times) {
+        if let index = MinuteIndex(text: text, times: times, pauses: pauses) {
             MinuteBlocks(index: index)
         } else {
             ReadingText(text: text)

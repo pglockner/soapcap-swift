@@ -37,6 +37,8 @@ final class SessionModel: ObservableObject {
     @Published var transcript = ""
     /// When each line of the transcript began, in seconds of the session heard.
     @Published var lineTimes: [Int] = []
+    /// When the session was paused, in the same seconds.
+    @Published var pauses: [Int] = []
     @Published var note = ""
     /// What stands under the transcript or the note, whichever is on screen.
     @Published var notice = ""
@@ -169,6 +171,7 @@ final class SessionModel: ObservableObject {
         guard phase == .recording else { return }
         capture?.pause()
         halt()
+        pauses.append(elapsed)
         phase = .paused
     }
 
@@ -408,7 +411,7 @@ final class SessionModel: ObservableObject {
         if let capture { Task { _ = await capture.stop() } }
         capture = nil
         draftRun.stop()
-        liveLines = []; transcript = ""; lineTimes = []; note = ""; notice = ""; warning = ""; copied = false; memoryQuestion = nil; phase = .idle
+        liveLines = []; transcript = ""; lineTimes = []; pauses = []; note = ""; notice = ""; warning = ""; copied = false; memoryQuestion = nil; phase = .idle
         showing = .transcript; kept = [:]
         refreshDeidentify()
     }

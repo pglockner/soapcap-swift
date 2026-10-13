@@ -159,7 +159,7 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Transcript").font(.headline)
             warning
-            TranscriptView(text: m.transcript, times: m.lineTimes)
+            TranscriptView(text: m.transcript, times: m.lineTimes, pauses: m.pauses)
             if !m.notice.isEmpty { Text(m.notice).font(.caption).foregroundStyle(.orange) }
             // Memory changes as apps open and close, so this is asked again every few seconds.
             TimelineView(.periodic(from: .now, by: 5)) { _ in

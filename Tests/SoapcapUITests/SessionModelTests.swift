@@ -115,9 +115,14 @@ final class SessionModelTests: XCTestCase {
         XCTAssertEqual(m.phase, .recording)
         clock += 5; m.tick()
         XCTAssertEqual(m.elapsed, 15)
+        m.pause()
         m.stop()
         await waitFor("transcript") { m.phase == .transcript }
-        XCTAssertEqual(capture.calls, ["start", "pause", "resume", "stop"])
+        XCTAssertEqual(capture.calls, ["start", "pause", "resume", "pause", "stop"])
+        // Where the pauses fell is kept for the transcript, in the clock's seconds.
+        XCTAssertEqual(m.pauses, [10, 15])
+        m.newSession()
+        XCTAssertEqual(m.pauses, [])
     }
 
     func testStoppingWhilePausedFinishes() async {
