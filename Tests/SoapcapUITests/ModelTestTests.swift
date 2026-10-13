@@ -106,7 +106,7 @@ final class ModelTestTests: XCTestCase {
     }
 
     func testRecordingStopsATestAndBlocksAnother() async {
-        let m = SessionModel(makeCapture: { FakeCapture(hello) }, settings: settings, drafting: drafter, deidentifying: FakeDeidentifier())
+        let m = SessionModel(pasteboard: .withUniqueName(), makeCapture: { FakeCapture(hello) }, settings: settings, drafting: drafter, deidentifying: FakeDeidentifier())
         m.modelTest.start()
         XCTAssertTrue(m.modelTest.isRunning)
         m.start()

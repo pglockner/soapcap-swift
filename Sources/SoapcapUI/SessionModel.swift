@@ -59,6 +59,7 @@ final class SessionModel: ObservableObject {
     let settings: SessionSettings
     /// The labels this session was recorded with; Settings may change mid-session.
     private var labels = (mic: "", system: "")
+    private let pasteboard: NSPasteboard
     private let makeCapture: () -> Capturing
     private let now: () -> Date
     private let gatherChecks: () async -> [Check]
@@ -78,10 +79,14 @@ final class SessionModel: ObservableObject {
     /// Where the draft in flight was asked for, to go back to if it is stopped.
     private var draftedFrom: Stage = .transcript
 
-    init(makeCapture: @escaping () -> Capturing = { CaptureSession() }, now: @escaping () -> Date = Date.init,
+    /// `pasteboard` is where Keep puts the note. Tests give one of their
+    /// own: the real one belongs to whoever is at the Mac.
+    init(pasteboard: NSPasteboard = .general,
+         makeCapture: @escaping () -> Capturing = { CaptureSession() }, now: @escaping () -> Date = Date.init,
          settings: SessionSettings = SessionSettings(), drafting: Drafting? = nil,
          deidentifying: Deidentifying? = nil, memory: @escaping () -> MemoryStatus? = MemoryStatus.current,
          fixer: Fixer = Fixer(), checks: (() async -> [Check])? = nil) {
+        self.pasteboard = pasteboard
         self.fixer = fixer
         self.makeCapture = makeCapture
         self.now = now
@@ -338,7 +343,7 @@ final class SessionModel: ObservableObject {
     }
 
     func keep() {
-        let pb = NSPasteboard.general
+        let pb = pasteboard
         pb.clearContents()
         pb.setString(note, forType: .string)
         // Convention (nspasteboard.org) asking clipboard managers not to record this.

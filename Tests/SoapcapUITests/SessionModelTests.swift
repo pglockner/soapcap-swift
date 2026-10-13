@@ -9,6 +9,9 @@ import XCTest
 final class SessionModelTests: XCTestCase {
     private var dir: URL!
     private var defaults: UserDefaults!
+    /// Where Keep puts the note in these tests. Never the real clipboard:
+    /// that is in use by whoever is at the Mac while the tests run.
+    private var scratch: NSPasteboard!
     private var settings: SessionSettings!
     private var drafter: FakeDrafter!
     private var deidentifier: FakeDeidentifier!
@@ -18,6 +21,7 @@ final class SessionModelTests: XCTestCase {
             .appendingPathComponent("soapcap-app-tests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         defaults = MemoryDefaults()
+        scratch = NSPasteboard.withUniqueName()
         settings = SessionSettings(defaults: defaults)
         drafter = FakeDrafter()
         deidentifier = FakeDeidentifier()
@@ -25,10 +29,11 @@ final class SessionModelTests: XCTestCase {
 
     override func tearDown() async throws {
         try? FileManager.default.removeItem(at: dir)
+        scratch.releaseGlobally()
     }
 
     private func recording(_ capture: FakeCapture, now: @escaping () -> Date = Date.init) async -> SessionModel {
-        let m = SessionModel(makeCapture: { capture }, now: now, settings: settings, drafting: drafter, deidentifying: deidentifier)
+        let m = SessionModel(pasteboard: scratch, makeCapture: { capture }, now: now, settings: settings, drafting: drafter, deidentifying: deidentifier)
         m.start()
         await waitFor("recording") { m.phase == .recording }
         return m
@@ -38,7 +43,7 @@ final class SessionModelTests: XCTestCase {
 
     func testTheToggleIsOfferedOnceTheModelIsInstalled() {
         deidentifier.isReady = false
-        let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier)
+        let m = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier)
         XCTAssertFalse(m.canDeidentify)
         deidentifier.isReady = true
         m.refreshDeidentify()
@@ -46,7 +51,7 @@ final class SessionModelTests: XCTestCase {
     }
 
     func testAnInProgressLineIsReplacedUntilItIsFinal() {
-        let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier)
+        let m = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier)
         m.heard(LiveLine(speaker: "Client", text: "I", isFinal: false))
         m.heard(LiveLine(speaker: "Therapist", text: "mm", isFinal: false))
         m.heard(LiveLine(speaker: "Client", text: "I slept", isFinal: false))
@@ -56,7 +61,7 @@ final class SessionModelTests: XCTestCase {
     }
 
     func testTheLiveStripKeepsOnlyTheLastLines() {
-        let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier)
+        let m = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier)
         for i in 1...40 { m.heard(LiveLine(speaker: "Client", text: "line \(i)", isFinal: true)) }
         XCTAssertEqual(m.liveLines.count, SessionModel.liveLimit)
         XCTAssertEqual(m.liveLines.last?.text, "line 40")
@@ -162,6 +167,8 @@ final class SessionModelTests: XCTestCase {
 
         m.go(to: .note)
         m.keep()
+        XCTAssertEqual(scratch.string(forType: .string), m.note)        // Keep copies the note, whole
+        XCTAssertTrue(m.copied)
         XCTAssertFalse(m.hasUnkeptNote)
         XCTAssertFalse(m.hasUnkeptWork)             // it is on the clipboard
 
@@ -248,7 +255,7 @@ final class SessionModelTests: XCTestCase {
     }
 
     func testACaptureThatCannotStartShowsWhy() async {
-        let m = SessionModel(makeCapture: { FakeCapture(startError: CaptureError.microphoneDenied) }, settings: settings, drafting: drafter, deidentifying: deidentifier)
+        let m = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture(startError: CaptureError.microphoneDenied) }, settings: settings, drafting: drafter, deidentifying: deidentifier)
         m.start()
         await waitFor("error") { if case .error = m.phase { true } else { false } }
         guard case .error(let message) = m.phase else { return }
@@ -273,7 +280,7 @@ final class SessionModelTests: XCTestCase {
 
     func testCheckPermissionsShowsTheGatheredChecks() async {
         let found = [Check("Microphone", .ok, "fine"), Check("Call audio", .failed, "off")]
-        let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier, checks: { found })
+        let m = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier, checks: { found })
         m.diagnose()
         await waitFor("checks") { m.phase == .checks(found) }
         m.newSession()
@@ -284,12 +291,12 @@ final class SessionModelTests: XCTestCase {
         let needed = [Check("Microphone", .warning, "ask")]
         var fixer = SessionModel.Fixer()
         fixer.hasPermissions = { false }
-        let first = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier,
+        let first = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier,
                                  fixer: fixer, checks: { needed })
         first.setUpIfNeeded()
         await waitFor("setup") { first.phase == .checks(needed) }
         fixer.hasPermissions = { true }
-        let later = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier,
+        let later = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier,
                                  fixer: fixer, checks: { needed })
         later.setUpIfNeeded()
         try? await Task.sleep(nanoseconds: 200_000_000)
@@ -304,7 +311,7 @@ final class SessionModelTests: XCTestCase {
         fixer.askForMicrophone = { seen.did.append("ask microphone") }
         fixer.askForCallAudio = { seen.did.append("ask call audio") }
         let after = [Check("Microphone", .ok, "granted")]
-        let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier,
+        let m = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier,
                              fixer: fixer, checks: { after })
         m.perform(.askForMicrophone)
         await waitFor("checked again") { m.phase == .checks(after) }     // the answer shows without another click
@@ -324,7 +331,7 @@ final class SessionModelTests: XCTestCase {
     func testAVeryShortMemoryAsksBeforeABonsaiDraft() async {
         defaults.set("bonsai", forKey: SessionSettings.Key.noteModel)
         var free = 30
-        let m = SessionModel(makeCapture: { FakeCapture(hello) }, settings: settings, drafting: drafter, deidentifying: deidentifier,
+        let m = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture(hello) }, settings: settings, drafting: drafter, deidentifying: deidentifier,
                              memory: { MemoryStatus(totalBytes: 16 << 30, freePercent: free, swapUsedBytes: 7 << 30, swapTotalBytes: 8 << 30) })
         m.start()
         await waitFor("recording") { m.phase == .recording }
@@ -340,7 +347,7 @@ final class SessionModelTests: XCTestCase {
     }
 
     func testStoppingADraftFreesTheModelAndGoesBackToTheTranscript() async {
-        let m = SessionModel(makeCapture: { FakeCapture(hello) }, settings: settings, drafting: drafter, deidentifying: deidentifier)
+        let m = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture(hello) }, settings: settings, drafting: drafter, deidentifying: deidentifier)
         m.start()
         await waitFor("recording") { m.phase == .recording }
         m.stop()
@@ -369,11 +376,11 @@ final class SessionModelTests: XCTestCase {
 
     func testClosingAppsIsAdvisedOnlyForBonsaiWhenMemoryIsShort() {
         let short = { MemoryStatus(totalBytes: 16 << 30, freePercent: 41) }
-        let m = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier, memory: short)
+        let m = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier, memory: short)
         XCTAssertNil(m.memoryAdvice)                         // llama3.1:8b: Ollama loads it, not the app
         defaults.set("bonsai", forKey: SessionSettings.Key.noteModel)
         XCTAssertTrue(m.memoryAdvice?.contains("Close other apps") == true, m.memoryAdvice ?? "nil")
-        let roomy = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier,
+        let roomy = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier,
                                  memory: { MemoryStatus(totalBytes: 16 << 30, freePercent: 68) })
         XCTAssertNil(roomy.memoryAdvice)
     }
@@ -416,10 +423,10 @@ final class SessionModelTests: XCTestCase {
     }
 
     func testFormatAndDeidentifyAreRememberedForTheNextLaunch() {
-        let first = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier)
+        let first = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier)
         first.format = "dap"
         first.deidentify = false
-        let second = SessionModel(makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier)
+        let second = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier)
         XCTAssertEqual(second.format, "dap")
         XCTAssertFalse(second.deidentify)
     }
