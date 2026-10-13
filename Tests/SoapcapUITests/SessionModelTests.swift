@@ -80,6 +80,20 @@ final class SessionModelTests: XCTestCase {
         XCTAssertEqual(capture.calls, ["start", "stop"])
     }
 
+    func testEachLineOfTheTranscriptKeepsTheTimeItBegan() async {
+        let capture = FakeCapture([Segment(speaker: "Therapist", start: 4.2, end: 5, id: 1, text: "hi Bob"),
+                                   Segment(speaker: "Client", start: 61.9, end: 63, id: 1, text: "hello"),
+                                   Segment(speaker: "Client", start: 64, end: 65, id: 2, text: "again")])
+        let m = await recording(capture)
+        m.stop()
+        await waitFor("transcript") { m.phase == .transcript }
+        // De-identifying changes the words, not which line is which.
+        XCTAssertEqual(m.transcript, "Therapist: hi [FIRST_NAME_1]\nClient: hello again")
+        XCTAssertEqual(m.lineTimes, [4, 61])
+        m.newSession()
+        XCTAssertEqual(m.lineTimes, [])
+    }
+
     func testLiveLinesReachTheStripWhileRecording() async {
         let capture = FakeCapture(hello)
         let m = await recording(capture)

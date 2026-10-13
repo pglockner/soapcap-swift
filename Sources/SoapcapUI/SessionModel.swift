@@ -35,6 +35,8 @@ final class SessionModel: ObservableObject {
     /// follows the screen, and runs ahead of it while a step's work is done.
     @Published private(set) var stage: Stage = .record
     @Published var transcript = ""
+    /// When each line of the transcript began, in seconds of the session heard.
+    @Published var lineTimes: [Int] = []
     @Published var note = ""
     /// What stands under the transcript or the note, whichever is on screen.
     @Published var notice = ""
@@ -201,7 +203,9 @@ final class SessionModel: ObservableObject {
     }
 
     private func finalize(_ segments: [Segment]) async {
-        transcript = Transcript.render(segments, mic: labels.mic, system: labels.system)
+        let turns = Transcript.turns(segments, mic: labels.mic, system: labels.system)
+        transcript = Transcript.render(turns)
+        lineTimes = turns.map { Int($0.start) }
         guard !transcript.isEmpty else {
             phase = .error("No speech was captured.\n\nUse Check permissions to see whether Soapcap can use the microphone and hear the call.")
             return
@@ -404,7 +408,7 @@ final class SessionModel: ObservableObject {
         if let capture { Task { _ = await capture.stop() } }
         capture = nil
         draftRun.stop()
-        liveLines = []; transcript = ""; note = ""; notice = ""; warning = ""; copied = false; memoryQuestion = nil; phase = .idle
+        liveLines = []; transcript = ""; lineTimes = []; note = ""; notice = ""; warning = ""; copied = false; memoryQuestion = nil; phase = .idle
         showing = .transcript; kept = [:]
         refreshDeidentify()
     }

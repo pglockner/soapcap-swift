@@ -51,8 +51,11 @@ struct StageBar: View {
                 // Only a step that can be gone to is a button: a disabled
                 // one would grey out the step the session is on.
                 if canGo(step) {
-                    StepButton(action: { go(step) }) { label(step, canGo: true) }
-                        .help("Go to the \(Self.title(step).lowercased())")
+                    PillButton(action: { go(step) }) {
+                        label(step, canGo: true).padding(.horizontal, 8).padding(.vertical, 3)
+                    }
+                    .padding(.horizontal, -4)
+                    .help("Go to the \(Self.title(step).lowercased())")
                 } else {
                     label(step, canGo: false).gesture(WindowDragGesture()).allowsWindowActivationEvents(true)
                 }
@@ -83,26 +86,5 @@ struct StageBar: View {
         case .transcript: "Transcript"
         case .note: "Note"
         }
-    }
-}
-
-/// A step that can be gone to. It sits on a quiet pill, as a button at rest
-/// does, which deepens under the pointer; the pointer becomes a hand.
-private struct StepButton<Label: View>: View {
-    let action: () -> Void
-    @ViewBuilder let label: Label
-    @State private var isHovered = false
-
-    var body: some View {
-        Button(action: action) {
-            label
-                .padding(.horizontal, 8).padding(.vertical, 3)
-                .background(.primary.opacity(isHovered ? 0.18 : 0.09), in: Capsule())
-                .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .onHover { isHovered = $0 }
-        .pointerStyle(.link)
-        .padding(.horizontal, -4)
     }
 }

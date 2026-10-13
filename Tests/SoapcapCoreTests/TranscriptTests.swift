@@ -48,6 +48,13 @@ final class TranscriptTests: XCTestCase {
                        "Client: First part. Second part.")
     }
 
+    func testATurnBeginsWhenItsFirstSegmentDid() {
+        let turns = Transcript.turns([seg("Client", 61.5, 63, 1, "First part."), seg("Client", 64, 66, 2, "Second part."),
+                                      seg("Therapist", 70, 71, 1, "Go on.")], dedupe: nil)
+        XCTAssertEqual(turns.map(\.start), [61.5, 70])
+        XCTAssertEqual(Transcript.render(turns), "Client: First part. Second part.\nTherapist: Go on.")
+    }
+
     func testSortsByStartAndDropsBlankSegments() {
         XCTAssertEqual(Transcript.render([seg("Client", 3, 4, 2, " fine "), seg("Therapist", 1, 2, 1, "Hello"),
                                           seg("Client", 2, 2, 3, "  ")]),

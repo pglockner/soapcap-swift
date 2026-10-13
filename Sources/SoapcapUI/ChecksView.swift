@@ -61,7 +61,7 @@ struct ChecksView: View {
             // cut off by its edge shows that there are more below.
             .scrollIndicators(.visible)
             .scrollIndicatorsFlash(onAppear: true)
-            .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 6))
+            .readingBox()
             HStack {
                 if isSetup {
                     Button("Check again") { again() }

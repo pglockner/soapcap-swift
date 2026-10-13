@@ -34,6 +34,7 @@ private let previewLines = [
     sampleScreen {
         $0.phase = .transcript
         $0.transcript = previewLines.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n")
+        $0.lineTimes = [2, 9, 21, 24]
         $0.notice = "Transcript: 2 identifying details replaced (first name, date)"
     }
 }
@@ -215,6 +216,7 @@ private let previewSampleNote = "9 minutes, telehealth\n\nSUBJECTIVE:\nThe clien
     sampleScreen {
         $0.phase = .transcript
         $0.transcript = previewLines.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n")
+        $0.lineTimes = [2, 9, 21, 24]
         $0.notice = "Transcript: 2 identifying details replaced (first name, date)"
     }
     .preferredColorScheme(.dark)
@@ -258,4 +260,43 @@ private let previewSampleNote = "9 minutes, telehealth\n\nSUBJECTIVE:\nThe clien
         $0.draftRun.show(trail: previewTrail(from: 48, to: 19, swapGB: 3.6))
     }
     .preferredColorScheme(.light)
+}
+
+/// A made-up session of so many minutes, for the transcript's minute index.
+@MainActor private func longSession(_ m: SessionModel, minutes: Int) {
+    let said: [(who: String, what: String)] = [
+        ("Therapist", "How has your sleep been since we last spoke?"),
+        ("Client", "Better, mostly. The breathing exercises helped the first few nights, and then on Thursday it all went sideways again."),
+        ("Therapist", "What happened on Thursday?"),
+        ("Client", "I had the argument with my sister about the house. I didn't sleep at all after that, I just lay there going over what I should have said."),
+        ("Therapist", "That sounds exhausting."),
+        ("Client", "It was. And then work the next day."),
+        ("Therapist", "When you were lying awake, did you try any of what we practised?"),
+        ("Client", "The counting, for a bit. It works until I notice that it's working, if that makes sense."),
+        ("Therapist", "It does. That's very common."),
+    ]
+    var lines: [String] = [], times: [Int] = []
+    var time = 3
+    while time < minutes * 60 {
+        let line = said[lines.count % said.count]
+        lines.append(line.who + ": " + line.what)
+        times.append(time)
+        time += 3 + line.what.count / 14
+    }
+    m.transcript = lines.joined(separator: "\n")
+    m.lineTimes = times
+    m.elapsed = minutes * 60
+    m.phase = .transcript
+}
+
+#Preview("Transcript, a long session") {
+    sampleScreen { longSession($0, minutes: 53) }
+}
+
+#Preview("Transcript, a long session, at its end") {
+    sampleScreen { longSession($0, minutes: 53) }.defaultScrollAnchor(.bottom)
+}
+
+#Preview("Transcript, a short session") {
+    sampleScreen { longSession($0, minutes: 7) }
 }

@@ -9,6 +9,8 @@ public enum Transcript {
     public struct Turn: Equatable, Sendable {
         public var speaker: String
         public var text: String
+        /// When the turn began, in seconds of the session heard.
+        public var start: Double
     }
 
     /// Without headphones there's a one-directional leak: whatever plays
@@ -34,8 +36,12 @@ public enum Transcript {
     /// for single-track input, where there is nothing to compare against.
     public static func render(_ segments: [Segment], mic: String = "", system: String = "",
                               dedupe: Dedupe? = Dedupe()) -> String {
-        turns(segments, mic: mic, system: system, dedupe: dedupe)
-            .map { "\($0.speaker): \($0.text)" }.joined(separator: "\n")
+        render(turns(segments, mic: mic, system: system, dedupe: dedupe))
+    }
+
+    /// One line for each turn.
+    public static func render(_ turns: [Turn]) -> String {
+        turns.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n")
     }
 
     public static func turns(_ segments: [Segment], mic: String = "", system: String = "",
@@ -51,7 +57,7 @@ public enum Transcript {
             if let last = turns.indices.last, turns[last].speaker == s.speaker {
                 turns[last].text += " " + s.text
             } else {
-                turns.append(Turn(speaker: s.speaker, text: s.text))
+                turns.append(Turn(speaker: s.speaker, text: s.text, start: s.start))
             }
         }
     }

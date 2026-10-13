@@ -24,6 +24,6 @@ struct LiveStrip: View {
         }
         .defaultScrollAnchor(.bottom)
         .frame(height: 96)
-        .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 6))
+        .readingBox()
     }
 }

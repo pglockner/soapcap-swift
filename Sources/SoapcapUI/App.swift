@@ -138,11 +138,6 @@ struct ContentView: View {
         }.frame(maxWidth: .infinity)
     }
 
-    private func scrollText(_ s: String) -> some View {
-        ScrollView { Text(s).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading).padding(8) }
-            .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 6))
-    }
-
     /// Shown above text that was meant to be de-identified and was not.
     @ViewBuilder private var warning: some View {
         if !m.warning.isEmpty {
@@ -158,7 +153,7 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Transcript").font(.headline)
             warning
-            scrollText(m.transcript)
+            TranscriptView(text: m.transcript, times: m.lineTimes)
             if !m.notice.isEmpty { Text(m.notice).font(.caption).foregroundStyle(.orange) }
             // Memory changes as apps open and close, so this is asked again every few seconds.
             TimelineView(.periodic(from: .now, by: 5)) { _ in
@@ -198,7 +193,7 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("\((m.draftedFormat.isEmpty ? m.format : m.draftedFormat).uppercased()) note").font(.headline)
             warning
-            scrollText(m.note)
+            ReadingText(text: m.note)
             if !m.notice.isEmpty { Text(m.notice).font(.caption).foregroundStyle(.orange) }
             HStack {
                 Button(m.copied ? "Copied" : "Keep") { m.keep() }.keyboardShortcut(.defaultAction)
