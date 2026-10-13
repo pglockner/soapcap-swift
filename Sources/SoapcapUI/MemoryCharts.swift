@@ -12,7 +12,7 @@ struct MemoryCharts: View {
     var body: some View {
         HStack(spacing: 14) {
             MemoryChart(title: "Memory", value: trail.last.map { "\(100 - $0.freePercent)%" } ?? "",
-                        points: trail.map { Double(100 - $0.freePercent) / 100 }, tint: Self.tint(trail.last?.level ?? .ok))
+                        points: trail.map { Double(100 - $0.freePercent) / 100 }, tint: Self.tint(100 - (trail.last?.freePercent ?? 100)))
             MemoryChart(title: "Swap (disk)", value: trail.last.map(Self.swapText) ?? "",
                         points: trail.map { min($0.swapUsedGB / Self.swapScaleGB, 1) }, tint: Self.swapTint(trail.last?.swapUsedGB ?? 0))
         }
@@ -22,12 +22,10 @@ struct MemoryCharts: View {
     /// the app already treats as heavy.
     static let swapScaleGB = MemoryStatus.heavySwapGB * 4 / 3
 
-    static func tint(_ level: MemoryStatus.Level) -> Color {
-        switch level {
-        case .ok: .green
-        case .high: .yellow
-        case .critical: .red
-        }
+    /// The colour goes by the figure the chart itself shows: yellow from
+    /// 75% of memory in use and red from 90%. Swap has its own chart.
+    static func tint(_ percentInUse: Int) -> Color {
+        percentInUse >= 90 ? .red : percentInUse >= 75 ? .yellow : .green
     }
 
     static func swapTint(_ gigabytes: Double) -> Color {

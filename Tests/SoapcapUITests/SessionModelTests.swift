@@ -185,7 +185,11 @@ final class SessionModelTests: XCTestCase {
         XCTAssertEqual(DraftSteps.written(412), "about 310 words so far")
         XCTAssertEqual(MemoryCharts.swapText(MemoryStatus(totalBytes: 16 << 30, freePercent: 50)), "none")
         XCTAssertEqual(MemoryCharts.swapText(MemoryStatus(totalBytes: 16 << 30, freePercent: 6, swapUsedBytes: 2254 << 20, swapTotalBytes: 5 << 30)), "2.2 GB")
+        XCTAssertEqual(MemoryCharts.tint(74), .green)
+        XCTAssertEqual(MemoryCharts.tint(75), .yellow)
+        XCTAssertEqual(MemoryCharts.tint(90), .red)
         XCTAssertEqual(MemoryCharts.swapTint(1), .green)
+        XCTAssertEqual(MemoryCharts.swapTint(MemoryStatus.heavySwapGB / 2), .yellow)
         XCTAssertEqual(MemoryCharts.swapTint(MemoryStatus.heavySwapGB), .red)
     }
 

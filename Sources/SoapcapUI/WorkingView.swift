@@ -25,7 +25,7 @@ struct WorkingView: View {
                 VStack(spacing: 8) {
                     Button("Stop drafting", action: stop)
                     if keepsEarlierNote {
-                        Text("The note you already have is kept until this one is ready. Stop drafting to go back to it.")
+                        Text("The note you already have is still there until this one is ready. Stop drafting to go back to it.")
                             .font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
                     }

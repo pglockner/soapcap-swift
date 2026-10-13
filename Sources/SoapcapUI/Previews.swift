@@ -248,3 +248,14 @@ private let previewSampleNote = "9 minutes, telehealth\n\nSUBJECTIVE:\nThe clien
 #Preview("Finishing a session") {
     sampleScreen { $0.phase = .working("Finishing transcription…") }
 }
+
+#Preview("Drafting, memory getting short, light") {
+    sampleScreen {
+        $0.phase = .note
+        $0.phase = .working("Drafting a SOAP note with Bonsai…  240 tokens")
+        $0.draftSteps = ["Loading Bonsai…", "Reading the transcript with Bonsai…", "Drafting a SOAP note with Bonsai…"]
+        $0.draftTokens = 240
+        $0.draftRun.show(trail: previewTrail(from: 48, to: 19, swapGB: 3.6))
+    }
+    .preferredColorScheme(.light)
+}
