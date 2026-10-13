@@ -51,7 +51,7 @@ struct StageBar: View {
                 // Only a step that can be gone to is a button: a disabled
                 // one would grey out the step the session is on.
                 if canGo(step) {
-                    Button { go(step) } label: { label(step, canGo: true) }.buttonStyle(.plain)
+                    StepButton(action: { go(step) }) { label(step, canGo: true) }
                         .help("Go to the \(Self.title(step).lowercased())")
                 } else {
                     label(step, canGo: false).gesture(WindowDragGesture()).allowsWindowActivationEvents(true)
@@ -70,7 +70,9 @@ struct StageBar: View {
             Text(Self.title(step))
         }
         .fontWeight(step == stage ? .semibold : .regular)
-        .foregroundStyle(step == stage ? .primary : isReached ? .secondary : .tertiary)
+        // Full strength for where the session is and for where it can go;
+        // a step that is only done, or not reached, stands back.
+        .foregroundStyle(step == stage || canGo ? .primary : isReached ? .secondary : .tertiary)
         .accessibilityElement(children: .combine)
         .accessibilityValue(step == stage ? "current step" : isReached ? "done" : "not yet")
     }
@@ -81,5 +83,26 @@ struct StageBar: View {
         case .transcript: "Transcript"
         case .note: "Note"
         }
+    }
+}
+
+/// A step that can be gone to: it lights up under the pointer, and the
+/// pointer becomes a hand, as it does over a link.
+private struct StepButton<Label: View>: View {
+    let action: () -> Void
+    @ViewBuilder let label: Label
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            label
+                .padding(.horizontal, 7).padding(.vertical, 3)
+                .background(.primary.opacity(isHovered ? 0.1 : 0), in: Capsule())
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+        .pointerStyle(.link)
+        .padding(.horizontal, -7)
     }
 }

@@ -27,7 +27,7 @@ public struct SoapcapApp: App {
     public init() {}
 
     public var body: some Scene {
-        WindowGroup("Soapcap") {
+        WindowGroup("Soapcap", id: SessionMenu.window) {
             ContentView().environmentObject(model)
                 .frame(minWidth: 560, minHeight: 420)
                 .onReceive(ModelSetup.shared.$state) { state in
@@ -44,6 +44,18 @@ public struct SoapcapApp: App {
             }
         }
         Window("Acknowledgements", id: "acknowledgements") { AcknowledgementsView() }
+        // The session's time, in the menu bar for as long as a session runs:
+        // no window covers it there, as the call's window covers this one.
+        MenuBarExtra(isInserted: .constant(model.phase == .recording || model.phase == .paused)) {
+            SessionMenu(m: model)
+        } label: {
+            Label {
+                Text(SessionClock.text(model.elapsed)).monospacedDigit()
+            } icon: {
+                Image(systemName: model.phase == .paused ? "pause.fill" : "microphone.fill")
+            }
+            .labelStyle(.titleAndIcon)
+        }
         Settings { SettingsView(test: model.modelTest, stop: { [model] in await model.draftRun.stop().value }) }
     }
 }

@@ -66,8 +66,10 @@ model and free memory, each with a button that puts it right.
 
 **Record.** Use headphones and turn on Do Not Disturb. The window shows the
 last few lines heard from each side. **Pause** stops listening and stops
-the clock; **Resume** carries on in the same session. A microphone that
-changes mid-session, such as AirPods connecting, is picked up.
+the clock; **Resume** carries on in the same session. The session's time
+also shows in the menu bar while it runs, where the call's window can't
+cover it. A microphone that changes mid-session, such as AirPods
+connecting, is picked up.
 
 **De-identify** (optional). Names, phone numbers, dates and similar details
 become tokens like `[FIRST_NAME_1]`, in the transcript and again in the

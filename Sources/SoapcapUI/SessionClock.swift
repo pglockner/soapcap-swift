@@ -21,11 +21,16 @@ struct SessionClock: View {
                     .symbolEffect(.breathe, isActive: isLive && !reduceMotion)
             }
             .font(.title3)
-            Text(String(format: "%02d:%02d", elapsed / 60, elapsed % 60))
+            Text(Self.text(elapsed))
                 .font(.system(size: 56, weight: .light))
                 .monospacedDigit()
                 .contentTransition(.numericText())
         }
         .accessibilityElement(children: .combine)
+    }
+
+    /// "12:34", and "75:10" for a session past the hour.
+    static func text(_ elapsed: Int) -> String {
+        String(format: "%02d:%02d", elapsed / 60, elapsed % 60)
     }
 }
