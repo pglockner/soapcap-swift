@@ -73,7 +73,9 @@ struct ContentView: View {
             case .idle: idle
             case .recording: recording
             case .paused: paused
-            case .working(let msg): WorkingView(message: msg, run: m.draftRun, test: m.modelTest, stop: { m.stopDraft() })
+            case .working(let msg):
+                WorkingView(message: msg, run: m.draftRun, test: m.modelTest, steps: m.draftSteps, tokens: m.draftTokens,
+                            keepsEarlierNote: !m.note.isEmpty, stop: { m.stopDraft() })
             case .transcript: transcript
             case .note: note
             case .error(let msg): error(msg)

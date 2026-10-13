@@ -10,6 +10,10 @@ final class DraftRun: ObservableObject {
     @Published var isRunning = false
     /// How full memory is while a note is drafted; nil otherwise.
     @Published var memory: MemoryStatus?
+    /// The readings taken during the draft, oldest first, for a chart: one
+    /// every two seconds, and the last three minutes of them.
+    @Published private(set) var trail: [MemoryStatus] = []
+    static let trailLength = 90
 
     private let drafting: Drafting
     private let readMemory: () -> MemoryStatus?
@@ -38,10 +42,12 @@ final class DraftRun: ObservableObject {
         }
         self.task = task
         isRunning = true
+        trail = []
         // A model that outgrows memory slows to a crawl; show it happening.
         let watch = Task {
             while !Task.isCancelled, self.task == task {
                 memory = readMemory()
+                if let memory { trail = Array((trail + [memory]).suffix(Self.trailLength)) }
                 try? await Task.sleep(for: .seconds(2))
             }
         }
@@ -61,6 +67,13 @@ final class DraftRun: ObservableObject {
         task?.cancel()
         task = nil; isRunning = false; memory = nil
         return Task { await release() }
+    }
+
+    /// Puts a draft's memory readings on show, for a preview.
+    func show(trail: [MemoryStatus]) {
+        self.trail = trail
+        memory = trail.last
+        isRunning = true
     }
 
     /// The model is otherwise kept loaded between drafts. However many ask

@@ -18,6 +18,7 @@ final class DraftRunTests: XCTestCase {
         XCTAssertNil(run.memory)
         let drafting = draft(run)
         await waitFor("memory shown") { run.memory != nil }
+        XCTAssertEqual(run.trail.last, run.memory)           // each reading joins the chart's trail
         XCTAssertEqual(run.memory?.usedPercent, 70)
         XCTAssertTrue(run.isRunning)
         let note = try await drafting.value

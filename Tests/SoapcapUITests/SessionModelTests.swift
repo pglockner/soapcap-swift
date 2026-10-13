@@ -178,6 +178,17 @@ final class SessionModelTests: XCTestCase {
         XCTAssertEqual(m.draftedFormat, "dap")
     }
 
+    func testADraftsStepsAreWordedForTheScreen() {
+        XCTAssertEqual(DraftSteps.done("Loading llama3.1:8b…"), "Loading llama3.1:8b")
+        XCTAssertEqual(DraftSteps.done("Stopping"), "Stopping")
+        XCTAssertEqual(DraftSteps.written(7), "a few words so far")
+        XCTAssertEqual(DraftSteps.written(412), "about 310 words so far")
+        XCTAssertEqual(MemoryCharts.swapText(MemoryStatus(totalBytes: 16 << 30, freePercent: 50)), "none")
+        XCTAssertEqual(MemoryCharts.swapText(MemoryStatus(totalBytes: 16 << 30, freePercent: 6, swapUsedBytes: 2254 << 20, swapTotalBytes: 5 << 30)), "2.2 GB")
+        XCTAssertEqual(MemoryCharts.swapTint(1), .green)
+        XCTAssertEqual(MemoryCharts.swapTint(MemoryStatus.heavySwapGB), .red)
+    }
+
     func testADraftThatFailsDoesNotCostTheTranscript() async {
         let m = await recording(FakeCapture(hello))
         m.stop()
@@ -461,6 +472,8 @@ final class SessionModelTests: XCTestCase {
         let m = await atTranscript()
         m.draft()
         await waitFor("progress") { m.phase == .working("Drafting…  7 tokens") }
+        XCTAssertEqual(m.draftSteps, ["Drafting…"])          // each step once, however often it reports
+        XCTAssertEqual(m.draftTokens, 7)
         await waitFor("note") { m.phase == .note }
         XCTAssertEqual(m.notice, "proofread it\nthe Objective pass failed")
         try? await Task.sleep(nanoseconds: 100_000_000)

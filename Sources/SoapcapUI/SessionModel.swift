@@ -44,6 +44,10 @@ final class SessionModel: ObservableObject {
     @Published var elapsed = 0      // seconds recorded; stands still while paused
     @Published var liveLines: [LiveLine] = []
     @Published var copied = false
+    /// The steps the draft in flight has been through, the last of them still
+    /// going, and how much the model has written in that one when it says.
+    @Published var draftSteps: [String] = []
+    @Published var draftTokens: Int?
     /// The format the note on hand was drafted in; the picker may have moved since.
     @Published private(set) var draftedFormat = ""
     /// Set when a draft was asked for with memory very short: the question
@@ -234,6 +238,7 @@ final class SessionModel: ObservableObject {
         let gen = generation
         draftedFrom = stage == .note ? .note : .transcript
         stage = .note
+        draftSteps = []; draftTokens = nil
         phase = .working("Drafting a \(format.uppercased()) note…")
         Task {
             let drafted: DraftedNote
@@ -285,6 +290,8 @@ final class SessionModel: ObservableObject {
     /// draft is over; only a draft still in flight may change the screen.
     private func show(_ progress: DraftProgress, generation gen: Int) {
         guard draftRun.isRunning, gen == generation else { return }
+        if draftSteps.last != progress.title { draftSteps.append(progress.title) }
+        draftTokens = progress.tokens
         phase = .working(progress.tokens.map { "\(progress.title)  \($0) tokens" } ?? progress.title)
     }
 

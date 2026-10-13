@@ -89,12 +89,24 @@ private let previewLines = [
     }
 }
 
+/// Memory readings for a draft's two charts: free memory falling from one
+/// percentage to another while the model loads, and swap rising to `swapGB`.
+private func previewTrail(from: Int, to: Int, swapGB: Double = 0) -> [MemoryStatus] {
+    (0..<70).map { step in
+        let part = min(1, Double(step) / 45)
+        let free = Double(from) + (Double(to) - Double(from)) * part + (step % 3 == 0 ? 1 : 0)
+        return MemoryStatus(totalBytes: 16 << 30, freePercent: Int(free),
+                            swapUsedBytes: UInt64(swapGB * part * part * 1_073_741_824), swapTotalBytes: 8 << 30)
+    }
+}
+
 #Preview("Drafting") {
     sampleScreen {
         $0.phase = .note
         $0.phase = .working("Drafting a SOAP note with llama3.1:8b…  412 tokens")
-        $0.draftRun.isRunning = true
-        $0.draftRun.memory = MemoryStatus(totalBytes: 16 << 30, freePercent: 38)
+        $0.draftSteps = ["Loading llama3.1:8b…", "Drafting a SOAP note with llama3.1:8b…"]
+        $0.draftTokens = 412
+        $0.draftRun.show(trail: previewTrail(from: 54, to: 38))
     }
 }
 
@@ -102,8 +114,9 @@ private let previewLines = [
     sampleScreen {
         $0.phase = .note
         $0.phase = .working("Drafting the Objective with Bonsai…")
-        $0.draftRun.isRunning = true
-        $0.draftRun.memory = MemoryStatus(totalBytes: 16 << 30, freePercent: 6, swapUsedBytes: 2254 << 20, swapTotalBytes: 5 << 30)
+        $0.draftSteps = ["Loading Bonsai…", "Reading the transcript with Bonsai…", "Drafting a SOAP note with Bonsai…", "Drafting the Objective with Bonsai…"]
+        $0.draftTokens = 96
+        $0.draftRun.show(trail: previewTrail(from: 40, to: 6, swapGB: 6.4))
     }
 }
 
@@ -219,4 +232,19 @@ private let previewSampleNote = "9 minutes, telehealth\n\nSUBJECTIVE:\nThe clien
         $0.transcript = previewLines.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n")
         $0.note = "53 minutes, telehealth\n\nSUBJECTIVE:\nThe client reported sleeping better."
     }
+}
+
+#Preview("Drafting again, with a note already there") {
+    sampleScreen {
+        $0.note = "53 minutes, telehealth\n\nSUBJECTIVE:\nThe client reported sleeping better."
+        $0.phase = .note
+        $0.phase = .working("Drafting a SOAP note with llama3.1:8b…  188 tokens")
+        $0.draftSteps = ["Loading llama3.1:8b…", "Drafting a SOAP note with llama3.1:8b…"]
+        $0.draftTokens = 188
+        $0.draftRun.show(trail: previewTrail(from: 50, to: 31))
+    }
+}
+
+#Preview("Finishing a session") {
+    sampleScreen { $0.phase = .working("Finishing transcription…") }
 }

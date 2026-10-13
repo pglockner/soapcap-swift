@@ -88,12 +88,14 @@ the result before sharing it. If it fails, the text is shown under a red
   note and are never copied with it.
 - **Keep** copies the note. **Regenerate** drafts it again.
 
-**While drafting.** The window shows memory in use, turning yellow and then
-red as the Mac fills up and starts swapping. Bonsai takes about 8 GB: the
-app suggests closing other apps when memory is short, and asks before
-drafting when the Mac is also deep in swap. **Stop drafting** ends a draft
-and frees the model's memory. Otherwise the model stays loaded until you
-discard the note, start a new session or quit.
+**While drafting.** The window lists the steps of the draft as they are
+done, with two small charts beside them: memory in use, and how much has
+spilled over to disk as swap. They turn yellow and then red as the Mac
+fills up. Bonsai takes about 8 GB: the app suggests closing other apps when
+memory is short, and asks before drafting when the Mac is also deep in
+swap. **Stop drafting** ends a draft and frees the model's memory; if you
+were drafting again, the note you already had is still there. Otherwise the
+model stays loaded until you discard the note, start a new session or quit.
 
 **Settings** (Cmd-comma). The two speaker labels, the language to
 transcribe in, the note model, and the session type on the note's first
