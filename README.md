@@ -64,6 +64,10 @@ won't hear. **Check permissions** brings the same screen back later, with
 speech recognition for your language, the note model, the de-identification
 model and free memory, each with a button that puts it right.
 
+**The three steps.** The bar across the top says where a session is:
+Record, Transcript, Note. Once there is a note, Transcript and Note are
+buttons there, so you can go back to the transcript and return.
+
 **Record.** Use headphones and turn on Do Not Disturb. The window shows the
 last few lines heard from each side. **Pause** stops listening and stops
 the clock; **Resume** carries on in the same session. The session's time
@@ -76,6 +80,10 @@ become tokens like `[FIRST_NAME_1]`, in the transcript and again in the
 note. Speaker labels and clock times are kept. It is best effort, so read
 the result before sharing it. If it fails, the text is shown under a red
 "Not de-identified" banner rather than passed off as checked.
+
+**Transcript.** When you stop, the transcript is shown a turn at a time,
+with the minute of the session in the margin. A ruler of minutes down the
+side goes to any of them, and has a mark where the session was paused.
 
 **Draft note.** Pick SOAP, DAP or BIRP.
 
@@ -91,6 +99,8 @@ the result before sharing it. If it fails, the text is shown under a red
 - Cautions about a draft (a section still missing, say) appear under the
   note and are never copied with it.
 - **Keep** copies the note. **Regenerate** drafts it again.
+- Until a note has been kept, **Discard** and drafting again from the
+  transcript both ask first: neither can be undone.
 
 **While drafting.** The window lists the steps of the draft as they are
 done, with two small charts beside them: memory in use, and how much has
@@ -150,9 +160,8 @@ model is offered.
       with an Ollama model
 - [ ] Register jukenzie.com, the domain the app's identifier
       (`com.jukenzie.soapcap`) is named after, before the first public build
-- [ ] A design pass over every screen, to Apple's Human Interface
-      Guidelines for macOS (Liquid Glass materials, SF Symbols), checked
-      with Accessibility Inspector for VoiceOver and contrast
+- [ ] Check every screen with Accessibility Inspector, for VoiceOver and
+      contrast
 - [ ] A signed, notarized build that installs without Xcode
 - [ ] Try **Uninstall Soapcap…** again from that build: from Applications,
       and opened straight from the download
@@ -267,12 +276,12 @@ swift test
 
 | Bundle | Covers |
 |---|---|
-| `SoapcapCoreTests` | Transcript rendering and echo de-duplication (soapcap's cases); memory figures |
-| `SoapcapCaptureTests` | Cutting recognizer output into segments; transcribing a clip spoken by `say` |
-| `SoapcapNoteTests` | The checks and fixes on a draft (soapcap's cases); the drafting sequence; both model backends against stand-ins |
+| `SoapcapCoreTests` | Transcript rendering and echo de-duplication (soapcap's cases); memory figures; downloads that stop, carry on and are checked against a checksum |
+| `SoapcapCaptureTests` | Cutting recognizer output into segments; transcribing a clip spoken by `say`; the microphone following a change of input device; the permission rows of the checks screen; a recording that can't start |
+| `SoapcapNoteTests` | The checks and fixes on a draft (soapcap's cases); the drafting sequence, a session with no client heard included; both model backends against stand-ins; which model runs where |
 | `SoapcapDeidentifyTests` | The rules (soapcap's cases); speaker labels left alone; installing the model |
 | `SoapcapPIITests` | The real PII model on the transcripts in `Samples/deidentify`; skipped when the model isn't installed |
-| `SoapcapUITests` | The session flow against scripted stand-ins; starting and stopping the note model; settings; credits |
+| `SoapcapUITests` | The session flow against scripted stand-ins, with its steps and what asks first; the transcript's minute index; starting and stopping the note model; the Test button; model downloads; what Uninstall removes; settings; credits |
 
 Live capture, the permission grants, signing and the window itself are not
 covered. They need a person.
