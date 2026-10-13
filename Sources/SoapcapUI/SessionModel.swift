@@ -11,15 +11,32 @@ final class SessionModel: ObservableObject {
         case idle, recording, paused, working(String), transcript, note, error(String), checks([Check])
     }
 
+    /// The three steps of a session, as the bar across the window shows them.
+    enum Stage: Int, CaseIterable { case record, transcript, note }
+
     nonisolated static let formats = ["soap", "dap", "birp"]
     /// How many lines the recording screen's live strip keeps.
     static let liveLimit = 12
 
-    @Published var phase: Phase = .idle { didSet { modelTest.isBlocked = phase == .recording || phase == .paused } }
+    @Published var phase: Phase = .idle {
+        didSet {
+            modelTest.isBlocked = phase == .recording || phase == .paused
+            switch phase {
+            case .idle, .recording, .paused: stage = .record
+            case .transcript: stage = .transcript
+            case .note: stage = .note
+            case .working, .error, .checks: break       // wherever the session had got to
+            }
+        }
+    }
     @Published var deidentify: Bool { didSet { settings.deidentify = deidentify } }
     @Published var format: String { didSet { settings.format = format } }
+    /// The step the session has reached, or has been taken back to. It
+    /// follows the screen, and runs ahead of it while a step's work is done.
+    @Published private(set) var stage: Stage = .record
     @Published var transcript = ""
     @Published var note = ""
+    /// What stands under the transcript or the note, whichever is on screen.
     @Published var notice = ""
     /// Set when de-identifying was asked for and failed: what is on screen
     /// still has names in it.
@@ -52,6 +69,12 @@ final class SessionModel: ObservableObject {
     private var timer: Timer?
     /// Bumped by newSession() so work that finishes afterwards is ignored.
     private var generation = 0
+    /// Whose `notice` and `warning` are on screen, and the other's meanwhile:
+    /// the transcript can be gone back to once there is a note.
+    private var showing: Stage = .transcript
+    private var kept: [Stage: (notice: String, warning: String)] = [:]
+    /// Where the draft in flight was asked for, to go back to if it is stopped.
+    private var draftedFrom: Stage = .transcript
 
     init(makeCapture: @escaping () -> Capturing = { CaptureSession() }, now: @escaping () -> Date = Date.init,
          settings: SessionSettings = SessionSettings(), drafting: Drafting? = nil,
@@ -173,6 +196,7 @@ final class SessionModel: ObservableObject {
             return
         }
         let oneSided = Transcript.oneSidedNotice(segments, mic: labels.mic, system: labels.system) ?? ""
+        stage = .transcript
         notice = oneSided
         if deidentify && canDeidentify {
             phase = .working("De-identifying the transcript…")
@@ -201,7 +225,9 @@ final class SessionModel: ObservableObject {
     func draft() {
         guard let noteFormat = NoteFormat(rawValue: format) else { return }
         let gen = generation
-        phase = .working("Drafting a \(format) note…")
+        draftedFrom = stage == .note ? .note : .transcript
+        stage = .note
+        phase = .working("Drafting a \(format.uppercased()) note…")
         Task {
             let drafted: DraftedNote
             do {
@@ -217,9 +243,10 @@ final class SessionModel: ObservableObject {
             }
             note = drafted.text
             var notices = drafted.warnings
+            put(.note)
+            warning = ""
             if deidentify && canDeidentify {
                 phase = .working("De-identifying the note…")
-                warning = ""
                 let d = await deidentified(note, kind: .note, what: "note")
                 guard gen == generation else { return }
                 if let d { note = d.text; notices.append("Note: \(d.summary)") }
@@ -237,12 +264,12 @@ final class SessionModel: ObservableObject {
     func stopDraft() {
         guard draftRun.isRunning, !modelTest.isRunning else { return }
         generation += 1
-        let gen = generation, back: Phase = note.isEmpty ? .transcript : .note
+        let gen = generation, back = draftedFrom
         let stopping = draftRun.stop()
         phase = .working("Stopping…")
         Task {
             await stopping.value
-            if gen == generation { phase = back }
+            if gen == generation { show(back) }
         }
     }
 
@@ -251,6 +278,52 @@ final class SessionModel: ObservableObject {
     private func show(_ progress: DraftProgress, generation gen: Int) {
         guard draftRun.isRunning, gen == generation else { return }
         phase = .working(progress.tokens.map { "\(progress.title)  \($0) tokens" } ?? progress.title)
+    }
+
+    /// Whether the checks can be opened: not while a session is being
+    /// transcribed or something is in progress, since they take the screen.
+    var canCheck: Bool {
+        switch phase {
+        case .recording, .paused, .working: false
+        default: true
+        }
+    }
+
+    /// Whether a step in the bar can be clicked: the transcript once there
+    /// is a note, and back to the note from there. Recording can't be gone
+    /// back to.
+    func canGo(to step: Stage) -> Bool {
+        switch (step, phase) {
+        case (.transcript, .note): true
+        case (.note, .transcript): !note.isEmpty
+        default: false
+        }
+    }
+
+    func go(to step: Stage) {
+        if canGo(to: step) { show(step) }
+    }
+
+    /// Leaves an error or the checks for the session as it stood: its note
+    /// or transcript if it has one, or else a fresh start. A draft that
+    /// fails must not cost the transcript.
+    func back() {
+        guard !transcript.isEmpty else { return newSession() }
+        show(stage == .note && !note.isEmpty ? .note : .transcript)
+    }
+
+    /// Puts the transcript or the note on screen, with what stands under it.
+    private func show(_ step: Stage) {
+        put(step)
+        phase = step == .note ? .note : .transcript
+    }
+
+    /// Swaps `notice` and `warning` for those of the transcript or the note.
+    private func put(_ step: Stage) {
+        guard step != showing else { return }
+        kept[showing] = (notice, warning)
+        (notice, warning) = kept[step] ?? ("", "")
+        showing = step
     }
 
     func keep() {
@@ -309,6 +382,7 @@ final class SessionModel: ObservableObject {
         capture = nil
         draftRun.stop()
         liveLines = []; transcript = ""; note = ""; notice = ""; warning = ""; copied = false; memoryQuestion = nil; phase = .idle
+        showing = .transcript; kept = [:]
         refreshDeidentify()
     }
 }

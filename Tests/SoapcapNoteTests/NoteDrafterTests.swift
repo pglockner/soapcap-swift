@@ -158,7 +158,7 @@ final class NoteDrafterTests: XCTestCase {
         XCTAssertEqual(backend.contexts[0] % 1024, 0)
         XCTAssertGreaterThanOrEqual(backend.contexts[0], ContextSize.estimate(backend.prompts[1], headroom: 3072))
         XCTAssertEqual(seen.all.map(\.title).reduce(into: [String]()) { if $0.last != $1 { $0.append($1) } },
-                       ["Loading test-model…", "Drafting a soap note with test-model…", "Drafting the Objective with test-model…"])
+                       ["Loading test-model…", "Drafting a SOAP note with test-model…", "Drafting the Objective with test-model…"])
         XCTAssertTrue(seen.all.contains { $0.tokens == 1 })
     }
 }

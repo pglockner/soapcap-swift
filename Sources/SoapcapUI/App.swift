@@ -39,11 +39,10 @@ public struct SoapcapApp: App {
         .commands {
             CommandGroup(after: .appInfo) {
                 AcknowledgementsCommand()
-                UninstallCommand(stop: { [model] in await model.draftRun.stop().value })
             }
         }
         Window("Acknowledgements", id: "acknowledgements") { AcknowledgementsView() }
-        Settings { SettingsView(test: model.modelTest) }
+        Settings { SettingsView(test: model.modelTest, stop: { [model] in await model.draftRun.stop().value }) }
     }
 }
 
@@ -51,7 +50,6 @@ struct ContentView: View {
     @EnvironmentObject var m: SessionModel
     /// Read here so that this window follows a change of model made in Settings.
     @AppStorage(SessionSettings.Key.noteModel) private var noteModel = ""
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -65,7 +63,7 @@ struct ContentView: View {
             case .error(let msg): error(msg)
             case .checks(let checks):
                 ChecksView(checks: checks, test: m.modelTest, model: SessionSettings.noteModel(stored: noteModel),
-                           perform: { m.perform($0) }, again: { m.diagnose() }, back: { m.newSession() })
+                           perform: { m.perform($0) }, again: { m.diagnose() }, back: { m.back() })
                     // The line about the note model is about the one just chosen.
                     .onChange(of: noteModel) { m.diagnose() }
             }
@@ -74,17 +72,20 @@ struct ContentView: View {
         // than the window would otherwise float in the middle.
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(16)
+        .toolbar { SessionBar(m: m) }
+        // The bar says the app's name itself, beside its icon.
+        .toolbar(removing: .title)
     }
 
     private var idle: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Ready to transcribe").font(.title2.bold())
+            Text("Ready for a session").font(.title2.bold())
             Text("Use headphones, and turn on Do Not Disturb.").foregroundStyle(.secondary)
             if m.canDeidentify {
                 Toggle("De-identify the transcript, and the note once it's drafted", isOn: $m.deidentify)
             }
             HStack {
-                Button("Start transcribing") { m.start() }.keyboardShortcut(.defaultAction)
+                Button("Start session") { m.start() }.keyboardShortcut(.defaultAction)
                 Button("Check permissions") { m.diagnose() }
             }
             Spacer()
@@ -95,11 +96,7 @@ struct ContentView: View {
         VStack(spacing: 16) {
             Spacer()
             // Nothing is recorded: the app listens, and what it hears becomes text.
-            HStack { Image(systemName: "microphone.fill").foregroundStyle(.red)
-                    .symbolEffect(.breathe, isActive: !reduceMotion)
-                Text(String(format: "Transcribing  %02d:%02d", m.elapsed / 60, m.elapsed % 60))
-                    .monospacedDigit() }
-                .font(.title2)
+            SessionClock(title: "Transcribing", symbol: "microphone.fill", tint: .red, elapsed: m.elapsed, isLive: true)
             HStack {
                 Button("Pause") { m.pause() }
                 Button("Stop") { m.stop() }.keyboardShortcut(.defaultAction)
@@ -112,9 +109,7 @@ struct ContentView: View {
     private var paused: some View {
         VStack(spacing: 16) {
             Spacer()
-            HStack { Image(systemName: "pause.circle.fill").foregroundStyle(.orange)
-                Text(String(format: "Paused  %02d:%02d transcribed", m.elapsed / 60, m.elapsed % 60))
-                    .font(.title2).monospacedDigit() }
+            SessionClock(title: "Paused", symbol: "pause.circle.fill", tint: .orange, elapsed: m.elapsed)
             Text("Nothing is being captured.").foregroundStyle(.secondary)
             HStack {
                 Button("Resume") { m.resume() }.keyboardShortcut(.defaultAction)
@@ -196,7 +191,7 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             HStack {
-                Button("Back") { m.newSession() }
+                Button("Back") { m.back() }
                 Button("Check permissions") { m.diagnose() }
             }
         }

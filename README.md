@@ -108,7 +108,7 @@ filled, or Problem with what was wrong, and the note can be read either
 way. It takes as long as drafting a note does, nothing is kept, and it is
 not offered while a session is being recorded.
 
-**Uninstalling.** The app menu's **Uninstall Soapcap…** removes the models
+**Uninstalling.** **Uninstall Soapcap…**, at the bottom of Settings, removes the models
 the app downloaded, its settings and its permissions, then moves the app to
 the Trash. A Bonsai or an Ollama that something else installed is left
 alone.

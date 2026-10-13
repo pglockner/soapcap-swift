@@ -110,6 +110,58 @@ final class SessionModelTests: XCTestCase {
         XCTAssertEqual(capture.calls, ["start", "pause", "stop"])
     }
 
+    func testTheStepsFollowASessionAndTheTranscriptCanBeGoneBackTo() async {
+        let m = await recording(FakeCapture(hello))
+        XCTAssertEqual(m.stage, .record)
+        XCTAssertFalse(m.canGo(to: .transcript))
+        XCTAssertFalse(m.canCheck)                  // the checks would take the screen from the session
+        m.stop()
+        await waitFor("transcript") { m.phase == .transcript }
+        XCTAssertEqual(m.stage, .transcript)
+        XCTAssertFalse(m.canGo(to: .note))          // nothing is drafted yet
+        XCTAssertEqual(m.notice, "Transcript: 1 identifying detail replaced (first name)")
+        m.draft()
+        await waitFor("note") { m.phase == .note }
+        XCTAssertEqual(m.stage, .note)
+        XCTAssertEqual(m.notice, "Note: 1 identifying detail replaced (first name)")
+
+        m.go(to: .transcript)
+        XCTAssertEqual(m.phase, .transcript)
+        XCTAssertEqual(m.stage, .transcript)
+        XCTAssertEqual(m.notice, "Transcript: 1 identifying detail replaced (first name)")
+        XCTAssertFalse(m.note.isEmpty)              // the note is kept meanwhile
+        m.go(to: .note)
+        XCTAssertEqual(m.phase, .note)
+        XCTAssertEqual(m.notice, "Note: 1 identifying detail replaced (first name)")
+        m.go(to: .record)                           // a session can't be gone back into
+        XCTAssertEqual(m.phase, .note)
+
+        m.newSession()
+        XCTAssertEqual(m.stage, .record)
+        XCTAssertEqual(m.notice, "")
+    }
+
+    func testADraftThatFailsDoesNotCostTheTranscript() async {
+        let m = await recording(FakeCapture(hello))
+        m.stop()
+        await waitFor("transcript") { m.phase == .transcript }
+        let transcript = m.transcript
+        drafter.error = NoteError.notReady("Can't reach Ollama at http://localhost:11434.")
+        m.draft()
+        await waitFor("the failure") { if case .error = m.phase { true } else { false } }
+        m.back()
+        XCTAssertEqual(m.phase, .transcript)
+        XCTAssertEqual(m.transcript, transcript)
+        XCTAssertEqual(m.notice, "Transcript: 1 identifying detail replaced (first name)")
+
+        // The checks, opened from the transcript, come back to it too.
+        m.diagnose()
+        await waitFor("checks") { if case .checks = m.phase { true } else { false } }
+        m.back()
+        XCTAssertEqual(m.phase, .transcript)
+        XCTAssertEqual(m.transcript, transcript)
+    }
+
     func testDeidentifyRunsOnTheTranscriptAndThenTheNote() async {
         let m = await recording(FakeCapture(hello))
         m.stop()

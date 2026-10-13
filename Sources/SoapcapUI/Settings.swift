@@ -85,6 +85,8 @@ struct SettingsView: View {
     @ObservedObject var setup = ModelSetup.shared
     @ObservedObject var bonsai = ModelDownload.bonsai
     @ObservedObject var llama = ModelDownload.llama
+    /// Ends a draft and frees the note model, before the app is uninstalled.
+    var stop: () async -> Void = {}
 
     private var settings: SessionSettings { SessionSettings() }
 
@@ -177,6 +179,12 @@ struct SettingsView: View {
                     Text("This is not this Mac: transcripts will be sent to that machine over the network.")
                         .foregroundStyle(.orange)
                 }
+            }
+            Section {
+                UninstallButton(stop: stop)
+            } footer: {
+                Text("Removes the models Soapcap downloaded, its settings and its permissions, then moves Soapcap to the Trash. It asks first.")
+                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)

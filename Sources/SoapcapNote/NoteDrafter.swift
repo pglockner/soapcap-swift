@@ -90,8 +90,9 @@ public struct NoteDrafter: Sendable {
         var tries = 0
         while tries < limit {
             tries += 1
-            let title = tries == 1 ? "Drafting a \(format.rawValue) note with \(label)…"
-                : "Drafting the \(format.rawValue) note again with \(label) (\(tries) of \(limit))…"
+            let name = format.rawValue.uppercased()
+            let title = tries == 1 ? "Drafting a \(name) note with \(label)…"
+                : "Drafting the \(name) note again with \(label) (\(tries) of \(limit))…"
             progress(DraftProgress(title: title))
             let reply: ModelReply
             do {

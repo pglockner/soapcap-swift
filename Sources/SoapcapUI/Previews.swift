@@ -91,7 +91,8 @@ private let previewLines = [
 
 #Preview("Drafting") {
     sampleScreen {
-        $0.phase = .working("Drafting a soap note with llama3.1:8b…  412 tokens")
+        $0.phase = .note
+        $0.phase = .working("Drafting a SOAP note with llama3.1:8b…  412 tokens")
         $0.draftRun.isRunning = true
         $0.draftRun.memory = MemoryStatus(totalBytes: 16 << 30, freePercent: 38)
     }
@@ -99,6 +100,7 @@ private let previewLines = [
 
 #Preview("Drafting, memory full") {
     sampleScreen {
+        $0.phase = .note
         $0.phase = .working("Drafting the Objective with Bonsai…")
         $0.draftRun.isRunning = true
         $0.draftRun.memory = MemoryStatus(totalBytes: 16 << 30, freePercent: 6, swapUsedBytes: 2254 << 20, swapTotalBytes: 5 << 30)
@@ -172,7 +174,7 @@ private let previewSampleNote = "9 minutes, telehealth\n\nSUBJECTIVE:\nThe clien
 
 #Preview("Settings, model tested good") { SettingsView(test: testedModel(.good(model: "llama3.1:8b", seconds: 48))) }
 
-#Preview("Settings, model being tested") { SettingsView(test: testedModel(.running("Drafting a soap note with llama3.1:8b…"), note: nil)) }
+#Preview("Settings, model being tested") { SettingsView(test: testedModel(.running("Drafting a SOAP note with llama3.1:8b…"), note: nil)) }
 
 #Preview("Checks, model tested with a problem") {
     sampleScreen {
@@ -208,3 +210,5 @@ private let previewSampleNote = "9 minutes, telehealth\n\nSUBJECTIVE:\nThe clien
 #Preview("Transcribing, just started") {
     sampleScreen { $0.phase = .recording; $0.elapsed = 4 }
 }
+
+#Preview("Settings, the end") { SettingsView(test: SessionModel().modelTest).defaultScrollAnchor(.bottom) }

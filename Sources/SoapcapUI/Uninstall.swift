@@ -68,12 +68,12 @@ struct Uninstaller {
     }
 }
 
-/// The app-menu item that removes the app and everything it put on the Mac.
-struct UninstallCommand: View {
+/// The button in Settings that removes the app and everything it put on the Mac.
+struct UninstallButton: View {
     /// Ends a draft and frees the note model first.
     let stop: () async -> Void
 
-    var body: some View { Button("Uninstall Soapcap…") { ask() } }
+    var body: some View { Button("Uninstall Soapcap…", role: .destructive) { ask() } }
 
     @MainActor private func ask(_ uninstaller: Uninstaller = Uninstaller()) {
         let question = NSAlert()
