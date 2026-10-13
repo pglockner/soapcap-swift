@@ -92,10 +92,10 @@ side goes to any of them, and has a mark where the session was paused.
 - A SOAP note's Objective is a fixed mental-status frame filled in by a
   separate pass. It never says "No SI/HI reported" if risk language was
   seen.
-- When only your side was heard, the section that rests on the client is
+- When only your side was heard, the sections that rest on the client are
   not left to the model: a SOAP note's Subjective and Objective, a DAP
-  note's Data and a BIRP note's Behavior each say they need completing by
-  hand, and a caution under the note says so.
+  note's Data and a BIRP note's Behavior and Response each say they need
+  completing by hand, and a caution under the note says so.
 - Cautions about a draft (a section still missing, say) appear under the
   note and are never copied with it.
 - **Keep** copies the note. **Regenerate** drafts it again.

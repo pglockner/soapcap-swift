@@ -35,11 +35,11 @@ public struct NoteDrafter: Sendable {
 
     public init(backend: any NoteBackend) { self.backend = backend }
 
-    /// The client's section (SOAP's Subjective, DAP's Data, BIRP's Behavior)
-    /// when no client was heard. The transcript then holds nothing a client
-    /// reported, and a small model reports something all the same, whatever
-    /// its instructions say; so the app writes this section itself, as it
-    /// does SOAP's Objective.
+    /// A client's section (SOAP's Subjective, DAP's Data, BIRP's Behavior and
+    /// Response) when no client was heard. The transcript then holds nothing
+    /// a client reported, and a small model reports something all the same,
+    /// whatever its instructions say; so the app writes such a section
+    /// itself, as it does SOAP's Objective.
     static func noClient(_ section: String) -> String {
         "[No client speech was captured; complete the \(section.capitalized) manually.]"
     }
@@ -73,7 +73,7 @@ public struct NoteDrafter: Sendable {
             }
         }
         if !hasClient {
-            let left = ([format.clientSection] + (format == .soap ? ["OBJECTIVE"] : [])).map { "the \($0.capitalized)" }
+            let left = (format.clientSections + (format == .soap ? ["OBJECTIVE"] : [])).map { "the \($0.capitalized)" }
             warnings.append("No \(systemLabel) lines in the transcript — \(left.joined(separator: " and ")) \(left.count == 1 ? "is" : "are") left for you to complete.")
         }
 
@@ -128,7 +128,9 @@ public struct NoteDrafter: Sendable {
 
         var note = best.note
         if !hasClient {
-            note = NoteText.setting(format.clientSection, to: Self.noClient(format.clientSection), in: note, order: format.sections)
+            for section in format.clientSections {
+                note = NoteText.setting(section, to: Self.noClient(section), in: note, order: format.sections)
+            }
         }
         if format == .soap {
             if let objectivePrompt {

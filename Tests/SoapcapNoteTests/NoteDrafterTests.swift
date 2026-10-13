@@ -100,8 +100,9 @@ final class NoteDrafterTests: XCTestCase {
 
         let behavior = "**BEHAVIOR:** Tearful.\n\nINTERVENTION:\nBreathing practice.\n\nRESPONSE:\nCalmer.\n\nPLAN:\nWeekly."
         let birp = try await NoteDrafter(backend: ScriptedBackend(drafts: [behavior])).draft(format: .birp, transcript: long("Therapist"))
-        XCTAssertEqual(birp.text, "BEHAVIOR:\n[No client speech was captured; complete the Behavior manually.]\n\nINTERVENTION:\nBreathing practice.\n\nRESPONSE:\nCalmer.\n\nPLAN:\nWeekly.")
-        XCTAssertEqual(birp.warnings, ["No Client lines in the transcript — the Behavior is left for you to complete."])
+        // How the client took it is the client's too; what the therapist did stands.
+        XCTAssertEqual(birp.text, "BEHAVIOR:\n[No client speech was captured; complete the Behavior manually.]\n\nINTERVENTION:\nBreathing practice.\n\nRESPONSE:\n[No client speech was captured; complete the Response manually.]\n\nPLAN:\nWeekly.")
+        XCTAssertEqual(birp.warnings, ["No Client lines in the transcript — the Behavior and the Response are left for you to complete."])
 
         // A draft that left the section out gets it, in its place.
         let headless = try await NoteDrafter(backend: ScriptedBackend(drafts: ["ASSESSMENT:\nStress.\n\nPLAN:\nWeekly."]))
