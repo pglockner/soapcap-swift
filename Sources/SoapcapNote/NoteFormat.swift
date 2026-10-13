@@ -12,6 +12,19 @@ public enum NoteFormat: String, CaseIterable, Sendable {
         case .birp: ["BEHAVIOR", "INTERVENTION", "RESPONSE", "PLAN"]
         }
     }
+
+    /// Every section of the note, in the order it has them.
+    var sections: [String] { self == .soap ? NoteText.soapSections : draftSections }
+
+    /// The section that holds what the client said and how they came across.
+    /// With no client heard there is nothing to write it from.
+    var clientSection: String {
+        switch self {
+        case .soap: "SUBJECTIVE"
+        case .dap: "DATA"
+        case .birp: "BEHAVIOR"
+        }
+    }
 }
 
 /// The note's first line, e.g. "63 minutes, telehealth".

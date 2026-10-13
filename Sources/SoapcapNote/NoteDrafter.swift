@@ -35,11 +35,14 @@ public struct NoteDrafter: Sendable {
 
     public init(backend: any NoteBackend) { self.backend = backend }
 
-    /// SOAP's Subjective when no client was heard. The transcript then holds
-    /// nothing a client reported, and a small model reports something all
-    /// the same, whatever its instructions say; so the app writes this
-    /// section itself, as it does the Objective.
-    static let noClientSubjective = "[No client speech was captured; complete the Subjective manually.]"
+    /// The client's section (SOAP's Subjective, DAP's Data, BIRP's Behavior)
+    /// when no client was heard. The transcript then holds nothing a client
+    /// reported, and a small model reports something all the same, whatever
+    /// its instructions say; so the app writes this section itself, as it
+    /// does SOAP's Objective.
+    static func noClient(_ section: String) -> String {
+        "[No client speech was captured; complete the \(section.capitalized) manually.]"
+    }
 
     /// The model is left loaded afterwards so another draft starts at once;
     /// call `backend.stop()` when the session is over. `minutes` is the
@@ -67,8 +70,11 @@ public struct NoteDrafter: Sendable {
             } else {
                 // The model would rate the therapist instead.
                 objective = .noClient
-                warnings.append("No \(systemLabel) lines in the transcript — the Subjective and the Objective are left for you to complete.")
             }
+        }
+        if !hasClient {
+            let left = ([format.clientSection] + (format == .soap ? ["OBJECTIVE"] : [])).map { "the \($0.capitalized)" }
+            warnings.append("No \(systemLabel) lines in the transcript — \(left.joined(separator: " and ")) \(left.count == 1 ? "is" : "are") left for you to complete.")
         }
 
         // One context size for every pass, the largest any needs: a backend
@@ -121,8 +127,10 @@ public struct NoteDrafter: Sendable {
         if best.cutOff { warnings.append("\(label) hit its output limit — the end of the note may be cut off.") }
 
         var note = best.note
+        if !hasClient {
+            note = NoteText.setting(format.clientSection, to: Self.noClient(format.clientSection), in: note, order: format.sections)
+        }
         if format == .soap {
-            if !hasClient { note = NoteText.setting("SUBJECTIVE", to: Self.noClientSubjective, in: note) }
             if let objectivePrompt {
                 // A failed Objective pass never costs the rest of the note:
                 // the Objective then says plainly that it needs completing.

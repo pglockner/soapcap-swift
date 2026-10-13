@@ -91,11 +91,27 @@ final class NoteDrafterTests: XCTestCase {
         XCTAssertEqual(note.warnings, ["No Client lines in the transcript — the Subjective and the Objective are left for you to complete."])
     }
 
-    func testOnlySOAPsSubjectiveIsWrittenByTheAppWhenNoClientWasHeard() async throws {
+    func testTheClientsSectionIsWrittenByTheAppInEveryFormatWhenNoClientWasHeard() async throws {
+        // The model wrote something under Data and Behavior though no client was heard.
         let data = "DATA:\nSlept badly.\n\nASSESSMENT:\nStress.\n\nPLAN:\nWeekly."
-        let note = try await NoteDrafter(backend: ScriptedBackend(drafts: [data])).draft(format: .dap, transcript: long("Therapist"))
-        XCTAssertEqual(note.text, data)
+        let dap = try await NoteDrafter(backend: ScriptedBackend(drafts: [data])).draft(format: .dap, transcript: long("Therapist"))
+        XCTAssertEqual(dap.text, "DATA:\n[No client speech was captured; complete the Data manually.]\n\nASSESSMENT:\nStress.\n\nPLAN:\nWeekly.")
+        XCTAssertEqual(dap.warnings, ["No Client lines in the transcript — the Data is left for you to complete."])
 
+        let behavior = "**BEHAVIOR:** Tearful.\n\nINTERVENTION:\nBreathing practice.\n\nRESPONSE:\nCalmer.\n\nPLAN:\nWeekly."
+        let birp = try await NoteDrafter(backend: ScriptedBackend(drafts: [behavior])).draft(format: .birp, transcript: long("Therapist"))
+        XCTAssertEqual(birp.text, "BEHAVIOR:\n[No client speech was captured; complete the Behavior manually.]\n\nINTERVENTION:\nBreathing practice.\n\nRESPONSE:\nCalmer.\n\nPLAN:\nWeekly.")
+        XCTAssertEqual(birp.warnings, ["No Client lines in the transcript — the Behavior is left for you to complete."])
+
+        // A draft that left the section out gets it, in its place.
+        let headless = try await NoteDrafter(backend: ScriptedBackend(drafts: ["ASSESSMENT:\nStress.\n\nPLAN:\nWeekly."]))
+            .draft(format: .dap, transcript: long("Therapist"))
+        XCTAssertTrue(headless.text.hasPrefix("DATA:\n[No client speech was captured; complete the Data manually.]\n\nASSESSMENT:"), headless.text)
+
+        // With a client heard, what the model wrote stands, and nothing is said.
+        let heardData = try await NoteDrafter(backend: ScriptedBackend(drafts: [data])).draft(format: .dap, transcript: long())
+        XCTAssertEqual(heardData.text, data)
+        XCTAssertEqual(heardData.warnings, [])
         // With a client heard, what the model wrote under SUBJECTIVE stands.
         let heard = try await NoteDrafter(backend: ScriptedBackend(drafts: [good])).draft(format: .soap, transcript: long())
         XCTAssertTrue(heard.text.hasPrefix("SUBJECTIVE:\nSlept badly."), heard.text)
