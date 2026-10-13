@@ -73,7 +73,9 @@ struct UninstallButton: View {
     /// Ends a draft and frees the note model first.
     let stop: () async -> Void
 
-    var body: some View { Button("Uninstall Soapcap…", role: .destructive) { ask() } }
+    var body: some View {
+        Button { ask() } label: { Text("Uninstall Soapcap…").foregroundStyle(.red) }
+    }
 
     @MainActor private func ask(_ uninstaller: Uninstaller = Uninstaller()) {
         let question = NSAlert()

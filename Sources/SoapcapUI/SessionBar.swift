@@ -14,6 +14,10 @@ struct SessionBar: ToolbarContent {
                 Text("Soapcap").font(.headline)
             }
             .padding(.trailing, 4)
+            // A bar item takes the clicks that land on it; the name gives them
+            // back, so that the window can be dragged by it.
+            .gesture(WindowDragGesture())
+            .allowsWindowActivationEvents(true)
         }
         // A name is not a control, so it gets no glass behind it.
         .sharedBackgroundVisibility(.hidden)
@@ -50,7 +54,7 @@ struct StageBar: View {
                     Button { go(step) } label: { label(step) }.buttonStyle(.plain)
                         .help("Go back to the \(Self.title(step).lowercased())")
                 } else {
-                    label(step)
+                    label(step).gesture(WindowDragGesture()).allowsWindowActivationEvents(true)
                 }
             }
         }

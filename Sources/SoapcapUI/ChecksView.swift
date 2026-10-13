@@ -55,7 +55,13 @@ struct ChecksView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(10)
             }
+            // In a box of its own, as the transcript and the note are: a row
+            // cut off by its edge shows that there are more below.
+            .scrollIndicators(.visible)
+            .scrollIndicatorsFlash(onAppear: true)
+            .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 6))
             HStack {
                 if isSetup {
                     Button("Check again") { again() }

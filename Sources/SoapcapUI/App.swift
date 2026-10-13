@@ -36,6 +36,8 @@ public struct SoapcapApp: App {
                 .task { AppDelegate.beforeQuit = { [model] in await model.draftRun.stop().value } }
                 .task { model.setUpIfNeeded() }
         }
+        // Tall enough the first time for the setup screen to show every row.
+        .defaultSize(width: 640, height: 600)
         .commands {
             CommandGroup(after: .appInfo) {
                 AcknowledgementsCommand()
@@ -99,7 +101,7 @@ struct ContentView: View {
             SessionClock(title: "Transcribing", symbol: "microphone.fill", tint: .red, elapsed: m.elapsed, isLive: true)
             HStack {
                 Button("Pause") { m.pause() }
-                Button("Stop") { m.stop() }.keyboardShortcut(.defaultAction)
+                StopButton { m.stop() }
             }
             Spacer()
             LiveStrip(lines: m.liveLines)
@@ -113,7 +115,7 @@ struct ContentView: View {
             Text("Nothing is being captured.").foregroundStyle(.secondary)
             HStack {
                 Button("Resume") { m.resume() }.keyboardShortcut(.defaultAction)
-                Button("Stop") { m.stop() }
+                StopButton { m.stop() }
             }
             Spacer()
             LiveStrip(lines: m.liveLines).opacity(0.5)
@@ -177,7 +179,10 @@ struct ContentView: View {
                 Button("Regenerate") { m.draft() }
                 Spacer()
                 // Once the note is on the clipboard, leaving is no longer throwing it away.
-                Button(m.copied ? "New session" : "Discard") { m.newSession() }
+                // Until the note is kept, leaving throws it away.
+                Button { m.newSession() } label: {
+                    Text(m.copied ? "New session" : "Discard").foregroundStyle(m.copied ? Color.primary : Color.red)
+                }
             }
         }
     }
@@ -195,5 +200,15 @@ struct ContentView: View {
                 Button("Check permissions") { m.diagnose() }
             }
         }
+    }
+}
+
+/// Ends a session. A session that is stopped can't be taken up again, so the
+/// button is red and Return doesn't press it.
+struct StopButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button("Stop", action: action).buttonStyle(.borderedProminent).tint(.red)
     }
 }
