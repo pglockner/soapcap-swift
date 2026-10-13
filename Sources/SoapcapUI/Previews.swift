@@ -299,7 +299,7 @@ private let previewSampleNote = "9 minutes, telehealth\n\nSUBJECTIVE:\nThe clien
 }
 
 #Preview("Transcript, a short session") {
-    sampleScreen { longSession($0, minutes: 7) }
+    sampleScreen { longSession($0, minutes: 7, pauses: [SessionPause(at: 40, length: 95)]) }
 }
 
 #Preview("Transcript, a session paused twice") {
