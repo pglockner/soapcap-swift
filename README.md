@@ -154,6 +154,9 @@ model is offered.
 - [ ] A signed, notarized build that installs without Xcode
 - [ ] Try **Uninstall Soapcap…** again from that build: from Applications,
       and opened straight from the download
+- [ ] Later: go over the rules the note model is given, and rework them to
+      say less of what not to do and show more examples to follow. A change
+      to them needs a full comparison run before it can be trusted
 - [ ] Stretch: the `structured` and `combined` note styles (nobody is
       asking for them yet). Notes are drafted in the narrative style only
 - [ ] Idea, not scoped: note structure from a settings file, so a note's
