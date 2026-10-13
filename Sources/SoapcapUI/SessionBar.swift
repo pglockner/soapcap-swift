@@ -51,26 +51,28 @@ struct StageBar: View {
                 // Only a step that can be gone to is a button: a disabled
                 // one would grey out the step the session is on.
                 if canGo(step) {
-                    Button { go(step) } label: { label(step) }.buttonStyle(.plain)
-                        .help("Go back to the \(Self.title(step).lowercased())")
+                    Button { go(step) } label: { label(step, canGo: true) }.buttonStyle(.plain)
+                        .help("Go to the \(Self.title(step).lowercased())")
                 } else {
-                    label(step).gesture(WindowDragGesture()).allowsWindowActivationEvents(true)
+                    label(step, canGo: false).gesture(WindowDragGesture()).allowsWindowActivationEvents(true)
                 }
             }
         }
         .padding(.horizontal, 8)
     }
 
-    private func label(_ step: SessionModel.Stage) -> some View {
-        let isDone = step.rawValue < stage.rawValue
+    /// A step that is done, or that there is something to go to (a note,
+    /// seen from the transcript), is ticked and reads as within reach.
+    private func label(_ step: SessionModel.Stage, canGo: Bool) -> some View {
+        let isReached = step.rawValue < stage.rawValue || canGo
         return HStack(spacing: 4) {
-            if isDone { Image(systemName: "checkmark").font(.caption.weight(.semibold)).accessibilityHidden(true) }
+            if isReached { Image(systemName: "checkmark").font(.caption.weight(.semibold)).accessibilityHidden(true) }
             Text(Self.title(step))
         }
         .fontWeight(step == stage ? .semibold : .regular)
-        .foregroundStyle(step == stage ? .primary : isDone ? .secondary : .tertiary)
+        .foregroundStyle(step == stage ? .primary : isReached ? .secondary : .tertiary)
         .accessibilityElement(children: .combine)
-        .accessibilityValue(step == stage ? "current step" : isDone ? "done" : "not yet")
+        .accessibilityValue(step == stage ? "current step" : isReached ? "done" : "not yet")
     }
 
     static func title(_ step: SessionModel.Stage) -> String {

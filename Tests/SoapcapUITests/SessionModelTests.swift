@@ -141,6 +141,36 @@ final class SessionModelTests: XCTestCase {
         XCTAssertEqual(m.notice, "")
     }
 
+    func testWhatHasNotBeenKeptIsKnownSoThatItCanBeGuarded() async {
+        let m = await recording(FakeCapture(hello))
+        XCTAssertFalse(m.hasUnkeptWork)             // nothing to lose yet
+        m.stop()
+        await waitFor("transcript") { m.phase == .transcript }
+        XCTAssertTrue(m.hasUnkeptWork)              // leaving now would lose the transcript
+        XCTAssertFalse(m.hasUnkeptNote)
+        m.draft()
+        await waitFor("note") { m.phase == .note }
+        XCTAssertTrue(m.hasUnkeptNote)
+        XCTAssertEqual(m.draftedFormat, "soap")
+
+        // Back at the transcript, drafting again would replace it; and the
+        // note is still a SOAP note whatever the picker is moved to.
+        m.go(to: .transcript)
+        m.format = "dap"
+        XCTAssertTrue(m.hasUnkeptNote)
+        XCTAssertEqual(m.draftedFormat, "soap")
+
+        m.go(to: .note)
+        m.keep()
+        XCTAssertFalse(m.hasUnkeptNote)
+        XCTAssertFalse(m.hasUnkeptWork)             // it is on the clipboard
+
+        m.draft()                                   // a new draft is unkept again
+        await waitFor("the second note") { m.phase == .note }
+        XCTAssertTrue(m.hasUnkeptNote)
+        XCTAssertEqual(m.draftedFormat, "dap")
+    }
+
     func testADraftThatFailsDoesNotCostTheTranscript() async {
         let m = await recording(FakeCapture(hello))
         m.stop()

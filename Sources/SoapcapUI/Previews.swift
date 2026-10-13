@@ -212,3 +212,11 @@ private let previewSampleNote = "9 minutes, telehealth\n\nSUBJECTIVE:\nThe clien
 }
 
 #Preview("Settings, the end") { SettingsView(test: SessionModel().modelTest).defaultScrollAnchor(.bottom) }
+
+#Preview("Transcript, gone back to from a note not kept") {
+    sampleScreen {
+        $0.phase = .transcript
+        $0.transcript = previewLines.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n")
+        $0.note = "53 minutes, telehealth\n\nSUBJECTIVE:\nThe client reported sleeping better."
+    }
+}

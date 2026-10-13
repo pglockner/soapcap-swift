@@ -52,6 +52,8 @@ struct ContentView: View {
     @EnvironmentObject var m: SessionModel
     /// Read here so that this window follows a change of model made in Settings.
     @AppStorage(SessionSettings.Key.noteModel) private var noteModel = ""
+    /// Asked before a note that hasn't been kept is drafted over.
+    @State private var asksToReplace = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -154,9 +156,19 @@ struct ContentView: View {
                 Picker("Format", selection: $m.format) {
                     ForEach(SessionModel.formats, id: \.self) { Text($0.uppercased()) }
                 }.pickerStyle(.segmented).fixedSize()
-                Button("Draft note") { m.draftIfRoom() }.keyboardShortcut(.defaultAction)
+                Button(m.hasUnkeptNote ? "Draft again" : "Draft note") {
+                    if m.hasUnkeptNote { asksToReplace = true } else { m.draftIfRoom() }
+                }
+                // Return doesn't draft over a note that hasn't been kept.
+                .keyboardShortcut(m.hasUnkeptNote ? nil : .defaultAction)
+                .alert("Replace the note you haven't kept?", isPresented: $asksToReplace) {
+                    Button("Cancel", role: .cancel) {}
+                    Button("Draft again", role: .destructive) { m.draftIfRoom() }
+                } message: {
+                    Text("Drafting again writes a new note in its place, and the one you have can't be got back. To hold on to it, go to the note and choose Keep first.")
+                }
                 Spacer()
-                Button("New session") { m.newSession() }
+                LeaveButton(m: m)
             }
         }
         .alert("Not enough free memory", isPresented: Binding(get: { m.memoryQuestion != nil }, set: { if !$0 { m.memoryQuestion = nil } })) {
@@ -170,7 +182,7 @@ struct ContentView: View {
 
     private var note: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("\(m.format.uppercased()) note").font(.headline)
+            Text("\((m.draftedFormat.isEmpty ? m.format : m.draftedFormat).uppercased()) note").font(.headline)
             warning
             scrollText(m.note)
             if !m.notice.isEmpty { Text(m.notice).font(.caption).foregroundStyle(.orange) }
@@ -178,11 +190,7 @@ struct ContentView: View {
                 Button(m.copied ? "Copied" : "Keep") { m.keep() }.keyboardShortcut(.defaultAction)
                 Button("Regenerate") { m.draft() }
                 Spacer()
-                // Once the note is on the clipboard, leaving is no longer throwing it away.
-                // Until the note is kept, leaving throws it away.
-                Button { m.newSession() } label: {
-                    Text(m.copied ? "New session" : "Discard").foregroundStyle(m.copied ? Color.primary : Color.red)
-                }
+                LeaveButton(m: m)
             }
         }
     }
@@ -210,5 +218,27 @@ struct StopButton: View {
 
     var body: some View {
         Button("Stop", action: action).buttonStyle(.borderedProminent).tint(.red)
+    }
+}
+
+/// Starts afresh. While the session holds something that hasn't been kept it
+/// says Discard, in red, and asks first; once the note is on the clipboard,
+/// leaving is no longer throwing anything away.
+struct LeaveButton: View {
+    @ObservedObject var m: SessionModel
+    @State private var asks = false
+
+    var body: some View {
+        Button {
+            if m.hasUnkeptWork { asks = true } else { m.newSession() }
+        } label: {
+            Text(m.hasUnkeptWork ? "Discard" : "New session").foregroundStyle(m.hasUnkeptWork ? Color.red : Color.primary)
+        }
+        .alert("Discard this session?", isPresented: $asks) {
+            Button("Cancel", role: .cancel) {}
+            Button("Discard", role: .destructive) { m.newSession() }
+        } message: {
+            Text(m.note.isEmpty ? "The transcript can't be got back." : "The transcript and the note can't be got back. To hold on to the note, choose Keep first.")
+        }
     }
 }

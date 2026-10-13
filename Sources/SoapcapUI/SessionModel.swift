@@ -44,6 +44,8 @@ final class SessionModel: ObservableObject {
     @Published var elapsed = 0      // seconds recorded; stands still while paused
     @Published var liveLines: [LiveLine] = []
     @Published var copied = false
+    /// The format the note on hand was drafted in; the picker may have moved since.
+    @Published private(set) var draftedFormat = ""
     /// Set when a draft was asked for with memory very short: the question
     /// to put before going ahead. Cleared by the answer.
     @Published var memoryQuestion: String?
@@ -242,6 +244,7 @@ final class SessionModel: ObservableObject {
                 return
             }
             note = drafted.text
+            draftedFormat = noteFormat.rawValue
             var notices = drafted.warnings
             put(.note)
             warning = ""
@@ -279,6 +282,14 @@ final class SessionModel: ObservableObject {
         guard draftRun.isRunning, gen == generation else { return }
         phase = .working(progress.tokens.map { "\(progress.title)  \($0) tokens" } ?? progress.title)
     }
+
+    /// Whether there is a note that hasn't been kept. Drafting again would
+    /// put another in its place, and no two drafts come out the same.
+    var hasUnkeptNote: Bool { !note.isEmpty && !copied }
+
+    /// Whether leaving the session now would lose something: its transcript,
+    /// and its note if it has one, until a note has been kept.
+    var hasUnkeptWork: Bool { !(transcript.isEmpty && note.isEmpty) && !copied }
 
     /// Whether the checks can be opened: not while a session is being
     /// transcribed or something is in progress, since they take the screen.
