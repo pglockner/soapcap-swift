@@ -12,7 +12,7 @@ struct MinuteRuler: View {
 
     var body: some View {
         VStack(spacing: 4) {
-            Text("min").font(.caption2).foregroundStyle(.tertiary).accessibilityHidden(true)
+            Text("min").font(.caption).foregroundStyle(.secondary).accessibilityHidden(true)
             ViewThatFits(in: .vertical) {
                 ForEach(MinuteIndex.steps, id: \.self) { marks(index.marks(every: $0)) }
             }
