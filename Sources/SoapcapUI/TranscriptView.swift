@@ -18,6 +18,18 @@ struct TranscriptView: View {
     }
 }
 
+/// One turn of the transcript, "Therapist: How was the week?", with the
+/// speaker's name picked out so that the eye finds who is talking.
+private struct TurnLine: View {
+    let line: String
+
+    var body: some View {
+        // The name runs up to the first colon; a line without one has no name.
+        let cut = line.range(of: ": ")?.upperBound ?? line.startIndex
+        Text("\(Text(line[..<cut]).fontWeight(.semibold))\(String(line[cut...]))")
+    }
+}
+
 /// The transcript a minute at a time, each turn a speaker took standing a
 /// little apart from the next so that the back and forth can be seen.
 private struct MinuteBlocks: View {
@@ -41,7 +53,7 @@ private struct MinuteBlocks: View {
                             minute(block.minute)
                             VStack(alignment: .leading, spacing: Self.gap) {
                                 ForEach(block.lines.indices, id: \.self) { line in
-                                    Text(block.lines[line]).textSelection(.enabled)
+                                    TurnLine(line: block.lines[line]).textSelection(.enabled)
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                 }
                             }
