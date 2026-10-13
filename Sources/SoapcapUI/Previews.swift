@@ -36,6 +36,7 @@ private let previewLines = [
         $0.transcript = previewLines.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n")
         $0.lineTimes = [2, 9, 21, 24]
         $0.notice = "Transcript: 2 identifying details replaced (first name, date)"
+        $0.transcriptIsDeidentified = true
     }
 }
 
@@ -218,6 +219,7 @@ private let previewSampleNote = "9 minutes, telehealth\n\nSUBJECTIVE:\nThe clien
         $0.transcript = previewLines.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n")
         $0.lineTimes = [2, 9, 21, 24]
         $0.notice = "Transcript: 2 identifying details replaced (first name, date)"
+        $0.transcriptIsDeidentified = true
     }
     .preferredColorScheme(.dark)
 }
@@ -299,7 +301,11 @@ private let previewSampleNote = "9 minutes, telehealth\n\nSUBJECTIVE:\nThe clien
 }
 
 #Preview("Transcript, a short session") {
-    sampleScreen { longSession($0, minutes: 7, pauses: [SessionPause(at: 40, length: 95)]) }
+    sampleScreen {
+        longSession($0, minutes: 7, pauses: [SessionPause(at: 40, length: 95)])
+        $0.notice = "Transcript: 2 identifying details replaced (first name, date)"
+        $0.transcriptIsDeidentified = true
+    }
 }
 
 #Preview("Transcript, a session paused twice") {

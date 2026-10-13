@@ -39,6 +39,9 @@ final class SessionModel: ObservableObject {
     @Published var lineTimes: [Int] = []
     /// Each pause in the session: where it fell and how long it lasted.
     @Published var pauses: [SessionPause] = []
+    /// Whether the transcript on hand was de-identified, and that step
+    /// succeeded. Only then is saving it to a file offered.
+    @Published var transcriptIsDeidentified = false
     @Published var note = ""
     /// What stands under the transcript or the note, whichever is on screen.
     @Published var notice = ""
@@ -237,10 +240,17 @@ final class SessionModel: ObservableObject {
             phase = .working("De-identifying the transcript…")
             if let d = await deidentified(transcript, kind: .transcript, what: "transcript") {
                 transcript = d.text
+                transcriptIsDeidentified = true
                 notice = [oneSided, "Transcript: \(d.summary)"].filter { !$0.isEmpty }.joined(separator: "\n")
             }
         }
         phase = .transcript
+    }
+
+    /// The transcript as a text file, for Save transcript.
+    var transcriptFile: TranscriptFile {
+        TranscriptFile(transcript: transcript, times: lineTimes, pauses: pauses,
+                       about: SessionLine.line(minutes: elapsed / 60, type: settings.sessionType))
     }
 
     /// What to do before drafting when the chosen model won't fit in the
@@ -433,7 +443,7 @@ final class SessionModel: ObservableObject {
         if let capture { Task { _ = await capture.stop() } }
         capture = nil
         draftRun.stop()
-        liveLines = []; transcript = ""; lineTimes = []; pauses = []; note = ""; notice = ""; warning = ""; copied = false; memoryQuestion = nil; phase = .idle
+        liveLines = []; transcript = ""; lineTimes = []; pauses = []; transcriptIsDeidentified = false; note = ""; notice = ""; warning = ""; copied = false; memoryQuestion = nil; phase = .idle
         showing = .transcript; kept = [:]
         refreshDeidentify()
     }

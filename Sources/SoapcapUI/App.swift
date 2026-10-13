@@ -66,6 +66,11 @@ struct ContentView: View {
     @AppStorage(SessionSettings.Key.noteModel) private var noteModel = ""
     /// Asked before a note that hasn't been kept is drafted over.
     @State private var asksToReplace = false
+    /// Whether the panel that saves the transcript is up, and what went
+    /// wrong if a save failed.
+    @State private var savesTranscript = false
+    @State private var saveFailed = false
+    @State private var saveFailure = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -167,7 +172,17 @@ struct ContentView: View {
 
     private var transcript: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Transcript").font(.headline)
+            HStack(alignment: .firstTextBaseline) {
+                Text("Transcript").font(.headline)
+                Spacer()
+                // The one thing the app ever writes to disk, and only a
+                // transcript that de-identifying has been over.
+                if m.transcriptIsDeidentified {
+                    Button("Save transcript…") { savesTranscript = true }
+                        .controlSize(.small)
+                        .help("Save the de-identified transcript as a text file, wherever you choose")
+                }
+            }
             warning
             TranscriptView(text: m.transcript, times: m.lineTimes, pauses: m.pauses)
             if !m.notice.isEmpty { Text(m.notice).font(.caption).foregroundStyle(.orange) }
@@ -202,6 +217,17 @@ struct ContentView: View {
             Button("Draft anyway") { m.draft() }
         } message: {
             Text(m.memoryQuestion ?? "")
+        }
+        .fileExporter(isPresented: $savesTranscript, document: m.transcriptFile, contentType: .plainText,
+                      defaultFilename: TranscriptFile.name) { result in
+            // Closing the panel without saving is not a failure.
+            if case .failure(let error) = result, (error as? CocoaError)?.code != .userCancelled {
+                saveFailure = error.localizedDescription
+                saveFailed = true
+            }
+        }
+        .alert("The transcript was not saved", isPresented: $saveFailed) {} message: {
+            Text(saveFailure)
         }
     }
 

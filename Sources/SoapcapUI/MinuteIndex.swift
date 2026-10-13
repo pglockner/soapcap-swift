@@ -79,6 +79,17 @@ struct MinuteIndex: Equatable {
         return marks.sorted { $0.block < $1.block }
     }
 
+    /// The transcript as plain text, laid out as the window has it: the
+    /// minute on a line of its own where a minute begins, a blank line
+    /// between turns, and a line for each pause.
+    var plainText: String {
+        blocks.map { block in
+            if let pause = block.pause { return "[\(pause.text)]" }
+            let turns = block.lines.joined(separator: "\n\n")
+            return block.startsMinute ? "[\(SessionClock.text(block.minute * 60))]\n\(turns)" : turns
+        }.joined(separator: "\n\n")
+    }
+
     /// The minute marks whose stretch of the session is on screen, from the
     /// first and last blocks that are. A mark's stretch runs up to the next
     /// minute mark.

@@ -2,7 +2,7 @@
 
 A Mac app that turns a telehealth session into a **speaker-attributed
 transcript** and a **drafted SOAP, DAP or BIRP note**, entirely on the Mac.
-No cloud, no audio recorded, nothing saved to disk.
+No cloud, no audio recorded, and nothing saved to disk unless you ask.
 
 It has the same goal as [soapcap](https://github.com/pglockner/soapcap),
 the command-line tool, and shares its prompts and test cases. It is its own
@@ -25,7 +25,7 @@ you build it with Xcode. For a finished tool, use soapcap.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="Assets/how-it-works-dark.svg">
-  <img src="Assets/how-it-works-light.svg" alt="Call audio and your microphone feed Record (Apple SpeechAnalyzer, no audio recorded), which produces a transcript. The transcript goes straight to Draft note (Llama 3.1 or Bonsai, a local model), or first through the optional De-identify step, which redacts names and identifiers. The draft note is shown in the window, and Keep copies it. Everything runs on this Mac and is held in memory only; no audio, transcript or note is saved to disk.">
+  <img src="Assets/how-it-works-light.svg" alt="Call audio and your microphone feed Record (Apple SpeechAnalyzer, no audio recorded), which produces a transcript. The transcript goes straight to Draft note (Llama 3.1 or Bonsai, a local model), or first through the optional De-identify step, which redacts names and identifiers. The draft note is shown in the window, and Keep copies it. Everything runs on this Mac and is held in memory only; nothing is saved to disk unless you ask.">
 </picture>
 
 The app listens to **what the Mac is playing** and to **your microphone**,
@@ -87,7 +87,10 @@ the result before sharing it. If it fails, the text is shown under a red
 **Transcript.** When you stop, the transcript is shown a turn at a time,
 with the minute of the session in the margin. A ruler of minutes down the
 side goes to any of them. Where the session was paused, the transcript says
-so and for how long, and the ruler has a mark for it.
+so and for how long, and the ruler has a mark for it. Once a transcript has
+been de-identified, **Save transcript…** writes it to a text file wherever
+you choose. That is the only thing the app ever saves, and only when asked;
+a transcript that was not de-identified can't be saved.
 
 **Draft note.** Pick SOAP, DAP or BIRP.
 
@@ -133,7 +136,8 @@ not offered while a session is being recorded.
 **Uninstalling.** **Uninstall Soapcap…**, at the bottom of Settings, removes the models
 the app downloaded, its settings and its permissions, then moves the app to
 the Trash. A Bonsai or an Ollama that something else installed is left
-alone.
+alone, and so is any transcript you saved: that file is yours, wherever you
+put it.
 
 **Note models.** `llama3.1:8b` is fast, usually under a minute a note.
 Bonsai is more careful and slower, a few minutes a note. Both run on an
@@ -143,8 +147,12 @@ model is offered.
 
 ## Privacy
 
-- **Nothing is saved.** Audio is never recorded. The transcript and the
-  note live in memory and are gone when you start a new session or quit.
+- **Nothing is saved unless you ask.** Audio is never recorded. The
+  transcript and the note live in memory and are gone when you start a new
+  session or quit. The one exception is yours to make: **Save transcript…**
+  writes a de-identified transcript to a file you choose. De-identifying is
+  best effort, so that file can still hold a detail it missed: read it
+  through before sharing it.
 - **Nothing lands in a terminal.** A window has no scrollback and no
   window-restore snapshot.
 - **The copied note is marked concealed**, so clipboard managers that honor
@@ -186,7 +194,7 @@ model is offered.
 | Setup | `./install.sh`, with Homebrew | Build with Xcode |
 | Speech recognition | Apple SpeechAnalyzer, through `yap` | Apple SpeechAnalyzer, built in |
 | De-identification | OpenMed's PII model, through a Python helper | The same model, built in |
-| Saving to a file | Only if you ask | Never |
+| Saving to a file | Only if you ask | A de-identified transcript, only if you ask |
 | Note styles | narrative, structured, combined | narrative |
 | Settings | `config.sh` | Its own Settings window |
 
@@ -285,7 +293,7 @@ swift test
 | `SoapcapNoteTests` | The checks and fixes on a draft (soapcap's cases); the drafting sequence, a session with no client heard included; both model backends against stand-ins; which model runs where |
 | `SoapcapDeidentifyTests` | The rules (soapcap's cases); speaker labels left alone; installing the model |
 | `SoapcapPIITests` | The real PII model on the transcripts in `Samples/deidentify`; skipped when the model isn't installed |
-| `SoapcapUITests` | The session flow against scripted stand-ins, with its steps and what asks first; the transcript's minute index; starting and stopping the note model; the Test button; model downloads; what Uninstall removes; settings; credits |
+| `SoapcapUITests` | The session flow against scripted stand-ins, with its steps and what asks first; the transcript's minute index and pauses; what Save transcript writes, and when it is offered; starting and stopping the note model; the Test button; model downloads; what Uninstall removes; settings; credits |
 
 Live capture, the permission grants, signing and the window itself are not
 covered. They need a person.

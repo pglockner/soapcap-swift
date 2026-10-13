@@ -240,6 +240,18 @@ final class SessionModelTests: XCTestCase {
         await waitFor("transcript") { m.phase == .transcript }
         XCTAssertEqual(m.transcript, "Therapist: hi [FIRST_NAME_1]\nClient: hello")
         XCTAssertEqual(m.notice, "Transcript: 1 identifying detail replaced (first name)")
+        // Only now can the transcript be saved, and the file says what it is.
+        XCTAssertTrue(m.transcriptIsDeidentified)
+        XCTAssertEqual(m.transcriptFile.text, """
+            Transcript, under 1 minute, telehealth
+            De-identified by Soapcap, which is best effort: read it through before sharing it.
+
+            [00:00]
+            Therapist: hi [FIRST_NAME_1]
+
+            Client: hello
+
+            """)
         m.draft()
         await waitFor("note") { m.phase == .note }
         XCTAssertEqual(m.note, "SUBJECTIVE:\nformat soap\nNote about [FIRST_NAME_1]")
@@ -256,6 +268,8 @@ final class SessionModelTests: XCTestCase {
         XCTAssertEqual(m.transcript, "Therapist: hi Bob\nClient: hello")
         XCTAssertTrue(m.warning.hasPrefix("Not de-identified. This transcript still contains"), m.warning)
         XCTAssertFalse(m.notice.contains("redacted"))
+        // A transcript that still has its names in it is not offered for saving.
+        XCTAssertFalse(m.transcriptIsDeidentified)
         deidentifier.error = nil
         m.draft()
         await waitFor("note") { m.phase == .note }
@@ -275,10 +289,20 @@ final class SessionModelTests: XCTestCase {
         m.deidentify = false
         m.stop()
         await waitFor("transcript") { m.phase == .transcript }
+        XCTAssertFalse(m.transcriptIsDeidentified)
         m.draft()
         await waitFor("note") { m.phase == .note }
         XCTAssertTrue(m.transcript.contains("Bob"))
         XCTAssertTrue(m.note.contains("Bob"))
+    }
+
+    func testANewSessionForgetsThatTheLastTranscriptCouldBeSaved() async {
+        let m = await recording(FakeCapture(hello))
+        m.stop()
+        await waitFor("transcript") { m.phase == .transcript }
+        XCTAssertTrue(m.transcriptIsDeidentified)
+        m.newSession()
+        XCTAssertFalse(m.transcriptIsDeidentified)
     }
 
     func testHearingOnlyTheMicrophoneWarns() async {
