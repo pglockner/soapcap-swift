@@ -61,7 +61,8 @@ struct StageBar: View {
                 }
             }
         }
-        .padding(.horizontal, 8)
+        // Room between the words and the ends of the bar's own pill.
+        .padding(.horizontal, 16)
     }
 
     /// A step that is done, or that there is something to go to (a note,
