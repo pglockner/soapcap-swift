@@ -14,7 +14,7 @@ final class MinuteIndexTests: XCTestCase {
 
     func testLinesAreGatheredByTheMinuteTheyBeganIn() {
         XCTAssertEqual(index([3, 40, 59, 60, 190])?.blocks,
-                       [.init(minute: 0, text: "a\nb\nc"), .init(minute: 1, text: "d"), .init(minute: 3, text: "e")])
+                       [.init(minute: 0, lines: ["a", "b", "c"]), .init(minute: 1, lines: ["d"]), .init(minute: 3, lines: ["e"])])
     }
 
     func testThereIsNoIndexWithoutATimeForEveryLine() {
@@ -24,7 +24,7 @@ final class MinuteIndexTests: XCTestCase {
     }
 
     func testALineOutOfOrderStaysWithTheMinuteBeforeIt() {
-        XCTAssertEqual(index([70, 20, 130])?.blocks, [.init(minute: 1, text: "a\nb"), .init(minute: 2, text: "c")])
+        XCTAssertEqual(index([70, 20, 130])?.blocks, [.init(minute: 1, lines: ["a", "b"]), .init(minute: 2, lines: ["c"])])
     }
 
     func testAMarkLeadsToWhatWasBeingSaidAsThatMinuteBegan() {

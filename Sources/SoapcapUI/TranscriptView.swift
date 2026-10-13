@@ -16,9 +16,12 @@ struct TranscriptView: View {
     }
 }
 
-/// The transcript a minute at a time. Each minute is one piece of text, so
-/// that a selection can run over the whole of it.
+/// The transcript a minute at a time, each turn a speaker took standing a
+/// little apart from the next so that the back and forth can be seen.
 private struct MinuteBlocks: View {
+    /// The room between one turn and the next.
+    private static let gap: CGFloat = 8
+
     let index: MinuteIndex
     @State private var position = ScrollPosition(idType: Int.self)
     /// The first and last minutes on screen.
@@ -28,11 +31,18 @@ private struct MinuteBlocks: View {
     var body: some View {
         HStack(spacing: 0) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 6) {
+                // Not a lazy stack: going to a minute needs to know where
+                // every one of them is, and a session has only so many.
+                VStack(alignment: .leading, spacing: Self.gap) {
                     ForEach(index.blocks) { block in
                         HStack(alignment: .firstTextBaseline, spacing: 10) {
                             minute(block.minute)
-                            Text(block.text).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
+                            VStack(alignment: .leading, spacing: Self.gap) {
+                                ForEach(block.lines.indices, id: \.self) { line in
+                                    Text(block.lines[line]).textSelection(.enabled)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                            }
                         }
                     }
                 }

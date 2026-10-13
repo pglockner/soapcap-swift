@@ -3,10 +3,11 @@ import Foundation
 /// A transcript cut into the minutes of its session, so that the minute can
 /// stand beside the text and be gone to.
 struct MinuteIndex: Equatable {
-    /// The lines that began in one minute of the session.
+    /// The lines that began in one minute of the session, a line for each
+    /// turn a speaker took.
     struct Block: Equatable, Identifiable {
         let minute: Int
-        var text: String
+        var lines: [String]
         var id: Int { minute }
     }
 
@@ -30,9 +31,9 @@ struct MinuteIndex: Equatable {
         for (line, time) in zip(lines, times) {
             let minute = max(0, time) / 60
             if let last = blocks.indices.last, blocks[last].minute >= minute {
-                blocks[last].text += "\n" + line
+                blocks[last].lines.append(String(line))
             } else {
-                blocks.append(Block(minute: minute, text: String(line)))
+                blocks.append(Block(minute: minute, lines: [String(line)]))
             }
         }
         self.blocks = blocks
