@@ -121,22 +121,6 @@ public enum Objective {
     /// extra header markup, text on the header line, a second OBJECTIVE, or
     /// none at all (inserted before ASSESSMENT, else PLAN, else at the end).
     public static func splice(_ body: String, into note: String) -> String {
-        var out: [String] = [], placed = false, skipping = false
-        func place() {
-            guard !placed else { return }
-            out += ["OBJECTIVE:", body, ""]
-            placed = true
-        }
-        for line in NoteText.lines(NoteText.join(NoteText.lines(note))) {
-            if NoteText.isHeader(line, "OBJECTIVE") { skipping = true; place(); continue }
-            let subjective = NoteText.isHeader(line, "SUBJECTIVE")
-            if subjective || NoteText.isHeader(line, "ASSESSMENT") || NoteText.isHeader(line, "PLAN") {
-                skipping = false
-                if !subjective { place() }
-            }
-            if !skipping { out.append(line) }
-        }
-        if !placed { out += ["", "OBJECTIVE:", body] }
-        return NoteText.join(out)
+        NoteText.setting("OBJECTIVE", to: body, in: note)
     }
 }

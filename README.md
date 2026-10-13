@@ -84,6 +84,8 @@ the result before sharing it. If it fails, the text is shown under a red
 - A SOAP note's Objective is a fixed mental-status frame filled in by a
   separate pass. It never says "No SI/HI reported" if risk language was
   seen.
+- When only your side was heard, a SOAP note's Subjective and Objective are
+  not left to the model: each says it needs completing by hand.
 - Cautions about a draft (a section still missing, say) appear under the
   note and are never copied with it.
 - **Keep** copies the note. **Regenerate** drafts it again.

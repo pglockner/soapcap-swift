@@ -73,8 +73,32 @@ final class NoteDrafterTests: XCTestCase {
         let backend = ScriptedBackend(drafts: [bad, good])
         let note = try await NoteDrafter(backend: backend).draft(format: .soap, transcript: long("Therapist"))
         XCTAssertEqual(backend.log, ["start", "draft"])
-        XCTAssertEqual(note.text, withObjective(bad, "On time via video. [No client speech was captured; complete the Objective manually.] [SI/HI status not assessed; confirm before signing.]"))
-        XCTAssertEqual(note.warnings, ["No Client lines in the transcript — the Objective is left for you to complete."])
+        // The model wrote "Slept badly." under SUBJECTIVE though no client was
+        // heard to say so. The app writes that section itself, and the Objective.
+        XCTAssertEqual(note.text, """
+            SUBJECTIVE:
+            [No client speech was captured; complete the Subjective manually.]
+
+            OBJECTIVE:
+            On time via video. [No client speech was captured; complete the Objective manually.] [SI/HI status not assessed; confirm before signing.]
+
+            ASSESSMENT:
+            Not addressed in this session.
+
+            PLAN:
+            Weekly.
+            """)
+        XCTAssertEqual(note.warnings, ["No Client lines in the transcript — the Subjective and the Objective are left for you to complete."])
+    }
+
+    func testOnlySOAPsSubjectiveIsWrittenByTheAppWhenNoClientWasHeard() async throws {
+        let data = "DATA:\nSlept badly.\n\nASSESSMENT:\nStress.\n\nPLAN:\nWeekly."
+        let note = try await NoteDrafter(backend: ScriptedBackend(drafts: [data])).draft(format: .dap, transcript: long("Therapist"))
+        XCTAssertEqual(note.text, data)
+
+        // With a client heard, what the model wrote under SUBJECTIVE stands.
+        let heard = try await NoteDrafter(backend: ScriptedBackend(drafts: [good])).draft(format: .soap, transcript: long())
+        XCTAssertTrue(heard.text.hasPrefix("SUBJECTIVE:\nSlept badly."), heard.text)
     }
 
     func testAShortTranscriptIsLenientAboutHollowSections() async throws {

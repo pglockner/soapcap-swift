@@ -35,6 +35,12 @@ public struct NoteDrafter: Sendable {
 
     public init(backend: any NoteBackend) { self.backend = backend }
 
+    /// SOAP's Subjective when no client was heard. The transcript then holds
+    /// nothing a client reported, and a small model reports something all
+    /// the same, whatever its instructions say; so the app writes this
+    /// section itself, as it does the Objective.
+    static let noClientSubjective = "[No client speech was captured; complete the Subjective manually.]"
+
     /// The model is left loaded afterwards so another draft starts at once;
     /// call `backend.stop()` when the session is over. `minutes` is the
     /// session's length, for the note's first line.
@@ -61,7 +67,7 @@ public struct NoteDrafter: Sendable {
             } else {
                 // The model would rate the therapist instead.
                 objective = .noClient
-                warnings.append("No \(systemLabel) lines in the transcript — the Objective is left for you to complete.")
+                warnings.append("No \(systemLabel) lines in the transcript — the Subjective and the Objective are left for you to complete.")
             }
         }
 
@@ -116,6 +122,7 @@ public struct NoteDrafter: Sendable {
 
         var note = best.note
         if format == .soap {
+            if !hasClient { note = NoteText.setting("SUBJECTIVE", to: Self.noClientSubjective, in: note) }
             if let objectivePrompt {
                 // A failed Objective pass never costs the rest of the note:
                 // the Objective then says plainly that it needs completing.

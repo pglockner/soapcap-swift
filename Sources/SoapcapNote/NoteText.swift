@@ -4,6 +4,8 @@ import Foundation
 enum NoteText {
     static let allSections = ["SUBJECTIVE", "OBJECTIVE", "ASSESSMENT", "PLAN", "DATA", "BEHAVIOR", "INTERVENTION", "RESPONSE"]
     static let notAddressed = "notaddressedinthissession"
+    /// SOAP's four sections, in the order a note has them.
+    static let soapSections = ["SUBJECTIVE", "OBJECTIVE", "ASSESSMENT", "PLAN"]
 
     static func lines(_ text: String) -> [String] { text.components(separatedBy: "\n") }
 
@@ -18,6 +20,30 @@ enum NoteText {
     /// ("**OBJECTIVE:**", text after the colon)?
     static func isHeader(_ line: String, _ name: String) -> Bool {
         line.matches("^[#* \\t]*\(name)[* \\t]*:")
+    }
+
+    /// `note` with the body of its `section` replaced by `body`. Copes with
+    /// extra header markup, text on the header line, a second such section,
+    /// or none at all: the section is then put before the first of those
+    /// that follow it in `order`, or else at the end.
+    static func setting(_ section: String, to body: String, in note: String, order: [String] = soapSections) -> String {
+        let later = order.drop { $0 != section }.dropFirst()
+        var out: [String] = [], placed = false, skipping = false
+        func place() {
+            guard !placed else { return }
+            out += ["\(section):", body, ""]
+            placed = true
+        }
+        for line in lines(join(lines(note))) {
+            if isHeader(line, section) { skipping = true; place(); continue }
+            if let header = order.first(where: { isHeader(line, $0) }) {
+                skipping = false
+                if later.contains(header) { place() }
+            }
+            if !skipping { out.append(line) }
+        }
+        if !placed { out += ["", "\(section):", body] }
+        return join(out)
     }
 
     /// The text after a header line's colon.

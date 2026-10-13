@@ -68,6 +68,18 @@ final class ObjectiveTests: XCTestCase {
         XCTAssertEqual(Objective.result(fromJSON: #"{"mental_status": {"mood": "low"#), .failed)
     }
 
+    func testAnySectionOfANoteCanBeSetWhereverItIsOrIsNot() {
+        let body = "[placeholder]"
+        // In place, whatever markup the header has and however long the old body.
+        XCTAssertEqual(NoteText.setting("SUBJECTIVE", to: body, in: "**SUBJECTIVE:** The client said\nmore.\n\nASSESSMENT:\nA.\n\nPLAN:\nP."),
+                       "SUBJECTIVE:\n[placeholder]\n\nASSESSMENT:\nA.\n\nPLAN:\nP.")
+        // Missing: it goes before the first section that follows it.
+        XCTAssertEqual(NoteText.setting("SUBJECTIVE", to: body, in: "ASSESSMENT:\nA.\n\nPLAN:\nP."),
+                       "SUBJECTIVE:\n[placeholder]\n\nASSESSMENT:\nA.\n\nPLAN:\nP.")
+        // The last section, missing: at the end.
+        XCTAssertEqual(NoteText.setting("PLAN", to: body, in: "SUBJECTIVE:\nS."), "SUBJECTIVE:\nS.\n\nPLAN:\n[placeholder]")
+    }
+
     // MARK: splice
 
     private let spliced = "SUBJECTIVE:\nS.\n\nOBJECTIVE:\nBODY\n\nASSESSMENT:\nA.\n\nPLAN:\nP."

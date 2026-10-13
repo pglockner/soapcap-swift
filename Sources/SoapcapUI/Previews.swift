@@ -143,7 +143,7 @@ private func previewTrail(from: Int, to: Int, swapGB: Double = 0) -> [MemoryStat
     sampleScreen {
         $0.phase = .note
         $0.note = "53 minutes, telehealth\n\nSUBJECTIVE:\nThe client reported sleeping better since starting the breathing exercises.\n\nOBJECTIVE:\nOn time via video. Engaged. Affect congruent; mood stressed. Speech clear. Thought process linear. Insight good; judgment intact. No psychomotor abnormalities. No SI/HI reported.\n\nASSESSMENT:\nSleep is improving; conflict at home remains a stressor.\n\nPLAN:\nContinue the breathing exercises nightly. Return next week."
-        $0.notice = "No Client lines in the transcript — the Objective is left for you to complete."
+        $0.notice = "No Client lines in the transcript — the Subjective and the Objective are left for you to complete."
     }
 }
 
