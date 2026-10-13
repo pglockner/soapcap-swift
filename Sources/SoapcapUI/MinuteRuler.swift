@@ -8,7 +8,7 @@ struct MinuteRuler: View {
     let index: MinuteIndex
     /// The first and last blocks on screen, once that is known.
     let visible: ClosedRange<Int>?
-    /// Shows the block that began in the given minute.
+    /// Shows the block with the given id.
     let go: (Int) -> Void
 
     var body: some View {
@@ -28,7 +28,7 @@ struct MinuteRuler: View {
         return VStack(spacing: 0) {
             ForEach(marks, id: \.self) { mark in
                 if mark != marks.first { Spacer(minLength: 2) }
-                if let second = mark.pausedAt {
+                if let pause = mark.pause {
                     PillButton(showsAtRest: false, action: { go(mark.block) }) {
                         Image(systemName: "pause.fill")
                             .font(.caption)
@@ -36,8 +36,8 @@ struct MinuteRuler: View {
                             .frame(minWidth: 18)
                             .padding(.horizontal, 5).padding(.vertical, 2)
                     }
-                    .help("Paused at \(SessionClock.text(second))")
-                    .accessibilityLabel("Paused at \(SessionClock.text(second))")
+                    .help(pause.textWithTime)
+                    .accessibilityLabel(pause.textWithTime)
                 } else {
                     let isShown = shown.contains(mark.minute)
                     PillButton(showsAtRest: isShown, action: { go(mark.block) }) {

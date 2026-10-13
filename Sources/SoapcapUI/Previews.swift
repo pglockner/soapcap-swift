@@ -263,7 +263,7 @@ private let previewSampleNote = "9 minutes, telehealth\n\nSUBJECTIVE:\nThe clien
 }
 
 /// A made-up session of so many minutes, for the transcript's minute index.
-@MainActor private func longSession(_ m: SessionModel, minutes: Int, pauses: [Int] = []) {
+@MainActor private func longSession(_ m: SessionModel, minutes: Int, pauses: [SessionPause] = []) {
     let said: [(who: String, what: String)] = [
         ("Therapist", "How has your sleep been since we last spoke?"),
         ("Client", "Better, mostly. The breathing exercises helped the first few nights, and then on Thursday it all went sideways again."),
@@ -303,5 +303,14 @@ private let previewSampleNote = "9 minutes, telehealth\n\nSUBJECTIVE:\nThe clien
 }
 
 #Preview("Transcript, a session paused twice") {
-    sampleScreen { longSession($0, minutes: 53, pauses: [760, 1875]) }
+    sampleScreen { longSession($0, minutes: 53, pauses: [SessionPause(at: 760, length: 95), SessionPause(at: 1875, length: 600)]) }
+}
+
+#Preview("Transcript, with a pause in it") {
+    sampleScreen {
+        $0.phase = .transcript
+        $0.transcript = previewLines.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n")
+        $0.lineTimes = [2, 9, 81, 84]
+        $0.pauses = [SessionPause(at: 15, length: 95)]
+    }
 }

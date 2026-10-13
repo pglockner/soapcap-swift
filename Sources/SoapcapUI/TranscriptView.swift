@@ -6,8 +6,8 @@ struct TranscriptView: View {
     let text: String
     /// When each line began, in seconds of the session.
     let times: [Int]
-    /// When the session was paused, in the same seconds.
-    var pauses: [Int] = []
+    /// Each pause in the session, to be shown where it fell.
+    var pauses: [SessionPause] = []
 
     var body: some View {
         if let index = MinuteIndex(text: text, times: times, pauses: pauses) {
@@ -38,7 +38,7 @@ private struct MinuteBlocks: View {
 
     let index: MinuteIndex
     @State private var position = ScrollPosition(idType: Int.self)
-    /// The first and last minutes on screen.
+    /// The first and last blocks on screen.
     @State private var visible: ClosedRange<Int>?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -50,8 +50,13 @@ private struct MinuteBlocks: View {
                 VStack(alignment: .leading, spacing: Self.gap) {
                     ForEach(index.blocks) { block in
                         HStack(alignment: .firstTextBaseline, spacing: 10) {
-                            minute(block.minute)
+                            margin(of: block)
                             VStack(alignment: .leading, spacing: Self.gap) {
+                                // A pause is a block with this line and no turns.
+                                if let pause = block.pause {
+                                    Text(pause.text).foregroundStyle(.secondary)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
                                 ForEach(block.lines.indices, id: \.self) { line in
                                     TurnLine(line: block.lines[line]).textSelection(.enabled)
                                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -64,26 +69,36 @@ private struct MinuteBlocks: View {
             }
             .contentMargins(8, for: .scrollContent)
             .scrollPosition($position)
-            .onScrollTargetVisibilityChange(idType: Int.self, threshold: 0.05) { minutes in
-                if let first = minutes.min(), let last = minutes.max() { visible = first...last }
+            .onScrollTargetVisibilityChange(idType: Int.self, threshold: 0.05) { blocks in
+                if let first = blocks.min(), let last = blocks.max() { visible = first...last }
             }
             if index.blocks.count > 1 {
                 Divider()
-                MinuteRuler(index: index, visible: visible) { minute in
-                    withAnimation(reduceMotion ? nil : .default) { position.scrollTo(id: minute, anchor: .top) }
+                MinuteRuler(index: index, visible: visible) { block in
+                    withAnimation(reduceMotion ? nil : .default) { position.scrollTo(id: block, anchor: .top) }
                 }
             }
         }
         .readingBox()
     }
 
-    /// The minute a block began in, as wide as the widest of them.
-    private func minute(_ minute: Int) -> some View {
-        Text(SessionClock.text((index.blocks.last?.minute ?? minute) * 60)).hidden()
-            .overlay(alignment: .trailing) { Text(SessionClock.text(minute * 60)) }
+    /// What stands in the margin beside a block: the minute where a minute
+    /// begins, a pause sign beside a pause, and otherwise nothing. Always as
+    /// wide as the widest minute, so that the text lines up.
+    private func margin(of block: MinuteIndex.Block) -> some View {
+        Text(SessionClock.text((index.blocks.last?.minute ?? 0) * 60)).hidden()
+            .overlay(alignment: .trailing) {
+                if block.pause != nil {
+                    Image(systemName: "pause.fill").foregroundStyle(.orange)
+                } else if block.startsMinute {
+                    Text(SessionClock.text(block.minute * 60))
+                }
+            }
             .font(.caption.monospacedDigit())
             .foregroundStyle(.secondary)
             .accessibilityElement()
-            .accessibilityLabel("Minute \(minute)")
+            .accessibilityLabel("Minute \(block.minute)")
+            // The pause's own line says it is one.
+            .accessibilityHidden(block.pause != nil || !block.startsMinute)
     }
 }

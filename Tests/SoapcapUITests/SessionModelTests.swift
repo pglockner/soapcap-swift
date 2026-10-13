@@ -119,8 +119,9 @@ final class SessionModelTests: XCTestCase {
         m.stop()
         await waitFor("transcript") { m.phase == .transcript }
         XCTAssertEqual(capture.calls, ["start", "pause", "resume", "pause", "stop"])
-        // Where the pauses fell is kept for the transcript, in the clock's seconds.
-        XCTAssertEqual(m.pauses, [10, 15])
+        // Where each pause fell is kept for the transcript, in the clock's
+        // seconds, with how long it lasted: a minute, and no time at all.
+        XCTAssertEqual(m.pauses, [SessionPause(at: 10, length: 60), SessionPause(at: 15, length: 0)])
         m.newSession()
         XCTAssertEqual(m.pauses, [])
     }

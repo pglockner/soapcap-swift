@@ -83,7 +83,8 @@ the result before sharing it. If it fails, the text is shown under a red
 
 **Transcript.** When you stop, the transcript is shown a turn at a time,
 with the minute of the session in the margin. A ruler of minutes down the
-side goes to any of them, and has a mark where the session was paused.
+side goes to any of them. Where the session was paused, the transcript says
+so and for how long, and the ruler has a mark for it.
 
 **Draft note.** Pick SOAP, DAP or BIRP.
 

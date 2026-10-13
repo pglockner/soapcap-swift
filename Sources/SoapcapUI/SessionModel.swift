@@ -37,8 +37,8 @@ final class SessionModel: ObservableObject {
     @Published var transcript = ""
     /// When each line of the transcript began, in seconds of the session heard.
     @Published var lineTimes: [Int] = []
-    /// When the session was paused, in the same seconds.
-    @Published var pauses: [Int] = []
+    /// Each pause in the session: where it fell and how long it lasted.
+    @Published var pauses: [SessionPause] = []
     @Published var note = ""
     /// What stands under the transcript or the note, whichever is on screen.
     @Published var notice = ""
@@ -77,6 +77,8 @@ final class SessionModel: ObservableObject {
     private var capture: Capturing?
     private var recordedBefore: TimeInterval = 0
     private var runStart: Date?
+    /// When the pause in hand began, by the clock on the wall.
+    private var pausedSince: Date?
     private var timer: Timer?
     /// Bumped by newSession() so work that finishes afterwards is ignored.
     private var generation = 0
@@ -171,18 +173,29 @@ final class SessionModel: ObservableObject {
         guard phase == .recording else { return }
         capture?.pause()
         halt()
-        pauses.append(elapsed)
+        pauses.append(SessionPause(at: elapsed))
+        pausedSince = now()
         phase = .paused
     }
 
     func resume() {
         guard phase == .paused else { return }
+        endPause()
         capture?.resume()
         run()
     }
 
+    /// Notes how long the pause in hand lasted, as it ends. The session's
+    /// clock stood still meanwhile, so this is the only record of it.
+    private func endPause() {
+        guard let pausedSince, !pauses.isEmpty else { return }
+        pauses[pauses.count - 1].length = Int(now().timeIntervalSince(pausedSince))
+        self.pausedSince = nil
+    }
+
     func stop() {
         guard phase == .recording || phase == .paused, let capture else { return }
+        endPause()
         halt()
         phase = .working("Finishing transcription…")
         let gen = generation
@@ -407,7 +420,7 @@ final class SessionModel: ObservableObject {
     func newSession() {
         generation += 1
         timer?.invalidate(); timer = nil
-        runStart = nil
+        runStart = nil; pausedSince = nil
         if let capture { Task { _ = await capture.stop() } }
         capture = nil
         draftRun.stop()
