@@ -38,16 +38,18 @@ struct ModelTestView: View {
             : "Drafts a note from a made-up session and checks that every section is filled. It takes as long as drafting a note does, and nothing is kept."
     }
 
+    /// Only beside the model it is about: once another model is chosen, a
+    /// verdict on the last one would read as being about this one.
     @ViewBuilder private var verdict: some View {
         switch test.state {
-        case .good(let model, let seconds):
+        case .good(let model, let seconds) where model == self.model:
             Label {
                 Text("Good: \(ModelCatalog.displayName(of: model)) drafted a whole note from the sample session in \(seconds) s.")
             } icon: {
                 Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
             }
             readNote
-        case .problem(let model, let reasons):
+        case .problem(let model, let reasons) where model == self.model:
             Label {
                 Text("Problem: \(ModelCatalog.displayName(of: model)) did not draft a sound note from the sample session.")
             } icon: {
@@ -57,7 +59,7 @@ struct ModelTestView: View {
                 Text(reason).font(.callout).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
             }
             readNote
-        case .idle, .running:
+        default:
             EmptyView()
         }
     }
