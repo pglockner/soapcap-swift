@@ -68,8 +68,9 @@ Check turns into an orange warning sign and the Ready screen offers to show
 what needs attention.
 
 **The three steps.** The bar across the top says where a session is:
-Record, Transcript, Note. Once there is a note, Transcript and Note are
-buttons there, so you can go back to the transcript and return.
+Record, Transcript, Note, with the current step on a grey pill and the
+steps you can't go to dimmed. Once there is a note, Transcript and Note
+are both lit, so you can go back to the transcript and return.
 
 **Record.** Use headphones and turn on Do Not Disturb. The window shows the
 last few lines heard from each side. **Pause** stops listening and stops

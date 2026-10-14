@@ -40,50 +40,37 @@ struct SessionBar: ToolbarContent {
 }
 
 /// Record, Transcript, Note: where a session is, and a way back to the
-/// transcript once there is a note.
+/// transcript once there is a note. Drawn as Activity Monitor's segments
+/// are: the step in hand on a pill, the ones that can be gone to at full
+/// strength, and the rest dimmed, as a segment that can't be picked is.
 struct StageBar: View {
     let stage: SessionModel.Stage
     let canGo: (SessionModel.Stage) -> Bool
     let go: (SessionModel.Stage) -> Void
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 2) {
             ForEach(SessionModel.Stage.allCases, id: \.self) { step in
-                if step != .record {
-                    Image(systemName: "chevron.right").font(.caption2.weight(.semibold)).foregroundStyle(.tertiary)
-                        .accessibilityHidden(true)
-                }
                 // Only a step that can be gone to is a button: a disabled
                 // one would grey out the step the session is on.
                 if canGo(step) {
-                    PillButton(action: { go(step) }) {
-                        label(step, canGo: true).padding(.horizontal, 8).padding(.vertical, 3)
-                    }
-                    .padding(.horizontal, -4)
-                    .help("Go to the \(Self.title(step).lowercased())")
+                    PillButton(showsAtRest: false, action: { go(step) }) { label(step) }
+                        .help("Go to the \(Self.title(step).lowercased())")
                 } else {
-                    label(step, canGo: false).gesture(WindowDragGesture()).allowsWindowActivationEvents(true)
+                    label(step).gesture(WindowDragGesture()).allowsWindowActivationEvents(true)
                 }
             }
         }
-        // Room between the words and the ends of the bar's own pill.
-        .padding(.horizontal, 16)
+        // The pill of the step in hand sits just inside the bar's own.
+        .padding(.horizontal, 4)
     }
 
-    /// A step that is done, or that there is something to go to (a note,
-    /// seen from the transcript), is ticked and reads as within reach.
-    private func label(_ step: SessionModel.Stage, canGo: Bool) -> some View {
-        let isReached = step.rawValue < stage.rawValue || canGo
-        return HStack(spacing: 4) {
-            if isReached { Image(systemName: "checkmark").font(.caption.weight(.semibold)).accessibilityHidden(true) }
-            Text(Self.title(step))
-        }
-        .fontWeight(step == stage ? .semibold : .regular)
-        // Full strength for where the session is and for where it can go;
-        // a step that is only done, or not reached, stands back.
-        .foregroundStyle(step == stage || canGo ? .primary : isReached ? .secondary : .tertiary)
-        .accessibilityElement(children: .combine)
-        .accessibilityValue(step == stage ? "current step" : isReached ? "done" : "not yet")
+    private func label(_ step: SessionModel.Stage) -> some View {
+        Text(Self.title(step))
+            .foregroundStyle(step == stage || canGo(step) ? .primary : .tertiary)
+            .padding(.horizontal, 12).padding(.vertical, 4)
+            .background(.primary.opacity(step == stage ? 0.1 : 0), in: Capsule())
+            .accessibilityValue(step == stage ? "current step" : canGo(step) ? "" : "not available")
     }
 
     static func title(_ step: SessionModel.Stage) -> String {
