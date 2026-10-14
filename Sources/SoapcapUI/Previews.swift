@@ -324,3 +324,7 @@ private let previewSampleNote = "9 minutes, telehealth\n\nSUBJECTIVE:\nThe clien
 #Preview("Ready, with something needing attention") {
     sampleScreen { $0.needsAttention = true }
 }
+
+#Preview("Beta notice") { BetaNoticeView(version: "0.11.0") {} }
+
+#Preview("Help") { HelpView(isBeta: true).frame(width: 620, height: 680) }

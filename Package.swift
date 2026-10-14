@@ -31,7 +31,7 @@ let package = Package(
         .executableTarget(name: "CaptureProbe", dependencies: ["SoapcapCapture"], path: "Sources/CaptureProbe"),
         // The window and session flow. A library so Xcode can render its previews.
         .target(name: "SoapcapUI", dependencies: ["SoapcapCore", "SoapcapCapture", "SoapcapNote", "SoapcapDeidentify", "SoapcapPII"],
-                path: "Sources/SoapcapUI", resources: [.copy("Resources/Credits")],
+                path: "Sources/SoapcapUI", resources: [.copy("Resources/Credits"), .copy("Resources/Help")],
                 swiftSettings: [.swiftLanguageMode(.v5)]),
         .executableTarget(name: "Soapcap", dependencies: ["SoapcapUI"], path: "Sources/Soapcap"),
         .testTarget(name: "SoapcapCoreTests", dependencies: ["SoapcapCore"], path: "Tests/SoapcapCoreTests"),

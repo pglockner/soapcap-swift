@@ -13,6 +13,8 @@ struct SessionSettings {
         static let noteModel = "noteModel"
         static let ollamaHost = "ollamaHost"
         static let sessionType = "sessionType"
+        /// The last version whose beta notice was acknowledged.
+        static let betaNoticeSeen = "betaNoticeSeen"
     }
 
     var defaults: UserDefaults = .standard

@@ -42,8 +42,11 @@ public struct SoapcapApp: App {
             CommandGroup(after: .appInfo) {
                 AcknowledgementsCommand()
             }
+            HelpCommands()
         }
         Window("Acknowledgements", id: "acknowledgements") { AcknowledgementsView() }
+        Window("Soapcap Help", id: HelpView.window) { HelpView() }
+            .defaultSize(width: 620, height: 680)
         // The session's time, in the menu bar for as long as a session runs:
         // no window covers it there, as the call's window covers this one.
         MenuBarExtra(isInserted: .constant(model.phase == .recording || model.phase == .paused)) {
@@ -64,6 +67,8 @@ struct ContentView: View {
     @EnvironmentObject var m: SessionModel
     /// Read here so that this window follows a change of model made in Settings.
     @AppStorage(SessionSettings.Key.noteModel) private var noteModel = ""
+    /// The version whose beta notice was last acknowledged.
+    @AppStorage(SessionSettings.Key.betaNoticeSeen) private var betaNoticeSeen = ""
     /// Asked before a note that hasn't been kept is drafted over.
     @State private var asksToReplace = false
     /// Whether the panel that saves the transcript is up, and what went
@@ -77,21 +82,28 @@ struct ContentView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            switch m.phase {
-            case .idle: idle
-            case .recording: recording
-            case .paused: paused
-            case .working(let msg):
-                WorkingView(message: msg, run: m.draftRun, test: m.modelTest, steps: m.draftSteps, tokens: m.draftTokens,
-                            keepsEarlierNote: !m.note.isEmpty, stop: { m.stopDraft() })
-            case .transcript: transcript
-            case .note: note
-            case .error(let msg): error(msg)
-            case .checks(let checks):
-                ChecksView(checks: checks, test: m.modelTest, model: chosenModel,
-                           perform: { m.perform($0) }, again: { m.diagnose() }, back: { m.back() })
-                    // The line about the note model is about the one just chosen.
-                    .onChange(of: noteModel) { m.diagnose() }
+            // In place of the screen, not a sheet over it: macOS won't quit
+            // an app while a sheet is up.
+            if Beta.needsNotice(version: AppVersion.current.marketing, seen: betaNoticeSeen) {
+                BetaNoticeView(version: AppVersion.current.marketing) { betaNoticeSeen = AppVersion.current.marketing }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                switch m.phase {
+                case .idle: idle
+                case .recording: recording
+                case .paused: paused
+                case .working(let msg):
+                    WorkingView(message: msg, run: m.draftRun, test: m.modelTest, steps: m.draftSteps, tokens: m.draftTokens,
+                                keepsEarlierNote: !m.note.isEmpty, stop: { m.stopDraft() })
+                case .transcript: transcript
+                case .note: note
+                case .error(let msg): error(msg)
+                case .checks(let checks):
+                    ChecksView(checks: checks, test: m.modelTest, model: chosenModel,
+                               perform: { m.perform($0) }, again: { m.diagnose() }, back: { m.back() })
+                        // The line about the note model is about the one just chosen.
+                        .onChange(of: noteModel) { m.diagnose() }
+                }
             }
         }
         // Against the top left however wide the window is; a screen narrower
@@ -124,8 +136,16 @@ struct ContentView: View {
                 }
             }
             Spacer()
-            Text("Use headphones, and turn on Do Not Disturb.").foregroundStyle(.secondary)
-                .frame(height: LiveStrip.height)
+            VStack(spacing: 10) {
+                Text("Use headphones, and turn on Do Not Disturb.").foregroundStyle(.secondary)
+                if Beta.isBeta(AppVersion.current.marketing) {
+                    HStack(spacing: 6) {
+                        BetaBadge()
+                        Text("Read every note before you use it.").foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .frame(height: LiveStrip.height)
         }.frame(maxWidth: .infinity)
     }
 
