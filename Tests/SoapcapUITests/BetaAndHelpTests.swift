@@ -18,6 +18,12 @@ final class BetaAndHelpTests: XCTestCase {
         XCTAssertFalse(Beta.needsNotice(version: "", seen: ""), "nothing to acknowledge without a version")
     }
 
+    func testTheAboutBoxSaysBetaBelowOne() {
+        XCTAssertEqual(Beta.aboutVersion("0.11.0"), "0.11.0 Beta")
+        XCTAssertEqual(Beta.aboutVersion("1.0.0"), "1.0.0")
+        XCTAssertEqual(Beta.aboutVersion(""), "")
+    }
+
     func testTheHelpPageIsReadIntoSections() {
         let page = """
         # Title, left out

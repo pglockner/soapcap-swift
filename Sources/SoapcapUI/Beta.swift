@@ -34,6 +34,11 @@ enum Beta {
         !version.isEmpty && isBeta(version) && seen != version
     }
 
+    /// The version as the About box shows it: "0.11.0 Beta" below 1.0.
+    static func aboutVersion(_ version: String) -> String {
+        !version.isEmpty && isBeta(version) ? "\(version) Beta" : version
+    }
+
     /// What the notice says, one point to a line, with a symbol for each.
     /// Help shows the same points.
     static let points: [(symbol: String, text: String)] = [
@@ -75,6 +80,19 @@ struct BetaNoticeView: View {
         }
         .padding(24)
         .frame(width: 460)
+    }
+}
+
+/// The app menu's About item: macOS's own About box, with "Beta" after the
+/// version while there is one.
+struct AboutCommand: View {
+    var body: some View {
+        Button("About Soapcap") {
+            NSApp.orderFrontStandardAboutPanel(options: [
+                .applicationVersion: Beta.aboutVersion(AppVersion.current.marketing),
+            ])
+            NSApp.activate()
+        }
     }
 }
 

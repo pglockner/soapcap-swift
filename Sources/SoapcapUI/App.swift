@@ -39,7 +39,8 @@ public struct SoapcapApp: App {
         // Tall enough the first time for the setup screen to show every row.
         .defaultSize(width: 640, height: 600)
         .commands {
-            CommandGroup(after: .appInfo) {
+            CommandGroup(replacing: .appInfo) {
+                AboutCommand()
                 AcknowledgementsCommand()
             }
             HelpCommands()
