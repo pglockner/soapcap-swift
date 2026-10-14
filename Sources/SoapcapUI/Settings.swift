@@ -132,11 +132,17 @@ struct SettingsView: View {
                     ForEach(choices, id: \.self) { Text(ModelCatalog.displayName(of: $0)).tag($0) }
                 }
                 TextField("Session type", text: $sessionType, prompt: Text("telehealth"))
-                ModelTestView(test: test, model: chosenModel)
+                // A model still to be downloaded can't be tried, as on the
+                // checks screen. Asked here, not read from `models`, which is
+                // empty until the window has asked Ollama.
+                if ModelCatalog.installed(pulled: pulled).contains(chosenModel) {
+                    ModelTestView(test: test, model: chosenModel)
+                } else {
+                    Text("\(ModelCatalog.displayName(of: chosenModel)) can be tested once it is downloaded below.")
+                        .foregroundStyle(.secondary)
+                }
             } header: {
                 Text("Note")
-            } footer: {
-                Text(ModelCatalog.description(of: chosenModel)).foregroundStyle(.secondary)
             }
             Section {
                 if OllamaBackend.has(ModelCatalog.defaultModel, in: pulled), llama.state == .missing {
