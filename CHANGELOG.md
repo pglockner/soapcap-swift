@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.12 (2026-10-14)
+
+- Added a beta notice: every version below 1.0 opens on a notice to acknowledge once per version (pre-release, read every note before using it, sessions stay on this Mac), the Ready screen carries a Beta mark, and the About box says Beta after the version
+- Added Help › Soapcap Help, a one-page guide to the app, and Help › Report a Problem…, which starts an email with the version, macOS, memory and note model filled in
+- Changed the bar's steps to look like Activity Monitor's: the current step sits on a grey pill, steps that can be gone to are at full strength, and the rest are dimmed; the chevrons and ticks are gone
+- Fixed Settings offering Test for a note model that hadn't been downloaded yet
+- Fixed a model test's result staying up after choosing the other model; it now shows only beside the model it is about
+
 ## 0.11 (2026-10-12 – 2026-10-14)
 
 - Added Save transcript…, which writes a de-identified transcript to a text file wherever you choose; it is the only thing the app saves, and only when asked.
