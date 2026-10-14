@@ -64,10 +64,8 @@ struct ContentView: View {
     @EnvironmentObject var m: SessionModel
     /// Read here so that this window follows a change of model made in Settings.
     @AppStorage(SessionSettings.Key.noteModel) private var noteModel = ""
-    /// Asked before a note that hasn't been kept is drafted over, and the
-    /// model it was to be drafted with.
+    /// Asked before a note that hasn't been kept is drafted over.
     @State private var asksToReplace = false
-    @State private var replacingWith = ""
     /// Whether the panel that saves the transcript is up, and what went
     /// wrong if a save failed.
     @State private var savesTranscript = false
@@ -201,16 +199,18 @@ struct ContentView: View {
                 Picker("Format", selection: $m.format) {
                     ForEach(SessionModel.formats, id: \.self) { Text($0.uppercased()) }
                 }.pickerStyle(.segmented).fixedSize()
-                // Return doesn't draft over a note that hasn't been kept.
-                DraftButton(title: m.hasUnkeptNote ? "Draft again" : "Draft note", model: chosenModel, isDefault: !m.hasUnkeptNote) { model in
-                    if m.hasUnkeptNote { replacingWith = model; asksToReplace = true } else { m.draftIfRoom(with: model) }
+                Button(m.hasUnkeptNote ? "Draft again" : "Draft note") {
+                    if m.hasUnkeptNote { asksToReplace = true } else { m.draftIfRoom() }
                 }
+                // Return doesn't draft over a note that hasn't been kept.
+                .keyboardShortcut(m.hasUnkeptNote ? nil : .defaultAction)
                 .alert("Replace the note you haven't kept?", isPresented: $asksToReplace) {
                     Button("Cancel", role: .cancel) {}
-                    Button("Draft again", role: .destructive) { m.draftIfRoom(with: replacingWith) }
+                    Button("Draft again", role: .destructive) { m.draftIfRoom() }
                 } message: {
                     Text("Drafting again writes a new note in its place, and the one you have can't be got back. To hold on to it, go to the note and choose Keep first.")
                 }
+                NoteModelPicker()
                 Spacer()
                 LeaveButton(m: m)
             }
@@ -243,7 +243,8 @@ struct ContentView: View {
             if !m.notice.isEmpty { Text(m.notice).font(.caption).foregroundStyle(.orange) }
             HStack {
                 Button(m.copied ? "Copied" : "Keep") { m.keep() }.keyboardShortcut(.defaultAction)
-                DraftButton(title: "Regenerate", model: chosenModel) { m.draft(with: $0) }
+                Button("Regenerate") { m.draft() }
+                NoteModelPicker()
                 Spacer()
                 LeaveButton(m: m)
             }

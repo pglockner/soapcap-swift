@@ -51,11 +51,8 @@ struct SessionSettings {
     }
 
     /// The model that drafts notes: `bonsai`, or a model pulled into Ollama.
-    /// Chosen in Settings, or by drafting with it from the window.
-    var noteModel: String {
-        get { Self.noteModel(stored: defaults.string(forKey: Key.noteModel) ?? "") }
-        nonmutating set { defaults.set(newValue, forKey: Key.noteModel) }
-    }
+    /// Chosen in Settings, or beside Draft note and Regenerate.
+    var noteModel: String { Self.noteModel(stored: defaults.string(forKey: Key.noteModel) ?? "") }
 
     /// What a stored choice of model means: Bonsai, or else the default
     /// model. A name left from when any model in Ollama could be chosen

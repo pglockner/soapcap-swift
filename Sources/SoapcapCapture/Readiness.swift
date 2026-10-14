@@ -34,7 +34,7 @@ public enum Readiness {
             return Check("Microphone", .warning, "Needed to hear your side. macOS will ask whether Soapcap may use the microphone; choose Allow.",
                          fix: Check.Fix(label: "Allow the microphone", action: .askForMicrophone))
         default:
-            return Check("Microphone", .failed, "Turn on Soapcap under Microphone, then reopen Soapcap.",
+            return Check("Microphone", .failed, "Turn on Soapcap under Microphone, and choose Quit & Reopen when macOS offers it: Soapcap only sees the change once it has been reopened. Check again won't show it before then.",
                          fix: Check.Fix(label: "Open Microphone settings", url: pane("Privacy_Microphone")))
         }
     }

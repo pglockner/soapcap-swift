@@ -291,16 +291,14 @@ final class SessionModel: ObservableObject {
     /// Drafts, unless memory is very short for the chosen model, in which
     /// case it asks first. Not for drafting again: by then the model is
     /// loaded and is itself what fills memory.
-    func draftIfRoom(with model: String? = nil) {
-        if let model { settings.noteModel = model }
+    func draftIfRoom() {
         memoryQuestion = ModelCatalog.memoryQuestion(for: settings.noteModel, memory: readMemory())
         if memoryQuestion == nil { draft() }
     }
 
-    /// Drafts with the chosen model, or with `model`, which then becomes the
-    /// chosen one. Another model than the one loaded is loaded in its place.
-    func draft(with model: String? = nil) {
-        if let model { settings.noteModel = model }
+    /// Drafts with the chosen model. Another model than the one loaded is
+    /// loaded in its place.
+    func draft() {
         guard let noteFormat = NoteFormat(rawValue: format) else { return }
         let gen = generation
         draftedFrom = stage == .note ? .note : .transcript

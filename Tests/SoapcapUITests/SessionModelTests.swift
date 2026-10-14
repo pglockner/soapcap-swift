@@ -576,17 +576,6 @@ final class SessionModelTests: XCTestCase {
         XCTAssertEqual(second.format, "dap")
     }
 
-    func testDraftingWithAModelMakesItTheChosenOne() async {
-        let m = await atTranscript()
-        XCTAssertEqual(settings.noteModel, "llama3.1:8b")
-        m.draft(with: "bonsai")
-        await waitFor("note") { m.phase == .note }
-        XCTAssertEqual(settings.noteModel, "bonsai")
-        m.draft(with: "llama3.1:8b")
-        await waitFor("second note") { self.drafter.asked.count == 2 && m.phase == .note }
-        XCTAssertEqual(settings.noteModel, "llama3.1:8b")
-    }
-
     // MARK: drafting
 
     private func atTranscript(now: @escaping () -> Date = Date.init) async -> SessionModel {

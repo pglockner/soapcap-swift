@@ -97,10 +97,9 @@ above it instead, which writes it to a text file wherever you choose. That
 is the only thing the app ever saves, and only when asked; a transcript
 that was not de-identified can't be saved.
 
-**Draft note.** Pick SOAP, DAP or BIRP. With both note models installed,
-the button names the one it drafts with, and its arrow drafts with either;
-the one picked becomes the model chosen in Settings. **Regenerate** on the
-note works the same way.
+**Draft note.** Pick SOAP, DAP or BIRP. With both note models installed, a
+menu beside Draft note, and beside **Regenerate** on the note, picks the
+one that drafts; it is the same choice as in Settings.
 
 - A draft with a missing or empty section is redone, up to three times, and
   the most complete one is kept.
