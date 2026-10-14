@@ -9,6 +9,7 @@ struct SessionSettings {
         static let systemLabel = "systemLabel"
         static let language = "language"
         static let format = "format"
+        static let deidentify = "deidentify"
         static let noteModel = "noteModel"
         static let ollamaHost = "ollamaHost"
         static let sessionType = "sessionType"
@@ -38,12 +39,23 @@ struct SessionSettings {
         nonmutating set { defaults.set(newValue, forKey: Key.format) }
     }
 
+    /// Whether a transcript is de-identified as soon as the session stops,
+    /// once the model is installed. Otherwise De-identify waits to be chosen.
+    var deidentify: Bool {
+        get { defaults.object(forKey: Key.deidentify) as? Bool ?? true }
+        nonmutating set { defaults.set(newValue, forKey: Key.deidentify) }
+    }
+
     private func text(_ key: String) -> String {
         (defaults.string(forKey: key) ?? "").trimmingCharacters(in: .whitespaces)
     }
 
     /// The model that drafts notes: `bonsai`, or a model pulled into Ollama.
-    var noteModel: String { Self.noteModel(stored: defaults.string(forKey: Key.noteModel) ?? "") }
+    /// Chosen in Settings, or by drafting with it from the window.
+    var noteModel: String {
+        get { Self.noteModel(stored: defaults.string(forKey: Key.noteModel) ?? "") }
+        nonmutating set { defaults.set(newValue, forKey: Key.noteModel) }
+    }
 
     /// What a stored choice of model means: Bonsai, or else the default
     /// model. A name left from when any model in Ollama could be chosen
@@ -71,6 +83,7 @@ struct SettingsView: View {
     @AppStorage(SessionSettings.Key.noteModel) private var noteModel = ""
     @AppStorage(SessionSettings.Key.ollamaHost) private var ollamaHost = ""
     @AppStorage(SessionSettings.Key.sessionType) private var sessionType = ""
+    @AppStorage(SessionSettings.Key.deidentify) private var deidentify = true
     @State private var languages: [Locale] = []
     @State private var models: [String] = []
     /// What Ollama has, so that a model it already holds isn't offered again.
@@ -149,6 +162,11 @@ struct SettingsView: View {
                 switch setup.state {
                 case .ready:
                     Label("The model is installed.", systemImage: "checkmark.circle.fill")
+                    Toggle("De-identify by default", isOn: $deidentify)
+                    Text(deidentify ? "Each transcript is de-identified as the session stops, and so is its note."
+                         : "A transcript keeps its names until you choose De-identify above it, and can't be saved until then.")
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 case .working(let file, let fraction):
                     ProgressView(value: fraction) { Text(file.isEmpty ? "Setting up…" : "Getting \(file)…") }
                 case .missing, .failed:

@@ -84,6 +84,11 @@ public enum ModelCatalog {
         return (bonsai.isPresent ? [self.bonsai] : []) + (hasDefault ? [defaultModel] : [])
     }
 
+    /// The models that could draft right now, asking the Ollama at `host` what it has.
+    public static func installed(host: URL) async -> [String] {
+        installed(pulled: await pulled(host: host))
+    }
+
     /// Whether `model` is ready to draft, as a line for the checks screen.
     public static func check(_ model: String, host: URL = OllamaBackend.defaultHost) async -> Check {
         let backend = await backend(for: model, host: host)

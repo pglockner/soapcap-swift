@@ -234,11 +234,13 @@ final class SessionModel: ObservableObject {
         }
         notice = Transcript.oneSidedNotice(segments, mic: labels.mic, system: labels.system) ?? ""
         phase = .transcript
+        if settings.deidentify { deidentify() }
     }
 
     /// Replaces names and other identifying details in the transcript, and
     /// in the note as well if one has been drafted, so that the two agree.
-    /// Asked for from the transcript, once the session is over.
+    /// Done as the session stops when Settings says so, and otherwise when
+    /// chosen from the transcript.
     func deidentify() {
         guard phase == .transcript, canDeidentify, !transcriptIsDeidentified else { return }
         let gen = generation
@@ -289,12 +291,16 @@ final class SessionModel: ObservableObject {
     /// Drafts, unless memory is very short for the chosen model, in which
     /// case it asks first. Not for drafting again: by then the model is
     /// loaded and is itself what fills memory.
-    func draftIfRoom() {
+    func draftIfRoom(with model: String? = nil) {
+        if let model { settings.noteModel = model }
         memoryQuestion = ModelCatalog.memoryQuestion(for: settings.noteModel, memory: readMemory())
         if memoryQuestion == nil { draft() }
     }
 
-    func draft() {
+    /// Drafts with the chosen model, or with `model`, which then becomes the
+    /// chosen one. Another model than the one loaded is loaded in its place.
+    func draft(with model: String? = nil) {
+        if let model { settings.noteModel = model }
         guard let noteFormat = NoteFormat(rawValue: format) else { return }
         let gen = generation
         draftedFrom = stage == .note ? .note : .transcript

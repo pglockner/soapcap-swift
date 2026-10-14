@@ -83,18 +83,24 @@ with the minute of the session in the margin. A ruler of minutes down the
 side goes to any of them. Where the session was paused, the transcript says
 so and for how long, and the ruler has a mark for it.
 
-**De-identify** (optional), above the transcript. Names, phone numbers,
-dates and similar details become tokens like `[FIRST_NAME_1]`, in the
-transcript and in the note: a note already drafted is gone over as well,
-and so is any note drafted afterwards. Speaker labels and clock times are
-kept. It is best effort, so read the result before sharing it. If it fails,
-the text is shown under a red "Not de-identified" banner rather than passed
-off as checked, and De-identify can be tried again. Once it has worked, the
-button becomes **Save transcript…**, which writes the transcript to a text
-file wherever you choose. That is the only thing the app ever saves, and
-only when asked; a transcript that was not de-identified can't be saved.
+**De-identify** (optional, once its model is installed). Names, phone
+numbers, dates and similar details become tokens like `[FIRST_NAME_1]`, in
+the transcript and in the note. With **De-identify by default** on in
+Settings, as it starts out, this happens as the session stops. With it off,
+**De-identify** above the transcript does it when chosen, and goes over a
+note already drafted as well; any note drafted afterwards follows. Speaker
+labels and clock times are kept. It is best effort, so read the result
+before sharing it. If it fails, the text is shown under a red "Not
+de-identified" banner rather than passed off as checked, and De-identify
+can be tried again. A de-identified transcript has **Save transcript…**
+above it instead, which writes it to a text file wherever you choose. That
+is the only thing the app ever saves, and only when asked; a transcript
+that was not de-identified can't be saved.
 
-**Draft note.** Pick SOAP, DAP or BIRP.
+**Draft note.** Pick SOAP, DAP or BIRP. With both note models installed,
+the button names the one it drafts with, and its arrow drafts with either;
+the one picked becomes the model chosen in Settings. **Regenerate** on the
+note works the same way.
 
 - A draft with a missing or empty section is redone, up to three times, and
   the most complete one is kept.
@@ -121,8 +127,8 @@ were drafting again, the note you already had is still there. Otherwise the
 model stays loaded until you discard the note, start a new session or quit.
 
 **Settings** (Cmd-comma). The two speaker labels, the language to
-transcribe in, the note model, and the session type on the note's first
-line ("53 minutes, telehealth"). The two note models and the
+transcribe in, the note model, the session type on the note's first
+line ("53 minutes, telehealth"), and whether to de-identify by default. The two note models and the
 de-identification model are downloaded here: each says how big it is first,
 a download that is stopped carries on where it left off, and **Remove**
 deletes a note model again. `llama3.1:8b` is not offered when Ollama

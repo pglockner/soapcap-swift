@@ -23,6 +23,9 @@ final class SessionModelTests: XCTestCase {
         defaults = MemoryDefaults()
         scratch = NSPasteboard.withUniqueName()
         settings = SessionSettings(defaults: defaults)
+        // De-identifying as a session stops has tests of its own; elsewhere
+        // it waits to be chosen.
+        settings.deidentify = false
         drafter = FakeDrafter()
         deidentifier = FakeDeidentifier()
     }
@@ -316,6 +319,28 @@ final class SessionModelTests: XCTestCase {
         XCTAssertEqual(deidentifier.kinds, [])
     }
 
+    func testByDefaultTheTranscriptIsDeidentifiedAsTheSessionStops() async {
+        XCTAssertTrue(SessionSettings(defaults: MemoryDefaults()).deidentify)
+        settings.deidentify = true
+        let m = await recording(FakeCapture(hello))
+        m.stop()
+        await waitFor("the transcript, de-identified") { m.phase == .transcript && m.transcriptIsDeidentified }
+        XCTAssertEqual(m.transcript, "Therapist: hi [FIRST_NAME_1]\nClient: hello")
+        m.draft()
+        await waitFor("note") { m.phase == .note }
+        XCTAssertEqual(deidentifier.kinds, [.transcript, .note])
+    }
+
+    func testWithoutTheModelNothingIsDeidentifiedByDefault() async {
+        settings.deidentify = true
+        deidentifier.isReady = false
+        let m = await recording(FakeCapture(hello))
+        m.stop()
+        await waitFor("transcript") { m.phase == .transcript }
+        XCTAssertFalse(m.transcriptIsDeidentified)
+        XCTAssertEqual(deidentifier.kinds, [])
+    }
+
     func testDeidentifyingAfterTheNoteIsDraftedGoesOverTheNoteToo() async {
         let m = await recording(FakeCapture(hello))
         m.stop()
@@ -549,6 +574,17 @@ final class SessionModelTests: XCTestCase {
         first.format = "dap"
         let second = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier)
         XCTAssertEqual(second.format, "dap")
+    }
+
+    func testDraftingWithAModelMakesItTheChosenOne() async {
+        let m = await atTranscript()
+        XCTAssertEqual(settings.noteModel, "llama3.1:8b")
+        m.draft(with: "bonsai")
+        await waitFor("note") { m.phase == .note }
+        XCTAssertEqual(settings.noteModel, "bonsai")
+        m.draft(with: "llama3.1:8b")
+        await waitFor("second note") { self.drafter.asked.count == 2 && m.phase == .note }
+        XCTAssertEqual(settings.noteModel, "llama3.1:8b")
     }
 
     // MARK: drafting
