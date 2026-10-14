@@ -36,11 +36,14 @@ final class BetaAndHelpTests: XCTestCase {
         - two
 
         ## Second
-        Last.
+        1. Quit it.
+        2. Replace it.
+
+        Last. 3.5 is not a step.
         """
         XCTAssertEqual(HelpPage.sections(from: page), [
             HelpPage.Section(title: "First", blocks: [.paragraph("A paragraph on two lines."), .list(["one", "two"])]),
-            HelpPage.Section(title: "Second", blocks: [.paragraph("Last.")]),
+            HelpPage.Section(title: "Second", blocks: [.steps(["Quit it.", "Replace it."]), .paragraph("Last. 3.5 is not a step.")]),
         ])
     }
 

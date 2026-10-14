@@ -55,6 +55,14 @@ Audio is never recorded. The transcript and the note are held in memory and are 
 - If a note comes out with a section missing, **Regenerate**, or try the other model.
 - **Help › Report a Problem** starts an email with this copy's version and Mac already filled in. Please describe what happened, but don't include anything from a session.
 
+## Updating to a new version
+
+1. Quit Soapcap with Cmd-Q. Closing the window isn't enough: Soapcap keeps running so that a session can't be lost.
+2. Unzip the new version and drag it into Applications. Choose **Replace** when asked.
+3. Open it.
+
+Your models, settings and permissions are kept. Don't use **Uninstall Soapcap…** to update: it deletes the models, and they would have to be downloaded again.
+
 ## Uninstalling
 
 **Uninstall Soapcap…**, at the bottom of Settings, removes the models Soapcap downloaded, its settings and its permissions, then moves the app to the Trash. A transcript you saved is left where you put it.
