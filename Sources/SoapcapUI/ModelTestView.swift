@@ -8,12 +8,16 @@ struct ModelTestView: View {
     @ObservedObject var test: ModelTest
     @ObservedObject private var run: DraftRun
     let model: String
+    /// Whether to say when memory is short for the model. Not where a line
+    /// of its own already says so, as on the checks screen.
+    let advisesOnMemory: Bool
     @State private var showsNote = false
 
-    init(test: ModelTest, model: String) {
+    init(test: ModelTest, model: String, advisesOnMemory: Bool = true) {
         self.test = test
         run = test.run
         self.model = model
+        self.advisesOnMemory = advisesOnMemory
     }
 
     var body: some View {
@@ -26,7 +30,7 @@ struct ModelTestView: View {
                 verdict
                 Button("Test \(ModelCatalog.displayName(of: model))") { test.start() }.disabled(!test.canStart)
                 Text(hint).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                if let advice = ModelCatalog.memoryAdvice(for: model, memory: MemoryStatus.current()) {
+                if advisesOnMemory, let advice = ModelCatalog.memoryAdvice(for: model, memory: MemoryStatus.current()) {
                     Text(advice).font(.caption).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
                 }
             }
