@@ -39,9 +39,15 @@ final class SessionModelTests: XCTestCase {
         return m
     }
 
+    /// Chooses De-identify on the transcript and waits for it to be back.
+    private func deidentifying(_ m: SessionModel) async {
+        m.deidentify()
+        await waitFor("the transcript, de-identified") { m.phase == .transcript }
+    }
+
     // MARK: pure logic
 
-    func testTheToggleIsOfferedOnceTheModelIsInstalled() {
+    func testDeidentifyIsOfferedOnceTheModelIsInstalled() {
         deidentifier.isReady = false
         let m = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier)
         XCTAssertFalse(m.canDeidentify)
@@ -72,12 +78,12 @@ final class SessionModelTests: XCTestCase {
     func testStopRendersBothSidesInOrder() async {
         let capture = FakeCapture(hello)
         let m = await recording(capture)
-        m.deidentify = false
         m.stop()
         await waitFor("transcript") { m.phase == .transcript }
         XCTAssertEqual(m.transcript, "Therapist: hi Bob\nClient: hello")
         XCTAssertEqual(m.notice, "")
         XCTAssertEqual(capture.calls, ["start", "stop"])
+        XCTAssertEqual(deidentifier.kinds, [], "de-identifying waits to be asked")
     }
 
     func testEachLineOfTheTranscriptKeepsTheTimeItBegan() async {
@@ -87,7 +93,9 @@ final class SessionModelTests: XCTestCase {
         let m = await recording(capture)
         m.stop()
         await waitFor("transcript") { m.phase == .transcript }
+        XCTAssertEqual(m.lineTimes, [4, 61])
         // De-identifying changes the words, not which line is which.
+        await deidentifying(m)
         XCTAssertEqual(m.transcript, "Therapist: hi [FIRST_NAME_1]\nClient: hello again")
         XCTAssertEqual(m.lineTimes, [4, 61])
         m.newSession()
@@ -144,6 +152,8 @@ final class SessionModelTests: XCTestCase {
         await waitFor("transcript") { m.phase == .transcript }
         XCTAssertEqual(m.stage, .transcript)
         XCTAssertFalse(m.canGo(to: .note))          // nothing is drafted yet
+        await deidentifying(m)
+        XCTAssertEqual(m.stage, .transcript)
         XCTAssertEqual(m.notice, "Transcript: 1 identifying detail replaced (first name)")
         m.draft()
         await waitFor("note") { m.phase == .note }
@@ -217,6 +227,7 @@ final class SessionModelTests: XCTestCase {
         let m = await recording(FakeCapture(hello))
         m.stop()
         await waitFor("transcript") { m.phase == .transcript }
+        await deidentifying(m)
         let transcript = m.transcript
         drafter.error = NoteError.notReady("Can't reach Ollama at http://localhost:11434.")
         m.draft()
@@ -238,6 +249,10 @@ final class SessionModelTests: XCTestCase {
         let m = await recording(FakeCapture(hello))
         m.stop()
         await waitFor("transcript") { m.phase == .transcript }
+        XCTAssertFalse(m.transcriptIsDeidentified)
+        m.deidentify()
+        XCTAssertEqual(m.phase, .working("De-identifying the transcript…"))
+        await waitFor("the transcript, de-identified") { m.phase == .transcript }
         XCTAssertEqual(m.transcript, "Therapist: hi [FIRST_NAME_1]\nClient: hello")
         XCTAssertEqual(m.notice, "Transcript: 1 identifying detail replaced (first name)")
         // Only now can the transcript be saved, and the file says what it is.
@@ -265,12 +280,17 @@ final class SessionModelTests: XCTestCase {
         let m = await recording(FakeCapture(hello))
         m.stop()
         await waitFor("transcript") { m.phase == .transcript }
+        await deidentifying(m)
         XCTAssertEqual(m.transcript, "Therapist: hi Bob\nClient: hello")
         XCTAssertTrue(m.warning.hasPrefix("Not de-identified. This transcript still contains"), m.warning)
-        XCTAssertFalse(m.notice.contains("redacted"))
-        // A transcript that still has its names in it is not offered for saving.
+        XCTAssertFalse(m.notice.contains("replaced"))
+        // A transcript that still has its names in it is not offered for
+        // saving, and De-identify can be chosen again.
         XCTAssertFalse(m.transcriptIsDeidentified)
         deidentifier.error = nil
+        await deidentifying(m)
+        XCTAssertEqual(m.warning, "")
+        XCTAssertTrue(m.transcriptIsDeidentified)
         m.draft()
         await waitFor("note") { m.phase == .note }
         XCTAssertEqual(m.warning, "")
@@ -286,7 +306,6 @@ final class SessionModelTests: XCTestCase {
 
     func testWithoutDeidentifyNothingIsRedacted() async {
         let m = await recording(FakeCapture(hello))
-        m.deidentify = false
         m.stop()
         await waitFor("transcript") { m.phase == .transcript }
         XCTAssertFalse(m.transcriptIsDeidentified)
@@ -294,12 +313,34 @@ final class SessionModelTests: XCTestCase {
         await waitFor("note") { m.phase == .note }
         XCTAssertTrue(m.transcript.contains("Bob"))
         XCTAssertTrue(m.note.contains("Bob"))
+        XCTAssertEqual(deidentifier.kinds, [])
+    }
+
+    func testDeidentifyingAfterTheNoteIsDraftedGoesOverTheNoteToo() async {
+        let m = await recording(FakeCapture(hello))
+        m.stop()
+        await waitFor("transcript") { m.phase == .transcript }
+        m.draft()
+        await waitFor("note") { m.phase == .note }
+        m.keep()
+        m.go(to: .transcript)
+        await deidentifying(m)
+        XCTAssertEqual(m.transcript, "Therapist: hi [FIRST_NAME_1]\nClient: hello")
+        XCTAssertEqual(m.note, "SUBJECTIVE:\nformat soap\nNote about [FIRST_NAME_1]")
+        XCTAssertEqual(deidentifier.kinds, [.transcript, .note])
+        // What was kept still has the name in it, so this note is not kept.
+        XCTAssertFalse(m.copied)
+        // Each says what was done to it under itself.
+        XCTAssertEqual(m.notice, "Transcript: 1 identifying detail replaced (first name)")
+        m.go(to: .note)
+        XCTAssertEqual(m.notice, "Note: 1 identifying detail replaced (first name)")
     }
 
     func testANewSessionForgetsThatTheLastTranscriptCouldBeSaved() async {
         let m = await recording(FakeCapture(hello))
         m.stop()
         await waitFor("transcript") { m.phase == .transcript }
+        await deidentifying(m)
         XCTAssertTrue(m.transcriptIsDeidentified)
         m.newSession()
         XCTAssertFalse(m.transcriptIsDeidentified)
@@ -307,7 +348,6 @@ final class SessionModelTests: XCTestCase {
 
     func testHearingOnlyTheMicrophoneWarns() async {
         let m = await recording(FakeCapture([hello[0]]))
-        m.deidentify = false
         m.stop()
         await waitFor("transcript") { m.phase == .transcript }
         XCTAssertTrue(m.notice.contains("nothing from the other party"), m.notice)
@@ -476,7 +516,6 @@ final class SessionModelTests: XCTestCase {
         XCTAssertEqual(settings.systemLabel, "Client")
         XCTAssertEqual(settings.locale.identifier, Locale.current.identifier)
         XCTAssertEqual(settings.format, "soap")
-        XCTAssertTrue(settings.deidentify)
     }
 
     func testBlankOrColonLabelsFallBackToTheDefaults() {
@@ -496,7 +535,6 @@ final class SessionModelTests: XCTestCase {
         XCTAssertEqual(capture.started.mic, "Dr Lee")
         XCTAssertEqual(capture.started.system, "Patient")
         XCTAssertEqual(capture.started.locale, "en-GB")
-        m.deidentify = false
         m.stop()
         await waitFor("transcript") { m.phase == .transcript }
         XCTAssertEqual(m.transcript, "Dr Lee: hello\nPatient: hi")
@@ -506,20 +544,17 @@ final class SessionModelTests: XCTestCase {
         XCTAssertEqual(drafter.asked.last?.transcript, "Dr Lee: hello\nPatient: hi")
     }
 
-    func testFormatAndDeidentifyAreRememberedForTheNextLaunch() {
+    func testTheFormatIsRememberedForTheNextLaunch() {
         let first = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier)
         first.format = "dap"
-        first.deidentify = false
         let second = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier)
         XCTAssertEqual(second.format, "dap")
-        XCTAssertFalse(second.deidentify)
     }
 
     // MARK: drafting
 
     private func atTranscript(now: @escaping () -> Date = Date.init) async -> SessionModel {
         let m = await recording(FakeCapture(hello), now: now)
-        m.deidentify = false
         m.stop()
         await waitFor("transcript") { m.phase == .transcript }
         return m
@@ -528,7 +563,6 @@ final class SessionModelTests: XCTestCase {
     func testDraftAsksForTheChosenFormatWithTheRecordedMinutes() async {
         var clock = Date(timeIntervalSince1970: 0)
         let m = await recording(FakeCapture(hello), now: { clock })
-        m.deidentify = false
         clock += 125
         m.stop()
         await waitFor("transcript") { m.phase == .transcript }

@@ -121,13 +121,8 @@ struct ContentView: View {
                 }
             }
             Spacer()
-            VStack(spacing: 10) {
-                Text("Use headphones, and turn on Do Not Disturb.").foregroundStyle(.secondary)
-                if m.canDeidentify {
-                    Toggle("De-identify the transcript, and the note once it's drafted", isOn: $m.deidentify)
-                }
-            }
-            .frame(height: LiveStrip.height)
+            Text("Use headphones, and turn on Do Not Disturb.").foregroundStyle(.secondary)
+                .frame(height: LiveStrip.height)
         }.frame(maxWidth: .infinity)
     }
 
@@ -176,11 +171,16 @@ struct ContentView: View {
                 Text("Transcript").font(.headline)
                 Spacer()
                 // The one thing the app ever writes to disk, and only a
-                // transcript that de-identifying has been over.
+                // transcript that de-identifying has been over: until then,
+                // the button in its place is the way to have that done.
                 if m.transcriptIsDeidentified {
                     Button("Save transcript…") { savesTranscript = true }
                         .controlSize(.small)
                         .help("Save the de-identified transcript as a text file, wherever you choose")
+                } else if m.canDeidentify {
+                    Button("De-identify") { m.deidentify() }
+                        .controlSize(.small)
+                        .help("Replace names and other identifying details with tokens, in the transcript and in the note. Then the transcript can be saved.")
                 }
             }
             warning

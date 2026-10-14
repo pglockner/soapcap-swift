@@ -9,7 +9,6 @@ struct SessionSettings {
         static let systemLabel = "systemLabel"
         static let language = "language"
         static let format = "format"
-        static let deidentify = "deidentify"
         static let noteModel = "noteModel"
         static let ollamaHost = "ollamaHost"
         static let sessionType = "sessionType"
@@ -39,10 +38,6 @@ struct SessionSettings {
         nonmutating set { defaults.set(newValue, forKey: Key.format) }
     }
 
-    var deidentify: Bool {
-        get { defaults.object(forKey: Key.deidentify) as? Bool ?? true }
-        nonmutating set { defaults.set(newValue, forKey: Key.deidentify) }
-    }
     private func text(_ key: String) -> String {
         (defaults.string(forKey: key) ?? "").trimmingCharacters(in: .whitespaces)
     }

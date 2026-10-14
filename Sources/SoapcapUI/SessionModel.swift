@@ -29,7 +29,6 @@ final class SessionModel: ObservableObject {
             }
         }
     }
-    @Published var deidentify: Bool { didSet { settings.deidentify = deidentify } }
     @Published var format: String { didSet { settings.format = format } }
     /// The step the session has reached, or has been taken back to. It
     /// follows the screen, and runs ahead of it while a step's work is done.
@@ -40,7 +39,8 @@ final class SessionModel: ObservableObject {
     /// Each pause in the session: where it fell and how long it lasted.
     @Published var pauses: [SessionPause] = []
     /// Whether the transcript on hand was de-identified, and that step
-    /// succeeded. Only then is saving it to a file offered.
+    /// succeeded. Only then is saving it to a file offered, and a note
+    /// drafted from it is de-identified in turn.
     @Published var transcriptIsDeidentified = false
     @Published var note = ""
     /// What stands under the transcript or the note, whichever is on screen.
@@ -69,7 +69,7 @@ final class SessionModel: ObservableObject {
     /// the last time the checks were gathered: when the app opened, or
     /// whenever Check was last chosen.
     @Published var needsAttention = false
-    /// Whether the de-identification model is installed, so the toggle is offered.
+    /// Whether the de-identification model is installed, so De-identify is offered.
     @Published private(set) var canDeidentify = false
     let settings: SessionSettings
     /// The labels this session was recorded with; Settings may change mid-session.
@@ -117,7 +117,6 @@ final class SessionModel: ObservableObject {
                 + [await ModelCatalog.check(settings.noteModel, host: settings.ollamaHost)] + [ModelSetup.check()]
                 + [ModelCatalog.memoryCheck(memory(), model: settings.noteModel)]
         }
-        deidentify = settings.deidentify
         format = settings.format
         canDeidentify = self.deidentifying.isReady
     }
@@ -210,7 +209,7 @@ final class SessionModel: ObservableObject {
             let segments = await capture.stop()
             guard gen == generation else { return }
             self.capture = nil
-            await finalize(segments)
+            finalize(segments)
         }
     }
 
@@ -225,7 +224,7 @@ final class SessionModel: ObservableObject {
         if liveLines.count > Self.liveLimit { liveLines.removeFirst(liveLines.count - Self.liveLimit) }
     }
 
-    private func finalize(_ segments: [Segment]) async {
+    private func finalize(_ segments: [Segment]) {
         let turns = Transcript.turns(segments, mic: labels.mic, system: labels.system)
         transcript = Transcript.render(turns)
         lineTimes = turns.map { Int($0.start) }
@@ -233,18 +232,46 @@ final class SessionModel: ObservableObject {
             phase = .error("No speech was captured.\n\nUse Check permissions to see whether Soapcap can use the microphone and hear the call.")
             return
         }
-        let oneSided = Transcript.oneSidedNotice(segments, mic: labels.mic, system: labels.system) ?? ""
-        stage = .transcript
-        notice = oneSided
-        if deidentify && canDeidentify {
-            phase = .working("De-identifying the transcript…")
-            if let d = await deidentified(transcript, kind: .transcript, what: "transcript") {
+        notice = Transcript.oneSidedNotice(segments, mic: labels.mic, system: labels.system) ?? ""
+        phase = .transcript
+    }
+
+    /// Replaces names and other identifying details in the transcript, and
+    /// in the note as well if one has been drafted, so that the two agree.
+    /// Asked for from the transcript, once the session is over.
+    func deidentify() {
+        guard phase == .transcript, canDeidentify, !transcriptIsDeidentified else { return }
+        let gen = generation
+        warning = ""
+        phase = .working("De-identifying the transcript…")
+        Task {
+            let d = await deidentified(transcript, kind: .transcript, what: "transcript")
+            guard gen == generation else { return }
+            if let d {
                 transcript = d.text
                 transcriptIsDeidentified = true
-                notice = [oneSided, "Transcript: \(d.summary)"].filter { !$0.isEmpty }.joined(separator: "\n")
+                tell("Transcript: \(d.summary)")
+                if !note.isEmpty {
+                    // The note's own banner and notices, while it isn't on screen.
+                    put(.note)
+                    phase = .working("De-identifying the note…")
+                    let n = await deidentified(note, kind: .note, what: "note")
+                    guard gen == generation else { return }
+                    if let n {
+                        // A note kept with its names in it is not the one here now.
+                        if n.text != note { note = n.text; copied = false }
+                        tell("Note: \(n.summary)")
+                    }
+                    put(.transcript)
+                }
             }
+            phase = .transcript
         }
-        phase = .transcript
+    }
+
+    /// Adds a line to what stands under the transcript or the note.
+    private func tell(_ line: String) {
+        notice = [notice, line].filter { !$0.isEmpty }.joined(separator: "\n")
     }
 
     /// The transcript as a text file, for Save transcript.
@@ -292,7 +319,7 @@ final class SessionModel: ObservableObject {
             var notices = drafted.warnings
             put(.note)
             warning = ""
-            if deidentify && canDeidentify {
+            if transcriptIsDeidentified {
                 phase = .working("De-identifying the note…")
                 let d = await deidentified(note, kind: .note, what: "note")
                 guard gen == generation else { return }

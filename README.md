@@ -78,19 +78,21 @@ also shows in the menu bar while it runs, where the call's window can't
 cover it. A microphone that changes mid-session, such as AirPods
 connecting, is picked up.
 
-**De-identify** (optional). Names, phone numbers, dates and similar details
-become tokens like `[FIRST_NAME_1]`, in the transcript and again in the
-note. Speaker labels and clock times are kept. It is best effort, so read
-the result before sharing it. If it fails, the text is shown under a red
-"Not de-identified" banner rather than passed off as checked.
-
 **Transcript.** When you stop, the transcript is shown a turn at a time,
 with the minute of the session in the margin. A ruler of minutes down the
 side goes to any of them. Where the session was paused, the transcript says
-so and for how long, and the ruler has a mark for it. Once a transcript has
-been de-identified, **Save transcript…** writes it to a text file wherever
-you choose. That is the only thing the app ever saves, and only when asked;
-a transcript that was not de-identified can't be saved.
+so and for how long, and the ruler has a mark for it.
+
+**De-identify** (optional), above the transcript. Names, phone numbers,
+dates and similar details become tokens like `[FIRST_NAME_1]`, in the
+transcript and in the note: a note already drafted is gone over as well,
+and so is any note drafted afterwards. Speaker labels and clock times are
+kept. It is best effort, so read the result before sharing it. If it fails,
+the text is shown under a red "Not de-identified" banner rather than passed
+off as checked, and De-identify can be tried again. Once it has worked, the
+button becomes **Save transcript…**, which writes the transcript to a text
+file wherever you choose. That is the only thing the app ever saves, and
+only when asked; a transcript that was not de-identified can't be saved.
 
 **Draft note.** Pick SOAP, DAP or BIRP.
 
