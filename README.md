@@ -36,7 +36,7 @@ to one.
 
 | Requirement | Notes |
 |---|---|
-| macOS 26 (Tahoe) or newer, Apple silicon | |
+| macOS 26 (Tahoe) or newer, Apple silicon | Built for macOS 26 and tested on macOS 27; not yet run on macOS 26 itself |
 | Full Xcode, and cmake | To build. The Command Line Tools alone are not enough; cmake (`brew install cmake`) builds the note engine |
 | A note model | `llama3.1:8b` (the tested default, 4.9 GB) or Bonsai (5.9 GB), each a download from Settings. A model an [Ollama](https://ollama.com) on the Mac already has is used where it is. Recording works without one |
 | The de-identification model (optional) | OpenMed's PII model, about 130 MB, installed from Settings |
