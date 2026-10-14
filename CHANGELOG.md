@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.11 (2026-10-12 – 2026-10-14)
+
+- Added Save transcript…, which writes a de-identified transcript to a text file wherever you choose; it is the only thing the app saves, and only when asked.
+- Changed De-identify from a toggle on the Ready screen to a button above the transcript, so a session can be de-identified after it stops; a De-identify by default setting (on) does it as the session stops.
+- Added a note model chooser beside Draft note and Regenerate when both models are installed, the same choice as in Settings.
+- Added a line in the transcript where the session was paused, saying for how long.
+- Changed the Ready screen's check button to show only when something needs attention, with Check in the bar turning orange as well.
+
 ## 0.10 (2026-10-12)
 
 - Added the minute of the session to the transcript's margin, and a ruler of minutes down its side: each mark goes to that minute, the minutes on screen are picked out, and the ruler takes the finest spacing its height has room for
