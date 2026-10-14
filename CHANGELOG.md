@@ -7,6 +7,7 @@
 - Changed the bar's steps to look like Activity Monitor's: the current step sits on a grey pill, steps that can be gone to are at full strength, and the rest are dimmed; the chevrons and ticks are gone
 - Fixed Settings offering Test for a note model that hadn't been downloaded yet
 - Fixed a model test's result staying up after choosing the other model; it now shows only beside the model it is about
+- Added a section to Help on updating to a new version: quit with Cmd-Q, drag the new version into Applications and replace the old one; models, settings and permissions are kept (0.12.1)
 
 ## 0.11 (2026-10-12 – 2026-10-14)
 
