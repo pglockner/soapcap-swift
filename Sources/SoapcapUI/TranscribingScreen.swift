@@ -29,13 +29,3 @@ struct TranscribingScreen: View {
         }.frame(maxWidth: .infinity)
     }
 }
-
-/// Ends a session. A session that is stopped can't be taken up again, so the
-/// button is red and Return doesn't press it.
-struct StopButton: View {
-    let action: () -> Void
-
-    var body: some View {
-        Button("Stop", action: action).buttonStyle(.borderedProminent).tint(.red)
-    }
-}
