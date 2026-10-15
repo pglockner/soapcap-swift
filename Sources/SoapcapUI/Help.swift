@@ -1,4 +1,3 @@
-import AppKit
 import SwiftUI
 
 /// The help page, from Resources/Help/help.md: a section for each `## `
@@ -128,62 +127,6 @@ struct HelpView: View {
         let styled = (try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)))
             ?? AttributedString(text)
         return Text(styled).fixedSize(horizontal: false, vertical: true)
-    }
-}
-
-/// An email to the developer with what is worth knowing about this copy
-/// already written in, and nothing from a session.
-struct ProblemReport {
-    static let address = "pglockner@gmail.com"
-
-    var version: AppVersion
-    var macOS: String
-    var memoryGB: Int
-    var noteModel: String
-
-    static var current: ProblemReport {
-        ProblemReport(version: .current,
-                      macOS: ProcessInfo.processInfo.operatingSystemVersionString,
-                      memoryGB: Int(ProcessInfo.processInfo.physicalMemory >> 30),
-                      noteModel: SessionSettings().noteModel)
-    }
-
-    var subject: String { "Soapcap \(version.text): a problem" }
-
-    var body: String {
-        """
-        What happened, and what you were doing just before:
-
-
-
-        (Please don't include names or anything else from a session.)
-
-        Soapcap \(version.text)
-        macOS \(macOS)
-        Memory \(memoryGB) GB
-        Note model \(noteModel)
-        """
-    }
-
-    var mailURL: URL {
-        var c = URLComponents()
-        c.scheme = "mailto"
-        c.path = Self.address
-        c.queryItems = [URLQueryItem(name: "subject", value: subject), URLQueryItem(name: "body", value: body)]
-        // mailto wants spaces as %20; URLComponents leaves a + as it is,
-        // which mail apps read as a space.
-        c.percentEncodedQuery = c.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B")
-        return c.url!
-    }
-}
-
-/// Opens a new email in the Mac's mail app.
-struct ReportProblemButton: View {
-    @Environment(\.openURL) private var openURL
-
-    var body: some View {
-        Button("Report a Problem…") { openURL(ProblemReport.current.mailURL) }
-            .help("Write to \(ProblemReport.address), with this copy's version already filled in")
     }
 }
 

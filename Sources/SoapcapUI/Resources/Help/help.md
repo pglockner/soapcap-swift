@@ -53,7 +53,7 @@ Audio is never recorded. The transcript and the note are held in memory and are 
 - Choose **Check** in the bar. Each line that isn't green has a button that puts it right.
 - If you allow the microphone in System Settings after refusing it, quit and reopen Soapcap: macOS only tells an app at launch.
 - If a note comes out with a section missing, **Regenerate**, or try the other model.
-- **Help › Report a Problem** starts an email with this copy's version and Mac already filled in. Please describe what happened, but don't include anything from a session.
+- **Help › Report a Problem** shows where to write, with this copy's version and Mac to include. **Open in Mail** starts the email with both filled in; if your mail is in a browser, copy them into a new message. Please describe what happened, but don't include anything from a session.
 
 ## Updating to a new version
 

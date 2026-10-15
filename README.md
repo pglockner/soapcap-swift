@@ -166,7 +166,9 @@ opens on a notice to acknowledge (read every note before using it;
 nothing from a session leaves the Mac), and the Ready screen carries a
 Beta mark. **Help › Soapcap Help** is a one-page guide to the app, from
 `Sources/SoapcapUI/Resources/Help/help.md`. **Help › Report a Problem…**
-starts an email with the version, macOS, memory and note model filled in.
+shows the address to write to and the version, macOS, memory and note
+model, each with a Copy button, and **Open in Mail** starts the email with
+them filled in.
 
 **Note models.** `llama3.1:8b` is fast, usually under a minute a note.
 Bonsai is more careful and slower, a few minutes a note. Both run on an
