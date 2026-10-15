@@ -210,27 +210,32 @@ swift test
 | Bundle | Covers |
 |---|---|
 | `SoapcapCoreTests` | Transcript rendering and echo de-duplication (soapcap's cases); memory figures; downloads that stop, carry on and are checked against a checksum |
-| `SoapcapCaptureTests` | Cutting recognizer output into segments; transcribing a clip spoken by `say`; the microphone following a change of input device; the permission rows of the checks screen; a recording that can't start |
+| `SoapcapCaptureTests` | Cutting recognizer output into segments; transcribing a clip spoken by `say`; the microphone following a change of input device; the permission rows of the checks screen; a recording that can't start; Core Audio's buffer callback on this Mac's output, playing silence |
 | `SoapcapNoteTests` | The checks and fixes on a draft (soapcap's cases); the drafting sequence, a session with no client heard included; both model backends against stand-ins; which model runs where |
 | `SoapcapDeidentifyTests` | The rules (soapcap's cases); speaker labels left alone; installing the model |
 | `SoapcapPIITests` | The real PII model on the transcripts in `Samples/deidentify`; skipped when the model isn't installed |
 | `SoapcapUITests` | The session flow against scripted stand-ins, with its steps and what asks first; the transcript's minute index and pauses; what Save transcript writes, and when it is offered; starting and stopping the note model; the Test button; model downloads; what Uninstall removes; settings; credits |
 
-Live capture, the permission grants, signing and the window itself are not
-covered. They need a person.
+A whole live session, the permission grants, signing and the window itself
+are not covered. They need a person.
 
-Two tests run only when asked, and are skipped otherwise:
+Three sets of tests run only when asked, and are skipped otherwise:
 
 ```sh
 SOAPCAP_MODEL_TESTS=1 swift test --filter SampleNoteTests
 SOAPCAP_NETWORK_TESTS=1 swift test --filter FetcherNetworkTests
+SOAPCAP_AUDIO_TESTS=1 swift test --filter AudioHardwareTests
 ```
 
 The first drafts the sample session's note with the default model and
 checks that it comes out whole, as the app's Test button does: the baseline
 check that a model on this Mac is working. It takes about a minute. Give
 the variable a model's name instead of `1` to try that one. The second
-stops and resumes a real 130 MB download.
+stops and resumes a real 130 MB download. The third listens through the
+call's tap for the tone the app plays itself, as the checks screen does,
+and starts and stops the microphone. From a terminal those need the
+terminal to have the Microphone and System Audio Recording permissions;
+nothing is recorded or heard.
 
 The sample session is soapcap's `03-selfreport-diagnosis-9min`, an
 entirely fictional nine-minute session, in
