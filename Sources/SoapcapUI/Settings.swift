@@ -64,8 +64,13 @@ struct SessionSettings {
     }
 
     /// Where Ollama is. Anything but this Mac sends the transcript over the network.
-    var ollamaHost: URL {
-        guard let url = URL(string: text(Key.ollamaHost)), url.scheme?.hasPrefix("http") == true, url.host() != nil else {
+    var ollamaHost: URL { Self.ollamaHost(stored: text(Key.ollamaHost)) }
+
+    /// What a stored address means: itself if it is a web address, and
+    /// otherwise Ollama's usual place on this Mac.
+    static func ollamaHost(stored: String) -> URL {
+        let stored = stored.trimmingCharacters(in: .whitespaces)
+        guard let url = URL(string: stored), url.scheme?.hasPrefix("http") == true, url.host() != nil else {
             return OllamaBackend.defaultHost
         }
         return url
@@ -95,12 +100,12 @@ struct SettingsView: View {
     /// Ends a draft and frees the note model, before the app is uninstalled.
     var stop: () async -> Void = {}
 
-    private var settings: SessionSettings { SessionSettings() }
-
-    /// The chosen model, read from `noteModel` itself and not from the
-    /// stored settings: a window is drawn again only for a setting its body
-    /// has read, and otherwise the picker went on showing the model it had.
+    /// The chosen model and Ollama's address, read from the settings this
+    /// view holds and not from the stored settings: a window is drawn again
+    /// only for a setting its body has read, and otherwise the picker went
+    /// on showing the model it had.
     private var chosenModel: String { SessionSettings.noteModel(stored: noteModel) }
+    private var host: URL { SessionSettings.ollamaHost(stored: ollamaHost) }
 
     /// The installed models, plus the chosen one even if it has since gone.
     private var choices: [String] {
@@ -193,7 +198,7 @@ struct SettingsView: View {
             } header: {
                 Text("Advanced")
             } footer: {
-                if !OllamaBackend.isLocal(settings.ollamaHost) {
+                if !OllamaBackend.isLocal(host) {
                     Text("This is not this Mac: transcripts will be sent to that machine over the network.")
                         .foregroundStyle(.orange)
                 }
@@ -212,7 +217,7 @@ struct SettingsView: View {
         .task { languages = await Readiness.supportedLanguages() }
         // Asked again when a model arrives or goes, so the list above follows.
         .task(id: "\(ollamaHost) \(bonsai.isInstalled) \(llama.isInstalled)") {
-            pulled = await ModelCatalog.pulled(host: settings.ollamaHost)
+            pulled = await ModelCatalog.pulled(host: host)
             models = ModelCatalog.installed(pulled: pulled)
         }
     }
