@@ -69,46 +69,77 @@ struct HelpPage {
     }
 }
 
-/// The window Help › Soapcap Help opens.
+/// The window Help › Soapcap Help opens: the sections down a sidebar, and
+/// the one chosen beside it, with Report a Problem always at hand.
 struct HelpView: View {
-    var sections = HelpPage.sections
-    var isBeta = Beta.isBeta(AppVersion.current.marketing)
+    let sections: [HelpPage.Section]
+    let isBeta: Bool
+    /// The title of the section on show.
+    @State private var selection: String?
+
+    /// The sidebar's first item while the app is a beta.
+    static let betaTitle = "This is a beta"
+
+    /// Opens on the beta's points while there is a beta, and otherwise on
+    /// the first section, unless `showing` names another.
+    init(sections: [HelpPage.Section] = HelpPage.sections, isBeta: Bool = Beta.isBeta(AppVersion.current.marketing),
+         showing: String? = nil) {
+        self.sections = sections
+        self.isBeta = isBeta
+        _selection = State(initialValue: showing ?? (isBeta ? Self.betaTitle : sections.first?.title))
+    }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
-                if isBeta {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("This is a beta").font(.title3.weight(.semibold))
-                        BetaPoints()
-                    }
-                    .padding(14)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
-                }
-                ForEach(sections) { section in
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(section.title).font(.title3.weight(.semibold))
-                        ForEach(section.blocks, id: \.self) { block in
-                            switch block {
-                            case .paragraph(let text):
-                                inline(text)
-                            case .list(let items):
-                                marked(items) { _ in "•" }
-                            case .steps(let items):
-                                marked(items) { "\($0 + 1)." }
-                            }
-                        }
-                    }
-                }
-                ReportProblemButton().padding(.top, 4)
+        NavigationSplitView {
+            List(selection: $selection) {
+                if isBeta { Text(Self.betaTitle).tag(Self.betaTitle) }
+                ForEach(sections) { Text($0.title).tag($0.title) }
             }
-            .frame(maxWidth: 600, alignment: .leading)
-            .padding(24)
-            .frame(maxWidth: .infinity)
+            // Wide enough for the longest title, "When something goes wrong".
+            .navigationSplitViewColumnWidth(min: 210, ideal: 230, max: 280)
+        } detail: {
+            ScrollView {
+                page
+                    .frame(maxWidth: 560, alignment: .leading)
+                    .padding(24)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            // Each section opens at its top.
+            .id(selection)
+            .textSelection(.enabled)
+            .safeAreaInset(edge: .bottom) {
+                HStack {
+                    ReportProblemButton()
+                    Spacer()
+                }
+                .padding(.horizontal, 24).padding(.vertical, 10)
+                .background(.bar)
+            }
         }
-        .textSelection(.enabled)
-        .frame(minWidth: 480, minHeight: 400)
+        .frame(minWidth: 640, minHeight: 420)
+    }
+
+    @ViewBuilder private var page: some View {
+        if selection == Self.betaTitle {
+            VStack(alignment: .leading, spacing: 16) {
+                Text(Self.betaTitle).font(.title2.weight(.semibold))
+                BetaPoints()
+            }
+        } else if let section = sections.first(where: { $0.title == selection }) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(section.title).font(.title2.weight(.semibold))
+                ForEach(section.blocks, id: \.self) { block in
+                    switch block {
+                    case .paragraph(let text):
+                        inline(text)
+                    case .list(let items):
+                        marked(items) { _ in "•" }
+                    case .steps(let items):
+                        marked(items) { "\($0 + 1)." }
+                    }
+                }
+            }
+        }
     }
 
     /// Items one under another, each after its mark: a bullet, or its number.

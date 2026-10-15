@@ -47,7 +47,7 @@ public struct SoapcapApp: App {
         }
         Window("Acknowledgements", id: "acknowledgements") { AcknowledgementsView() }
         Window("Soapcap Help", id: HelpView.window) { HelpView() }
-            .defaultSize(width: 620, height: 680)
+            .defaultSize(width: 800, height: 600)
         Window("Report a Problem", id: ProblemReportView.window) { ProblemReportView() }
             .windowResizability(.contentSize)
         // The session's time, in the menu bar for as long as a session runs:
