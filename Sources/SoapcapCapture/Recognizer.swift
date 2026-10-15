@@ -16,7 +16,7 @@ public enum CaptureError: Error, LocalizedError, Equatable {
         case .unsupportedLocale(let id): "Speech recognition does not support the language \"\(id)\"."
         case .noAudioFormat: "No audio format is available for speech recognition."
         case .microphoneDenied:
-            "Soapcap can't use the microphone. Turn it on for Soapcap in System Settings > Privacy & Security > Microphone, then quit and reopen Soapcap."
+            "Soapcap can't use a microphone. If none is connected, connect one and start again. Otherwise, turn on Soapcap in System Settings > Privacy & Security > Microphone, then quit and reopen Soapcap."
         case .callAudioDenied:
             "Soapcap can't hear the call. Turn on Soapcap in System Settings > Privacy & Security > Screen & System Audio Recording, under System Audio Recording Only, then start again."
         case .callAudioFailed(let why):
