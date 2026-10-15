@@ -50,7 +50,7 @@ final class FileTranscriberTests: XCTestCase {
         let yap = "/opt/homebrew/bin/yap"
         try XCTSkipUnless(FileManager.default.isExecutableFile(atPath: yap), "yap is not installed")
         let file = try speak()
-        let theirs = try Segment.decode(yapJSON: try run(yap, ["transcribe", "--json", "--locale", "en-US", file.path]))
+        let theirs = try YapJSON.segments(try run(yap, ["transcribe", "--json", "--locale", "en-US", file.path]))
         let ours = try await FileTranscriber.segments(of: file, locale: Locale(identifier: "en-US"))
         XCTAssertEqual(words(ours), words(theirs))
         XCTAssertEqual(ours.map(\.text), theirs.map(\.text))

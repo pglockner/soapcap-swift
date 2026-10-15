@@ -70,10 +70,10 @@ final class TranscriptTests: XCTestCase {
 
     func testDecodesYapJSONWithMissingFields() throws {
         let json = #"{"segments":[{"end":2.0,"id":1,"start":0.5,"text":"A recorded line"},{"text":"bare"}]}"#
-        let segments = try Segment.decode(yapJSON: Data(json.utf8))
+        let segments = try YapJSON.segments(Data(json.utf8))
         XCTAssertEqual(segments, [Segment(speaker: "Speaker", start: 0.5, end: 2, id: 1, text: "A recorded line"),
                                   Segment(text: "bare")])
-        XCTAssertEqual(try Segment.decode(yapJSON: Data("{}".utf8)), [])
+        XCTAssertEqual(try YapJSON.segments(Data("{}".utf8)), [])
     }
 
     func testWordsAreLowercasedASCIIAndDistinct() {
