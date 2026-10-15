@@ -8,6 +8,9 @@
 - Fixed Settings offering Test for a note model that hadn't been downloaded yet
 - Fixed a model test's result staying up after choosing the other model; it now shows only beside the model it is about
 - Added a section to Help on updating to a new version: quit with Cmd-Q, drag the new version into Applications and replace the old one; models, settings and permissions are kept (0.12.1)
+- Changed Help › Report a Problem… to open a window with the address to write to and this copy's details, each with a Copy button for mail in a browser, and Open in Mail to start the email as before (0.12.2)
+- Added memory advice for `llama3.1:8b` (about 6.5 GB), as Bonsai already had: closing other apps when memory is short, a question when the Mac is also deep in swap, and a warning on a Mac with too little memory for it (0.12.2)
+- Changed the microphone error to also cover a Mac with no microphone connected, which was told only to turn the permission on (0.12.2)
 
 ## 0.11 (2026-10-12 – 2026-10-14)
 
