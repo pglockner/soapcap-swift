@@ -40,7 +40,7 @@ Read every note before you use it. The model can leave out what was said or add 
 
 ## Note models
 
-`llama3.1:8b` is fast, usually under a minute a note. Bonsai is more careful and slower, a few minutes a note, and needs about 8 GB of memory. While a note drafts, two small charts show memory in use and how much has spilled over to disk; close other apps if they turn red.
+`llama3.1:8b` is fast, usually under a minute a note, and needs about 6.5 GB of memory. Bonsai is more careful and slower, a few minutes a note, and needs about 8 GB. While a note drafts, two small charts show memory in use and how much has spilled over to disk; close other apps if they turn red.
 
 **Test**, under the model's name in Settings, drafts a note from a made-up session and answers Good or Problem.
 

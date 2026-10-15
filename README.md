@@ -129,8 +129,9 @@ one that drafts; it is the same choice as in Settings.
 **While drafting.** The window lists the steps of the draft as they are
 done, with two small charts beside them: memory in use, and how much has
 spilled over to disk as swap. They turn yellow and then red as the Mac
-fills up. Bonsai takes about 8 GB: the app suggests closing other apps when
-memory is short, and asks before drafting when the Mac is also deep in
+fills up. Bonsai takes about 8 GB and `llama3.1:8b` about 6.5 GB: the app
+suggests closing other apps when memory is short, warns a Mac with too
+little memory for the model that drafting will be very slow, and asks before drafting when the Mac is also deep in
 swap. **Stop drafting** ends a draft and frees the model's memory; if you
 were drafting again, the note you already had is still there. Otherwise the
 model stays loaded until you discard the note, start a new session or quit.

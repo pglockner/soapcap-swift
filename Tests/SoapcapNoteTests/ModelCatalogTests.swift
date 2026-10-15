@@ -48,15 +48,25 @@ final class ModelCatalogTests: XCTestCase {
         XCTAssertEqual(ModelCatalog.installed(pulled: ["llama3.1:8b"], bonsai: missing, llama: missing), ["llama3.1:8b"])   // Ollama's copy
     }
 
-    func testMemoryAdviceIsOnlyForAModelTheAppLoadsItself() {
+    func testMemoryAdviceIsForBothModels() {
         XCTAssertTrue(ModelCatalog.memoryAdvice(for: "bonsai", memory: short)?.hasPrefix("About 6 GB of memory is free and Bonsai takes") == true)
         XCTAssertNil(ModelCatalog.memoryAdvice(for: "bonsai", memory: roomy))
-        XCTAssertNil(ModelCatalog.memoryAdvice(for: "llama3.1:8b", memory: short))   // none for it yet, in Ollama or on the app's engine
+        XCTAssertTrue(ModelCatalog.memoryAdvice(for: "llama3.1:8b", memory: short)?.hasPrefix("About 6 GB of memory is free and llama3.1:8b takes") == true)
+        XCTAssertNil(ModelCatalog.memoryAdvice(for: "llama3.1:8b", memory: roomy))
         XCTAssertNil(ModelCatalog.memoryAdvice(for: "bonsai", memory: nil))
+        XCTAssertNil(ModelCatalog.memoryAdvice(for: "qwen3:8b", memory: short))      // not offered, so no figure
+    }
+
+    func testAnEightGigabyteMacIsToldDraftingWillBeSlowWithEitherModel() {
+        let small = MemoryStatus(totalBytes: 8 << 30, freePercent: 90)
+        for model in ["llama3.1:8b", "bonsai"] {
+            let advice = ModelCatalog.memoryAdvice(for: model, memory: small)
+            XCTAssertTrue(advice?.hasSuffix("this Mac has 8 GB of memory. Expect drafting to be very slow.") == true, advice ?? "nil")
+        }
     }
 
     func testTheMemoryCheckGivesTheFiguresAndWarnsWhenTheModelWontFit() {
-        XCTAssertEqual(ModelCatalog.memoryCheck(short, model: "llama3.1:8b"), Check("Memory", .ok, "16 GB, about 6 GB free now."))
+        XCTAssertEqual(ModelCatalog.memoryCheck(roomy, model: "llama3.1:8b"), Check("Memory", .ok, "16 GB, about 10 GB free now."))
         let tight = ModelCatalog.memoryCheck(short, model: "bonsai")
         XCTAssertEqual(tight.status, .warning)
         XCTAssertTrue(tight.detail.hasPrefix("16 GB, about 6 GB free now. About 6 GB of memory is free and Bonsai"), tight.detail)

@@ -523,10 +523,10 @@ final class SessionModelTests: XCTestCase {
         XCTAssertTrue(m.note.contains("format soap"))
     }
 
-    func testClosingAppsIsAdvisedOnlyForBonsaiWhenMemoryIsShort() {
+    func testClosingAppsIsAdvisedWhenMemoryIsShort() {
         let short = { MemoryStatus(totalBytes: 16 << 30, freePercent: 41) }
         let m = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier, memory: short)
-        XCTAssertNil(m.memoryAdvice)                         // llama3.1:8b: Ollama loads it, not the app
+        XCTAssertTrue(m.memoryAdvice?.contains("llama3.1:8b takes") == true, m.memoryAdvice ?? "nil")
         defaults.set("bonsai", forKey: SessionSettings.Key.noteModel)
         XCTAssertTrue(m.memoryAdvice?.contains("Close other apps") == true, m.memoryAdvice ?? "nil")
         let roomy = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier,

@@ -18,13 +18,17 @@ public enum ModelCatalog {
             : "Fast, usually under a minute. Often assumes a client's pronoun from their name; proofread pronouns and the Objective."
     }
 
-    /// Roughly how much memory a model takes once loaded, where that is
-    /// known and the app is what loads it. Bonsai measured at 7.4 GB with
-    /// the smallest context the app uses and 8.5 GB with the largest. The
-    /// default model gets no figure here yet, though the app's engine may
-    /// be what loads it: which of the two runs it isn't known in time.
+    /// Roughly how much memory a model takes once loaded. Bonsai measured
+    /// at 7.4 GB with the smallest context the app uses and 8.5 GB with the
+    /// largest. The default model was measured on the app's engine; Ollama's
+    /// copy is taken to need about the same, since the Mac's memory is
+    /// short either way.
     public static func memoryNeedGB(of model: String) -> Double? {
-        model == bonsai ? 8 : nil
+        switch model {
+        case bonsai: 8
+        case defaultModel: defaultModelMemoryGB
+        default: nil
+        }
     }
 
     /// What to say before drafting with `model` when memory is short, or nil.
