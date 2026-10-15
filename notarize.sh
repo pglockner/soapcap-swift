@@ -2,6 +2,9 @@
 # Has Apple notarize a built Soapcap.app and attaches the ticket to it, so
 # that it opens on another Mac without a warning. This uploads the app to
 # Apple. Usage: notarize.sh [APP]   (default build/Soapcap.app)
+# What is left is a zip to ship beside where the app was. The app itself is
+# then removed, since the zip holds it, ticket and all, and a second copy
+# would show up in Spotlight; unzip it to run it.
 # The app must be signed with a Developer ID Application identity (see
 # build.sh). Credentials come from a keychain profile made once with
 #   xcrun notarytool store-credentials soapcap-notary --apple-id … --team-id …
@@ -34,4 +37,10 @@ rm -f "$zip"
 ditto -c -k --keepParent "$app" "$zip"
 spctl --assess --type execute -vv "$app"
 echo "Notarized $app"
+if pgrep -qf "$app/Contents/MacOS/"; then
+  echo "Kept $app: it is running"
+else
+  rm -rf "$app"
+  echo "Removed $app: the zip holds it"
+fi
 echo "To ship: $zip"

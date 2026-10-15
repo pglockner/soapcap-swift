@@ -189,7 +189,8 @@ tccutil reset Microphone com.jukenzie.soapcap
 Every build runs under the hardened runtime. For a build that opens on
 another Mac without a warning, sign with a Developer ID Application
 identity and have Apple notarize it. `notarize.sh` uploads the app to
-Apple, attaches the ticket and leaves a zip to ship:
+Apple, attaches the ticket and leaves a zip to ship, then removes the app,
+which the zip holds (unless that copy is running):
 
 ```sh
 SOAPCAP_SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" ./build.sh
