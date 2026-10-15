@@ -43,11 +43,19 @@ final class SessionModel: ObservableObject {
     /// drafted from it is de-identified in turn.
     @Published var transcriptIsDeidentified = false
     @Published var note = ""
+    /// What stands under the transcript and under the note.
+    @Published private var notes = ScreenNotes()
     /// What stands under the transcript or the note, whichever is on screen.
-    @Published var notice = ""
+    var notice: String {
+        get { notes.notice }
+        set { notes.notice = newValue }
+    }
     /// Set when de-identifying was asked for and failed: what is on screen
     /// still has names in it.
-    @Published var warning = ""
+    var warning: String {
+        get { notes.warning }
+        set { notes.warning = newValue }
+    }
     @Published var elapsed = 0      // seconds recorded; stands still while paused
     @Published var liveLines: [LiveLine] = []
     @Published var copied = false
@@ -77,22 +85,15 @@ final class SessionModel: ObservableObject {
     private let pasteboard: NSPasteboard
     private let makeCapture: () -> Capturing
     private let now: () -> Date
-    private let gatherChecks: () async -> [Check]
+    private let checkup: Checkup
     private let readMemory: () -> MemoryStatus?
-    private let fixer: Fixer
     private let deidentifying: Deidentifying
     private var capture: Capturing?
-    private var recordedBefore: TimeInterval = 0
-    private var runStart: Date?
-    /// When the pause in hand began, by the clock on the wall.
-    private var pausedSince: Date?
+    private var stopwatch = Stopwatch()
+    /// Ticks `elapsed` on while the session is heard.
     private var timer: Timer?
     /// Bumped by newSession() so work that finishes afterwards is ignored.
     private var generation = 0
-    /// Whose `notice` and `warning` are on screen, and the other's meanwhile:
-    /// the transcript can be gone back to once there is a note.
-    private var showing: Stage = .transcript
-    private var kept: [Stage: (notice: String, warning: String)] = [:]
     /// Where the draft in flight was asked for, to go back to if it is stopped.
     private var draftedFrom: Stage = .transcript
 
@@ -104,7 +105,6 @@ final class SessionModel: ObservableObject {
          deidentifying: Deidentifying? = nil, memory: @escaping () -> MemoryStatus? = MemoryStatus.current,
          fixer: Fixer = Fixer(), checks: (() async -> [Check])? = nil) {
         self.pasteboard = pasteboard
-        self.fixer = fixer
         self.makeCapture = makeCapture
         self.now = now
         self.settings = settings
@@ -112,11 +112,7 @@ final class SessionModel: ObservableObject {
         modelTest = ModelTest(run: draftRun, settings: settings)
         self.deidentifying = deidentifying ?? ModelDeidentifying()
         readMemory = memory
-        gatherChecks = checks ?? {
-            await Readiness.checks(locale: settings.locale)
-                + [await ModelCatalog.check(settings.noteModel, host: settings.ollamaHost)] + [ModelSetup.check()]
-                + [ModelCatalog.memoryCheck(memory(), model: settings.noteModel)]
-        }
+        checkup = Checkup(gather: checks ?? Checkup.everything(settings: settings, memory: memory), fixer: fixer)
         format = settings.format
         canDeidentify = self.deidentifying.isReady
     }
@@ -136,7 +132,7 @@ final class SessionModel: ObservableObject {
     func start() {
         guard phase == .idle else { return }
         modelTest.stop()        // a session has the Mac to itself
-        notice = ""; warning = ""; copied = false; liveLines = []; recordedBefore = 0; elapsed = 0
+        notice = ""; warning = ""; copied = false; liveLines = []; stopwatch = Stopwatch(); elapsed = 0
         phase = .working("Starting…")
         labels = (settings.micLabel, settings.systemLabel)
         let locale = settings.locale
@@ -156,7 +152,7 @@ final class SessionModel: ObservableObject {
     }
 
     private func run() {
-        runStart = now()
+        stopwatch.run(at: now())
         phase = .recording
         timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.tick() }
@@ -164,23 +160,21 @@ final class SessionModel: ObservableObject {
     }
 
     private func halt() {
-        if let runStart { recordedBefore += now().timeIntervalSince(runStart) }
-        runStart = nil
         timer?.invalidate(); timer = nil
-        elapsed = Int(recordedBefore)
+        elapsed = stopwatch.halt(at: now())
     }
 
     func tick() {
-        elapsed = Int(recordedBefore + (runStart.map { now().timeIntervalSince($0) } ?? 0))
+        elapsed = stopwatch.seconds(at: now())
     }
 
     /// Nothing is heard while paused, and the clock stands still.
     func pause() {
         guard phase == .recording else { return }
         capture?.pause()
-        halt()
+        timer?.invalidate(); timer = nil
+        elapsed = stopwatch.pause(at: now())
         pauses.append(SessionPause(at: elapsed))
-        pausedSince = now()
         phase = .paused
     }
 
@@ -194,9 +188,8 @@ final class SessionModel: ObservableObject {
     /// Notes how long the pause in hand lasted, as it ends. The session's
     /// clock stood still meanwhile, so this is the only record of it.
     private func endPause() {
-        guard let pausedSince, !pauses.isEmpty else { return }
-        pauses[pauses.count - 1].length = Int(now().timeIntervalSince(pausedSince))
-        self.pausedSince = nil
+        guard let length = stopwatch.endPause(at: now()), !pauses.isEmpty else { return }
+        pauses[pauses.count - 1].length = length
     }
 
     func stop() {
@@ -272,9 +265,7 @@ final class SessionModel: ObservableObject {
     }
 
     /// Adds a line to what stands under the transcript or the note.
-    private func tell(_ line: String) {
-        notice = [notice, line].filter { !$0.isEmpty }.joined(separator: "\n")
-    }
+    private func tell(_ line: String) { notes.tell(line) }
 
     /// The transcript as a text file, for Save transcript.
     var transcriptFile: TranscriptFile {
@@ -407,12 +398,7 @@ final class SessionModel: ObservableObject {
     }
 
     /// Swaps `notice` and `warning` for those of the transcript or the note.
-    private func put(_ step: Stage) {
-        guard step != showing else { return }
-        kept[showing] = (notice, warning)
-        (notice, warning) = kept[step] ?? ("", "")
-        showing = step
-    }
+    private func put(_ step: Stage) { notes.put(step) }
 
     func keep() {
         let pb = pasteboard
@@ -429,53 +415,39 @@ final class SessionModel: ObservableObject {
         let gen = generation
         Task {
             phase = .working("Checking…")
-            let checks = await gatherChecks()
+            let checks = await checkup.gather()
             needsAttention = checks.needAttention
             if gen == generation { phase = .checks(checks) }
         }
     }
 
-    /// What the setup screen's buttons reach outside this window.
-    struct Fixer {
-        var open: (URL) -> Void = { NSWorkspace.shared.open($0) }
-        var askForMicrophone: () async -> Void = { await Readiness.askForMicrophone() }
-        var askForCallAudio: () async -> Void = { await Readiness.askForCallAudio() }
-    }
+    typealias Fixer = Checkup.Fixer
 
     /// Looks the Mac over as the app opens. On a first launch, or after a
     /// permission was taken away, the checks screen is the place to start.
     /// Anything else in the way is left for the Ready screen to point at.
     func setUpIfNeeded() {
         Task {
-            let checks = await gatherChecks()
+            let checks = await checkup.gather()
             needsAttention = checks.needAttention
             if checks.lackPermission, phase == .idle { phase = .checks(checks) }
         }
     }
 
-    /// Does what a button on the checks screen stands for.
+    /// Does what a button on the checks screen stands for, then checks again
+    /// where the answer changes what the screen says.
     func perform(_ action: Check.Fix.Action) {
-        switch action {
-        case .open(let url):
-            fixer.open(url)
-        case .askForMicrophone:
-            Task { await fixer.askForMicrophone(); diagnose() }      // the answer shows at once
-        case .askForCallAudio:
-            Task { await fixer.askForCallAudio(); diagnose() }
-        case .showSettings:
-            break       // the window opens its own Settings
-        }
+        checkup.perform(action) { [weak self] in self?.diagnose() }
     }
 
     func newSession() {
         generation += 1
         timer?.invalidate(); timer = nil
-        runStart = nil; pausedSince = nil
+        stopwatch = Stopwatch()
         if let capture { Task { _ = await capture.stop() } }
         capture = nil
         draftRun.stop()
-        liveLines = []; transcript = ""; lineTimes = []; pauses = []; transcriptIsDeidentified = false; note = ""; notice = ""; warning = ""; copied = false; memoryQuestion = nil; phase = .idle
-        showing = .transcript; kept = [:]
+        liveLines = []; transcript = ""; lineTimes = []; pauses = []; transcriptIsDeidentified = false; note = ""; notes = ScreenNotes(); copied = false; memoryQuestion = nil; phase = .idle
         refreshDeidentify()
     }
 }
