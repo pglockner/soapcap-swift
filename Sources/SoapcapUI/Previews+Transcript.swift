@@ -34,7 +34,7 @@ import SwiftUI
 }
 
 #Preview("Transcript, memory short") {
-    let defaults = UserDefaults(suiteName: "soapcap-preview")!
+    let defaults = MemoryDefaults()
     defaults.set("bonsai", forKey: SessionSettings.Key.noteModel)
     let m = SessionModel(settings: SessionSettings(defaults: defaults), memory: { MemoryStatus(totalBytes: 16 << 30, freePercent: 41) })
     m.phase = .transcript
@@ -43,7 +43,7 @@ import SwiftUI
 }
 
 #Preview("Transcript, memory very short") {
-    let defaults = UserDefaults(suiteName: "soapcap-preview")!
+    let defaults = MemoryDefaults()
     defaults.set("bonsai", forKey: SessionSettings.Key.noteModel)
     let m = SessionModel(settings: SessionSettings(defaults: defaults), memory: { MemoryStatus(totalBytes: 16 << 30, freePercent: 30, swapUsedBytes: 7 << 30, swapTotalBytes: 8 << 30) })
     m.phase = .transcript

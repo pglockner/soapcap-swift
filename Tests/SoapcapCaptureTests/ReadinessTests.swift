@@ -3,14 +3,6 @@ import SoapcapCore
 import XCTest
 @testable import SoapcapCapture
 
-/// Settings kept in memory, so that a test run leaves no file in
-/// ~/Library/Preferences. The UI tests have the same stand-in.
-private final class MemoryDefaults: UserDefaults {
-    private var values: [String: Any] = [:]
-    override func object(forKey key: String) -> Any? { values[key] }
-    override func set(_ value: Any?, forKey key: String) { values[key] = value }
-}
-
 final class ReadinessTests: XCTestCase {
     func testMicrophoneStatusMapsToACheck() {
         XCTAssertEqual(Readiness.microphone(.authorized).status, .ok)

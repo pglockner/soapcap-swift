@@ -5,16 +5,6 @@ import SoapcapNote
 import XCTest
 @testable import SoapcapUI
 
-/// Settings kept in memory. A suite of the real kind leaves a file in
-/// ~/Library/Preferences for every test run: macOS writes it back even
-/// after it has been removed.
-final class MemoryDefaults: UserDefaults {
-    private var values: [String: Any] = [:]
-    override func object(forKey key: String) -> Any? { values[key] }
-    override func set(_ value: Any?, forKey key: String) { values[key] = value }
-    override func removeObject(forKey key: String) { values[key] = nil }
-}
-
 /// Scripted capture: returns `segments` on stop and records what it was asked to do.
 final class FakeCapture: Capturing {
     let live: AsyncStream<LiveLine>
