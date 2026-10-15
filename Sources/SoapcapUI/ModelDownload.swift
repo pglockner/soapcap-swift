@@ -19,11 +19,10 @@ final class ModelDownload: ObservableObject {
     typealias Fetch = @Sendable (PinnedFile, URL, @escaping @Sendable (FetchProgress) -> Void) async throws -> Void
 
     /// Bonsai's weights: the app's copy, or the one soapcap's installer made.
-    static let bonsai = ModelDownload(file: BonsaiBackend.Install.weights, target: BonsaiBackend.Install.ownWeights,
-                                      elsewhere: BonsaiBackend.Install.soapcapWeights)
+    static let bonsai = ModelDownload(model: .bonsai)
 
     /// The default model's weights, for a Mac whose Ollama doesn't have it.
-    static let llama = ModelDownload(file: BonsaiBackend.Install.llamaWeights, target: BonsaiBackend.Install.ownLlamaWeights)
+    static let llama = ModelDownload(model: .llama)
 
     @Published private(set) var state = State.missing
     let file: PinnedFile
@@ -38,6 +37,10 @@ final class ModelDownload: ObservableObject {
         self.elsewhere = elsewhere
         self.fetch = fetch
         refresh()
+    }
+
+    convenience init(model: NoteModel) {
+        self.init(file: model.weights, target: model.ownWeights, elsewhere: model.elsewhere)
     }
 
     /// True when the model can be used, whoever put it there.

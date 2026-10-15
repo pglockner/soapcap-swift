@@ -3,32 +3,23 @@ import SoapcapCore
 
 /// Which note models there are, and how to reach each.
 public enum ModelCatalog {
-    public static let bonsai = "bonsai"
-    public static let defaultModel = "llama3.1:8b"
+    public static let bonsai = NoteModel.bonsai.id
+    public static let defaultModel = NoteModel.llama.id
 
     /// What to call a model on screen.
     public static func displayName(of model: String) -> String {
-        model == bonsai ? BonsaiBackend.displayName : model
+        NoteModel.named(model)?.displayName ?? model
     }
 
     /// What the clinician should know about each of the two models.
     public static func description(of model: String) -> String {
-        model == bonsai
-            ? "More careful: best at pronouns and at not inventing in-session reactions. Slower, a few minutes a note."
-            : "Fast, usually under a minute. Often assumes a client's pronoun from their name; proofread pronouns and the Objective."
+        NoteModel.named(model)?.description ?? ""
     }
 
-    /// Roughly how much memory a model takes once loaded. Bonsai measured
-    /// at 7.4 GB with the smallest context the app uses and 8.5 GB with the
-    /// largest. The default model was measured on the app's engine; Ollama's
-    /// copy is taken to need about the same, since the Mac's memory is
-    /// short either way.
+    /// Roughly how much memory a model takes once loaded; nil for any
+    /// model but the two.
     public static func memoryNeedGB(of model: String) -> Double? {
-        switch model {
-        case bonsai: 8
-        case defaultModel: defaultModelMemoryGB
-        default: nil
-        }
+        NoteModel.named(model)?.memoryNeedGB
     }
 
     /// What to say before drafting with `model` when memory is short, or nil.
@@ -52,10 +43,6 @@ public enum ModelCatalog {
         return Check("Memory", .ok, size)
     }
 
-    /// Roughly what the default model takes on the app's engine, measured
-    /// with the smallest context the app uses.
-    public static let defaultModelMemoryGB = 6.5
-
     /// What the Ollama at `host` has pulled; nothing when it doesn't answer.
     public static func pulled(host: URL = OllamaBackend.defaultHost) async -> [String] {
         (try? await OllamaBackend(model: "", host: host).models()) ?? []
@@ -65,13 +52,10 @@ public enum ModelCatalog {
     /// the app's own file, unless Ollama has it: a model Ollama already
     /// holds is used where it is. Every other name is a model in Ollama.
     public static func backend(for model: String, pulled: [String], host: URL = OllamaBackend.defaultHost,
-                               bonsai: BonsaiBackend.Install = .standard,
-                               llama: BonsaiBackend.Install = .llama) -> any NoteBackend {
-        if model == self.bonsai { return BonsaiBackend(install: bonsai) }
-        if model == defaultModel, !OllamaBackend.has(model, in: pulled) {
-            // Prompts in the order Ollama gets them, as the two were compared.
-            return BonsaiBackend(install: llama, label: model, resumesFromSharedOpening: false)
-        }
+                               bonsai: EngineBackend.Install = NoteModel.bonsai.install,
+                               llama: EngineBackend.Install = NoteModel.llama.install) -> any NoteBackend {
+        if model == self.bonsai { return EngineBackend(.bonsai, install: bonsai) }
+        if model == defaultModel, !OllamaBackend.has(model, in: pulled) { return EngineBackend(.llama, install: llama) }
         return OllamaBackend(model: model, host: host)
     }
 
@@ -82,8 +66,8 @@ public enum ModelCatalog {
     /// The models that could draft right now: Bonsai if it is set up, and
     /// the default model if the app or Ollama has its file. They are the two
     /// the prompts were tested with, and no other is offered.
-    public static func installed(pulled: [String], bonsai: BonsaiBackend.Install = .standard,
-                                 llama: BonsaiBackend.Install = .llama) -> [String] {
+    public static func installed(pulled: [String], bonsai: EngineBackend.Install = NoteModel.bonsai.install,
+                                 llama: EngineBackend.Install = NoteModel.llama.install) -> [String] {
         let hasDefault = llama.isPresent || OllamaBackend.has(defaultModel, in: pulled)
         return (bonsai.isPresent ? [self.bonsai] : []) + (hasDefault ? [defaultModel] : [])
     }

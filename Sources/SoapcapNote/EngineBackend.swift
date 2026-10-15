@@ -1,10 +1,11 @@
 import Foundation
 import SoapcapCore
 
-/// A note model served by a `llama-server` this backend starts for a note
-/// and stops afterwards: Bonsai 2 27B unless told otherwise. The server
-/// ships inside the app (see engine.sh); the weights are a download.
-public actor BonsaiBackend: NoteBackend {
+/// A note model served by the app's engine, a `llama-server` this backend
+/// starts for a note and stops afterwards. The server ships inside the app
+/// (see engine.sh); the model's file is a download. Which model, and what
+/// is known about it, is a `NoteModel`.
+public actor EngineBackend: NoteBackend {
     /// Where the server and a model's weights are, and the local port to serve on.
     public struct Install: Equatable, Sendable {
         public var server: URL
@@ -17,33 +18,15 @@ public actor BonsaiBackend: NoteBackend {
             self.port = port
         }
 
-        /// Bonsai 2 27B's weights, as soapcap tested them.
-        public static let weights = PinnedFile(
-            name: "Ternary-Bonsai-2-27B-PTQ1_0.gguf",
-            url: URL(string: "https://huggingface.co/prism-ml/Ternary-Bonsai-2-27B-gguf/resolve/65f27a86966957c534ea6ad12149286e01ca7cc0/Ternary-Bonsai-2-27B-PTQ1_0.gguf")!,
-            sha256: "53107f530aa52eb00912263ab1ee29bd199261c87cd7b4ad4ca1318c1fe33ee3", bytes: 5_946_648_928)
-
         /// Where the app keeps the note models it downloads.
         public static var modelsDirectory: URL {
             URL.applicationSupportDirectory.appending(path: "Soapcap/note-models", directoryHint: .isDirectory)
         }
 
-        /// The app's own copy of the weights, and the one soapcap's installer makes.
-        public static var ownWeights: URL { modelsDirectory.appendingPathComponent(weights.name) }
-        public static var soapcapWeights: URL { soapcapDirectory.appendingPathComponent(weights.name) }
+        /// Where soapcap's installer puts Bonsai and the engine it builds.
         static var soapcapDirectory: URL {
             FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".local/share/soapcap/bonsai")
         }
-
-        /// Llama 3.1 8B Instruct at 4 bits, in second-state's conversion.
-        /// Of the files that need no sign-up it is the nearest to the copy
-        /// Ollama serves, which the prompts were tested with: 276 of its
-        /// 292 tensors are the same bytes, and so is the chat template.
-        public static let llamaWeights = PinnedFile(
-            name: "Llama-3.1-8B-Instruct-Q4_K_M.gguf",
-            url: URL(string: "https://huggingface.co/second-state/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/6d6118a261564da05fd7e651f4bc069eb7c38c20/Llama-3.1-8B-Instruct-Q4_K_M.gguf")!,
-            sha256: "599024f21235045ea4ad7aecc5d46e794920e201d669328f577b1971cf98c904", bytes: 4_920_739_200)
-        public static var ownLlamaWeights: URL { modelsDirectory.appendingPathComponent(llamaWeights.name) }
 
         /// The engine inside the app, or else the one soapcap's installer built.
         /// SOAPCAP_ENGINE names a different llama-server, for trying a build.
@@ -52,13 +35,6 @@ public actor BonsaiBackend: NoteBackend {
             return named + [Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/llama-server"),
                             soapcapDirectory.appendingPathComponent("llama.cpp/build/bin/llama-server")]
         }
-
-        /// Bonsai: the app's own copy of the weights, or else the one
-        /// soapcap's installer made, used where it is.
-        public static var standard: Install { found(servers: servers, weights: [ownWeights, soapcapWeights]) }
-
-        /// Llama 3.1 on the same engine, from the app's own copy of the weights.
-        public static var llama: Install { found(servers: servers, weights: [ownLlamaWeights]) }
 
         /// The first of each that is there. When none is, the first, so that
         /// what gets reported missing is the place the app would put it.
@@ -75,7 +51,6 @@ public actor BonsaiBackend: NoteBackend {
     }
 
     public nonisolated let install: Install
-    public static let displayName = "Bonsai"
     public nonisolated let label: String
     public nonisolated let cautions: [String] = []
     /// llama-server keeps its place only near the end of each prompt, so a
@@ -95,9 +70,14 @@ public actor BonsaiBackend: NoteBackend {
     private var key = ""
     private let log = LogTail()
 
-    /// The defaults are Bonsai's. The same server runs any GGUF model, so a
-    /// different one is a different `install`, with its own name.
-    public init(install: Install = .standard, label: String = BonsaiBackend.displayName,
+    /// One of the two note models, from where it was found unless `install` says.
+    public init(_ model: NoteModel, install: Install? = nil) {
+        self.init(install: install ?? model.install, label: model.displayName,
+                  resumesFromSharedOpening: model.resumesFromSharedOpening)
+    }
+
+    /// Any GGUF model: the same server runs them all.
+    public init(install: Install, label: String,
                 resumesFromSharedOpening: Bool = true, session: URLSession = .keepingNothing,
                 loadTimeout: TimeInterval = 180, pollInterval: TimeInterval = 1) {
         self.install = install

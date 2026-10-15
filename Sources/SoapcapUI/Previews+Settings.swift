@@ -7,7 +7,7 @@ import SwiftUI
 /// A Bonsai download in a given state, on a path where nothing is installed.
 @MainActor private func bonsaiDownload(_ state: ModelDownload.State) -> ModelDownload {
     let nowhere = URL(fileURLWithPath: "/nonexistent/soapcap-preview/bonsai.gguf")
-    let download = ModelDownload(file: BonsaiBackend.Install.weights, target: nowhere)
+    let download = ModelDownload(file: NoteModel.bonsai.weights, target: nowhere)
     download.show(state)
     return download
 }

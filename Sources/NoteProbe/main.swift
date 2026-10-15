@@ -22,7 +22,7 @@ let model = args.dropFirst(2).first ?? "llama3.1:8b"
 let backend: any NoteBackend
 if model.hasPrefix("gguf:") {
     let weights = URL(fileURLWithPath: String(model.dropFirst(5)))
-    backend = BonsaiBackend(install: .init(server: BonsaiBackend.Install.standard.server, weights: weights),
+    backend = EngineBackend(install: .init(server: NoteModel.bonsai.install.server, weights: weights),
                             label: "llama-server", resumesFromSharedOpening: false)
 } else {
     backend = await ModelCatalog.backend(for: model)

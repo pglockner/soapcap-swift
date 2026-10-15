@@ -14,9 +14,9 @@ if [ -f "$dir/stubborn" ]; then trap '' TERM; else trap 'echo stopped >> "$dir/l
 while :; do sleep 0.05; done
 """#
 
-final class BonsaiBackendTests: XCTestCase {
+final class EngineBackendTests: XCTestCase {
     private var dir: URL!
-    private var install: BonsaiBackend.Install!
+    private var install: EngineBackend.Install!
 
     override func setUpWithError() throws {
         StubHTTP.replies = [:]; StubHTTP.sent = []; StubHTTP.answer = { _ in nil }
@@ -37,8 +37,8 @@ final class BonsaiBackendTests: XCTestCase {
 
     override func tearDown() { try? FileManager.default.removeItem(at: dir) }
 
-    private func backend() -> BonsaiBackend {
-        BonsaiBackend(install: install, session: StubHTTP.session(), loadTimeout: 5, pollInterval: 0.05)
+    private func backend() -> EngineBackend {
+        EngineBackend(install: install, label: "Bonsai", session: StubHTTP.session(), loadTimeout: 5, pollInterval: 0.05)
     }
 
     private var log: [String] {
@@ -57,13 +57,13 @@ final class BonsaiBackendTests: XCTestCase {
         let servers = [mine.appendingPathComponent("llama-server"), soapcaps.appendingPathComponent("llama-server")]
         let weights = [mine.appendingPathComponent("model.gguf"), soapcaps.appendingPathComponent("model.gguf")]
         // Nothing anywhere: the app's own places are what will be reported missing.
-        XCTAssertEqual(BonsaiBackend.Install.found(servers: servers, weights: weights), .init(server: servers[0], weights: weights[0]))
+        XCTAssertEqual(EngineBackend.Install.found(servers: servers, weights: weights), .init(server: servers[0], weights: weights[0]))
         // Only soapcap's install: it is used where it is.
         _ = try file(servers[1]); _ = try file(weights[1])
-        XCTAssertEqual(BonsaiBackend.Install.found(servers: servers, weights: weights), .init(server: servers[1], weights: weights[1]))
+        XCTAssertEqual(EngineBackend.Install.found(servers: servers, weights: weights), .init(server: servers[1], weights: weights[1]))
         // The app's engine with soapcap's weights, as on a Mac that had soapcap first.
         _ = try file(servers[0])
-        XCTAssertEqual(BonsaiBackend.Install.found(servers: servers, weights: weights), .init(server: servers[0], weights: weights[1]))
+        XCTAssertEqual(EngineBackend.Install.found(servers: servers, weights: weights), .init(server: servers[0], weights: weights[1]))
     }
 
     func testCheckSaysWhenBonsaiIsNotSetUpOrThePortIsTaken() async throws {
@@ -195,6 +195,6 @@ final class BonsaiBackendTests: XCTestCase {
     }
 
     func testNothingSentOrReceivedIsCachedUnlessAnotherSessionIsGiven() {
-        XCTAssertTrue(BonsaiBackend(install: install).session === URLSession.keepingNothing)
+        XCTAssertTrue(EngineBackend(.bonsai, install: install).session === URLSession.keepingNothing)
     }
 }

@@ -153,7 +153,7 @@ struct SettingsView: View {
                 if OllamaBackend.has(ModelCatalog.defaultModel, in: pulled), llama.state == .missing {
                     Label("Ollama has \(ModelCatalog.defaultModel), and Soapcap drafts with that copy.", systemImage: "checkmark.circle.fill")
                 } else {
-                    ModelDownloadRow(name: ModelCatalog.defaultModel, needGB: ModelCatalog.defaultModelMemoryGB, download: llama)
+                    ModelDownloadRow(name: NoteModel.llama.displayName, needGB: NoteModel.llama.memoryNeedGB, download: llama)
                 }
             } header: {
                 Text(ModelCatalog.defaultModel)
@@ -162,9 +162,9 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
             Section {
-                ModelDownloadRow(name: BonsaiBackend.displayName, needGB: ModelCatalog.memoryNeedGB(of: ModelCatalog.bonsai), download: bonsai)
+                ModelDownloadRow(name: NoteModel.bonsai.displayName, needGB: NoteModel.bonsai.memoryNeedGB, download: bonsai)
             } header: {
-                Text(BonsaiBackend.displayName)
+                Text(NoteModel.bonsai.displayName)
             } footer: {
                 Text(ModelCatalog.description(of: ModelCatalog.bonsai)).foregroundStyle(.secondary)
             }

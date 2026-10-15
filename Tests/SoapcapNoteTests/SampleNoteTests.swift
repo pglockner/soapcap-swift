@@ -46,8 +46,8 @@ final class SampleNoteTests: XCTestCase {
         let engine = root.appendingPathComponent(".build/engine/llama-server")
         let backend = ModelCatalog.backend(
             for: model, pulled: await ModelCatalog.pulled(),
-            bonsai: .init(server: engine, weights: BonsaiBackend.Install.standard.weights, port: 18090),
-            llama: .init(server: engine, weights: BonsaiBackend.Install.ownLlamaWeights, port: 18090))
+            bonsai: .init(server: engine, weights: NoteModel.bonsai.install.weights, port: 18090),
+            llama: .init(server: engine, weights: NoteModel.llama.ownWeights, port: 18090))
         do { try await backend.check() } catch {
             throw XCTSkip("\(model) can't draft on this Mac: \(error.localizedDescription)")
         }
