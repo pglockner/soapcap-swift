@@ -47,8 +47,8 @@ to one.
 Unzip the download, drag **Soapcap** into Applications, and open it from
 there. It is signed and notarized, so macOS asks once whether to open an
 app from the internet and then lets it run. The first run walks through
-setup (see [Using the app](#using-the-app)); to update later, see
-**Updating** there.
+setup. Updating and uninstalling are in the app's Help (see
+[Using the app](#using-the-app)).
 
 ## Build and run
 
@@ -63,119 +63,18 @@ app's permissions on every rebuild.
 
 ## Using the app
 
-**First run.** Soapcap opens on a setup screen that walks through the two
-permissions macOS asks for, Microphone and System Audio Recording. Each has
-a button that says what you are about to see, and the answer counts at
-once. System Audio Recording is how macOS lets an app hear what the Mac is
-playing: sound only, never the screen. macOS can't tell an app whether it
-has that permission, so Soapcap finds out by playing itself a tone you
-won't hear. **Check**, in the bar, brings the same screen back later, with
-speech recognition for your language, the note model, the de-identification
-model and free memory, each with a button that puts it right. The app looks
-these over whenever it opens: if a permission or the note model is missing,
-Check turns into an orange warning sign and the Ready screen offers to show
-what needs attention.
+How to use Soapcap is in its own Help, under **Help › Soapcap Help** in
+the app, and in this repository as
+[`Sources/SoapcapUI/Resources/Help/help.md`](Sources/SoapcapUI/Resources/Help/help.md).
+It covers setup and the checks, a session, the transcript and
+de-identifying it, drafting a note, the note models and their memory,
+Settings, updating and uninstalling. It is kept there and not repeated
+here.
 
-**The three steps.** The bar across the top says where a session is:
-Record, Transcript, Note, with the current step on a grey pill and the
-steps you can't go to dimmed. Once there is a note, Transcript and Note
-are both lit, so you can go back to the transcript and return.
-
-**Record.** Use headphones and turn on Do Not Disturb. The window shows the
-last few lines heard from each side. **Pause** stops listening and stops
-the clock; **Resume** carries on in the same session. The session's time
-also shows in the menu bar while it runs, where the call's window can't
-cover it. A microphone that changes mid-session, such as AirPods
-connecting, is picked up.
-
-**Transcript.** When you stop, the transcript is shown a turn at a time,
-with the minute of the session in the margin. A ruler of minutes down the
-side goes to any of them. Where the session was paused, the transcript says
-so and for how long, and the ruler has a mark for it.
-
-**De-identify** (optional, once its model is installed). Names, phone
-numbers, dates and similar details become tokens like `[FIRST_NAME_1]`, in
-the transcript and in the note. With **De-identify by default** on in
-Settings, as it starts out, this happens as the session stops. With it off,
-**De-identify** above the transcript does it when chosen, and goes over a
-note already drafted as well; any note drafted afterwards follows. Speaker
-labels and clock times are kept. It is best effort, so read the result
-before sharing it. If it fails, the text is shown under a red "Not
-de-identified" banner rather than passed off as checked, and De-identify
-can be tried again. A de-identified transcript has **Save transcript…**
-above it instead, which writes it to a text file wherever you choose. That
-is the only thing the app ever saves, and only when asked; a transcript
-that was not de-identified can't be saved.
-
-**Draft note.** Pick SOAP, DAP or BIRP. With both note models installed, a
-menu beside Draft note, and beside **Regenerate** on the note, picks the
-one that drafts; it is the same choice as in Settings.
-
-- A draft with a missing or empty section is redone, up to three times, and
-  the most complete one is kept.
-- A SOAP note's Objective is a fixed mental-status frame filled in by a
-  separate pass. It never says "No SI/HI reported" if risk language was
-  seen.
-- When only your side was heard, the sections that rest on the client are
-  not left to the model: a SOAP note's Subjective and Objective, a DAP
-  note's Data and a BIRP note's Behavior and Response each say they need
-  completing by hand, and a caution under the note says so.
-- Cautions about a draft (a section still missing, say) appear under the
-  note and are never copied with it.
-- **Keep** copies the note. **Regenerate** drafts it again.
-- Until a note has been kept, **Discard** and drafting again from the
-  transcript both ask first: neither can be undone.
-
-**While drafting.** The window lists the steps of the draft as they are
-done, with two small charts beside them: memory in use, and how much has
-spilled over to disk as swap. They turn yellow and then red as the Mac
-fills up. Bonsai takes about 8 GB and `llama3.1:8b` about 6.5 GB: the app
-suggests closing other apps when memory is short, warns a Mac with too
-little memory for the model that drafting will be very slow, and asks before drafting when the Mac is also deep in
-swap. **Stop drafting** ends a draft and frees the model's memory; if you
-were drafting again, the note you already had is still there. Otherwise the
-model stays loaded until you discard the note, start a new session or quit.
-
-**Settings** (Cmd-comma). The two speaker labels, the language to
-transcribe in, the note model, the session type on the note's first
-line ("53 minutes, telehealth"), and whether to de-identify by default.
-The two note models and the de-identification model are downloaded here: each says how big it is first,
-a download that is stopped carries on where it left off, and **Remove**
-deletes a note model again. `llama3.1:8b` is not offered when Ollama
-already has it. Ollama's address is under Advanced.
-
-**Testing a note model.** **Test**, under the model's name in Settings and
-on the Note model line of the checks screen, drafts a note from a made-up
-session with the chosen model. It answers Good when every section came out
-filled, or Problem with what was wrong, and the note can be read either
-way. It takes as long as drafting a note does, nothing is kept, and it is
-not offered while a session is being recorded.
-
-**Updating.** Quit Soapcap (Cmd-Q; closing the window leaves it running),
-then drag the new version into Applications and choose Replace. Models,
-settings and permissions are kept. Uninstall is not the way to update: it
-deletes the models.
-
-**Uninstalling.** **Uninstall Soapcap…**, at the bottom of Settings,
-removes the models the app downloaded, its settings and its permissions, then moves the app to
-the Trash. A Bonsai or an Ollama that something else installed is left
-alone, and so is any transcript you saved: that file is yours, wherever you
-put it.
-
-**Beta and Help.** Below version 1.0 the app is a beta. Each new version
-opens on a notice to acknowledge (read every note before using it;
-nothing from a session leaves the Mac), and the Ready screen carries a
-Beta mark. **Help › Soapcap Help** is a one-page guide to the app, from
-`Sources/SoapcapUI/Resources/Help/help.md`. **Help › Report a Problem…**
-shows the address to write to and the version, macOS, memory and note
-model, each with a Copy button, and **Open in Mail** starts the email with
-them filled in.
-
-**Note models.** `llama3.1:8b` is fast, usually under a minute a note.
-Bonsai is more careful and slower, a few minutes a note. Both run on an
-engine inside the app, except that `llama3.1:8b` is left to Ollama when
-Ollama has it. They are the two the prompts were tested with, and no other
-model is offered.
+Below version 1.0 the app is a beta: each new version opens on a notice to
+acknowledge, and the Ready screen carries a Beta mark. **Help › Report a
+Problem…** gives the address to write to, with the version, macOS, memory
+and note model to include.
 
 ## Privacy
 
@@ -199,13 +98,6 @@ model is offered.
 
 ## Roadmap
 
-- [ ] Before a release candidate, try by hand what nobody has yet:
-      stopping a draft while Bonsai loads and with an Ollama model, and
-      **Uninstall Soapcap…** from a copy opened straight from the download
-- [ ] Register jukenzie.com, the domain the app's identifier
-      (`com.jukenzie.soapcap`) is named after, before the first public build
-- [ ] Check every screen with Accessibility Inspector, for VoiceOver and
-      contrast
 - [ ] Later: go over the rules the note model is given, and rework them to
       say less of what not to do and show more examples to follow. A change
       to them needs a full comparison run before it can be trusted
