@@ -105,7 +105,7 @@ final class SystemInputEngine: InputEngine {
     private var handler: ((AVAudioPCMBuffer) -> Void)?
     private var device = AudioDevice.none
     private var format: AVAudioFormat?
-    private var proc: AudioDeviceIOProcID?
+    private var proc: IOProc?
     /// One block for every listener, so that each can be taken off again.
     private var listener: AudioObjectPropertyListenerBlock?
 
@@ -135,8 +135,7 @@ final class SystemInputEngine: InputEngine {
         guard let handler = lock.withLock({ handler }), let format = AudioDevice.format(of: device, .input) else {
             throw CaptureError.microphoneDenied
         }
-        var proc: AudioDeviceIOProcID?
-        let made = AudioDeviceCreateIOProcIDWithBlock(&proc, device, delivery) { _, input, _, output, _ in
+        guard let proc = try? IOProc(device: device, queue: delivery, block: { _, input, _, output, _ in
             // A device that also plays is given silence to play.
             for buffer in UnsafeMutableAudioBufferListPointer(output) {
                 if let data = buffer.mData { memset(data, 0, Int(buffer.mDataByteSize)) }
@@ -145,12 +144,7 @@ final class SystemInputEngine: InputEngine {
             guard input.pointee.mNumberBuffers > 0 else { return }
             var first = AudioBufferList(mNumberBuffers: 1, mBuffers: input.pointee.mBuffers)
             if let buffer = AVAudioPCMBuffer(pcmFormat: format, bufferListNoCopy: &first) { handler(buffer) }
-        }
-        guard made == noErr, let proc else { throw CaptureError.microphoneDenied }
-        guard AudioDeviceStart(device, proc) == noErr else {
-            AudioDeviceDestroyIOProcID(device, proc)
-            throw CaptureError.microphoneDenied
-        }
+        }) else { throw CaptureError.microphoneDenied }
         lock.withLock { (self.device, self.format, self.proc) = (device, format, proc) }
         listen(to: kAudioDevicePropertyDeviceIsAlive, of: device, true)
         listen(to: kAudioDevicePropertyNominalSampleRate, of: device, true)
@@ -164,8 +158,7 @@ final class SystemInputEngine: InputEngine {
         guard let proc else { return }
         listen(to: kAudioDevicePropertyDeviceIsAlive, of: device, false)
         listen(to: kAudioDevicePropertyNominalSampleRate, of: device, false)
-        AudioDeviceStop(device, proc)
-        AudioDeviceDestroyIOProcID(device, proc)
+        proc.stop()
     }
 
     /// Passes a change on only if it means starting again: another device

@@ -65,8 +65,7 @@ public enum CallAudio {
 private final class Tone {
     static let level: Float = 0.001
     private let queue = DispatchQueue(label: "soapcap.tone")
-    private var device = AudioDevice.none
-    private var proc: AudioDeviceIOProcID?
+    private var proc: IOProc?
 
     func start() -> Bool {
         let device = AudioDevice.default(.output)
@@ -75,8 +74,7 @@ private final class Tone {
         guard let format = AudioDevice.format(of: device, .output), format.commonFormat == .pcmFormatFloat32 else { return false }
         let step = 2 * Float.pi * 440 / Float(format.sampleRate)
         var phase: Float = 0
-        var proc: AudioDeviceIOProcID?
-        let made = AudioDeviceCreateIOProcIDWithBlock(&proc, device, queue) { _, _, _, output, _ in
+        proc = try? IOProc(device: device, queue: queue) { _, _, _, output, _ in
             for (index, buffer) in UnsafeMutableAudioBufferListPointer(output).enumerated() {
                 guard let data = buffer.mData else { continue }
                 // The tone goes to the device's first stream; any other gets silence.
@@ -91,19 +89,11 @@ private final class Tone {
                 phase = (phase + Float(frames) * step).truncatingRemainder(dividingBy: 2 * .pi)
             }
         }
-        guard made == noErr, let proc else { return false }
-        guard AudioDeviceStart(device, proc) == noErr else {
-            AudioDeviceDestroyIOProcID(device, proc)
-            return false
-        }
-        (self.device, self.proc) = (device, proc)
-        return true
+        return proc != nil
     }
 
     func stop() {
-        guard let proc else { return }
-        AudioDeviceStop(device, proc)
-        AudioDeviceDestroyIOProcID(device, proc)
-        self.proc = nil
+        proc?.stop()
+        proc = nil
     }
 }

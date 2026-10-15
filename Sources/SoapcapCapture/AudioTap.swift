@@ -23,7 +23,7 @@ final class AudioTap: @unchecked Sendable {
     private let delivery = DispatchQueue(label: "soapcap.audio-tap.buffers")
     private var tap: AudioHardwareTap?
     private var device: AudioHardwareAggregateDevice?
-    private var proc: AudioDeviceIOProcID?
+    private var proc: IOProc?
 
     /// Whose sound a tap copies.
     enum Sound: Sendable {
@@ -79,11 +79,9 @@ final class AudioTap: @unchecked Sendable {
             ]) else { throw CaptureError.callAudioFailed("no device") }
             self.device = device
             // This is the call that waits for the permission question.
-            let status = AudioDeviceCreateIOProcIDWithBlock(&proc, device.id, delivery) { _, input, _, _, _ in
+            proc = try IOProc(device: device.id, queue: delivery) { _, input, _, _, _ in
                 if let buffer = AVAudioPCMBuffer(pcmFormat: format, bufferListNoCopy: input) { onBuffer(buffer) }
             }
-            guard status == noErr, let proc else { throw CaptureError.callAudioFailed("error \(status)") }
-            try device.start(IOProcID: proc)
         } catch {
             close()
             throw error as? CaptureError ?? CaptureError.callAudioFailed(error.localizedDescription)
@@ -91,10 +89,7 @@ final class AudioTap: @unchecked Sendable {
     }
 
     private func close() {
-        if let device, let proc {
-            try? device.stop(IOProcID: proc)
-            AudioDeviceDestroyIOProcID(device.id, proc)
-        }
+        proc?.stop()
         if let device { try? system.destroyAggregateDevice(device) }
         if let tap { try? system.destroyProcessTap(tap) }
         proc = nil
