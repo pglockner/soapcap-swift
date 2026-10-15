@@ -9,11 +9,12 @@ the command-line tool, and shares its prompts and test cases. It is its own
 implementation: one window that captures, de-identifies and drafts by
 itself.
 
-**In development.** Everything below works, but there is no installer yet:
-you build it with Xcode. For a finished tool, use soapcap.
+**Beta.** Everything below works, and testers are trying it as a signed,
+notarized download. For a finished tool, use soapcap.
 
 [How it works](#how-it-works) ·
 [Requirements](#requirements) ·
+[Install](#install) ·
 [Build and run](#build-and-run) ·
 [Using the app](#using-the-app) ·
 [Privacy](#privacy) ·
@@ -37,9 +38,17 @@ to one.
 | Requirement | Notes |
 |---|---|
 | macOS 26 (Tahoe) or newer, Apple silicon | Built for macOS 26 and tested on macOS 27; not yet run on macOS 26 itself |
-| Full Xcode, and cmake | To build. The Command Line Tools alone are not enough; cmake (`brew install cmake`) builds the note engine |
+| Full Xcode, and cmake | Only to build it yourself. The Command Line Tools alone are not enough; cmake (`brew install cmake`) builds the note engine |
 | A note model | `llama3.1:8b` (the tested default, 4.9 GB) or Bonsai (5.9 GB), each a download from Settings. A model an [Ollama](https://ollama.com) on the Mac already has is used where it is. Recording works without one |
 | The de-identification model (optional) | OpenMed's PII model, about 130 MB, installed from Settings |
+
+## Install
+
+Unzip the download, drag **Soapcap** into Applications, and open it from
+there. It is signed and notarized, so macOS asks once whether to open an
+app from the internet and then lets it run. The first run walks through
+setup (see [Using the app](#using-the-app)); to update later, see
+**Updating** there.
 
 ## Build and run
 
@@ -128,8 +137,8 @@ model stays loaded until you discard the note, start a new session or quit.
 
 **Settings** (Cmd-comma). The two speaker labels, the language to
 transcribe in, the note model, the session type on the note's first
-line ("53 minutes, telehealth"), and whether to de-identify by default. The two note models and the
-de-identification model are downloaded here: each says how big it is first,
+line ("53 minutes, telehealth"), and whether to de-identify by default.
+The two note models and the de-identification model are downloaded here: each says how big it is first,
 a download that is stopped carries on where it left off, and **Remove**
 deletes a note model again. `llama3.1:8b` is not offered when Ollama
 already has it. Ollama's address is under Advanced.
@@ -146,8 +155,8 @@ then drag the new version into Applications and choose Replace. Models,
 settings and permissions are kept. Uninstall is not the way to update: it
 deletes the models.
 
-**Uninstalling.** **Uninstall Soapcap…**, at the bottom of Settings, removes the models
-the app downloaded, its settings and its permissions, then moves the app to
+**Uninstalling.** **Uninstall Soapcap…**, at the bottom of Settings,
+removes the models the app downloaded, its settings and its permissions, then moves the app to
 the Trash. A Bonsai or an Ollama that something else installed is left
 alone, and so is any transcript you saved: that file is yours, wherever you
 put it.
@@ -187,16 +196,13 @@ model is offered.
 
 ## Roadmap
 
-- [ ] Before a release candidate, try by hand what nobody has yet: a
-      whole Bonsai download, and stopping a draft while Bonsai loads and
-      with an Ollama model
+- [ ] Before a release candidate, try by hand what nobody has yet:
+      stopping a draft while Bonsai loads and with an Ollama model, and
+      **Uninstall Soapcap…** from a copy opened straight from the download
 - [ ] Register jukenzie.com, the domain the app's identifier
       (`com.jukenzie.soapcap`) is named after, before the first public build
 - [ ] Check every screen with Accessibility Inspector, for VoiceOver and
       contrast
-- [ ] A signed, notarized build that installs without Xcode
-- [ ] Try **Uninstall Soapcap…** again from that build: from Applications,
-      and opened straight from the download
 - [ ] Later: go over the rules the note model is given, and rework them to
       say less of what not to do and show more examples to follow. A change
       to them needs a full comparison run before it can be trusted
@@ -211,7 +217,7 @@ model is offered.
 | | soapcap | soapcap-swift |
 |---|---|---|
 | Form | Command-line tool | Mac app, one window |
-| Setup | `./install.sh`, with Homebrew | Build with Xcode |
+| Setup | `./install.sh`, with Homebrew | Drag into Applications, or build with Xcode |
 | Speech recognition | Apple SpeechAnalyzer, through `yap` | Apple SpeechAnalyzer, built in |
 | De-identification | OpenMed's PII model, through a Python helper | The same model, built in |
 | Saving to a file | Only if you ask | A de-identified transcript, only if you ask |
