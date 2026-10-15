@@ -9,8 +9,9 @@ import SoapcapNote
 final class ModelTest: ObservableObject {
     enum State: Equatable {
         case idle
-        /// What the model is doing just now.
-        case running(String)
+        /// What the model is doing just now, and how much it has written
+        /// in that step when it says.
+        case running(String, tokens: Int? = nil)
         case good(model: String, seconds: Int)
         case problem(model: String, reasons: [String])
     }
@@ -85,7 +86,7 @@ final class ModelTest: ObservableObject {
 
     private func show(_ progress: DraftProgress, _ mine: Int) {
         guard mine == current, isRunning else { return }
-        state = .running(progress.tokens.map { "\(progress.title)  \($0) tokens" } ?? progress.title)
+        state = .running(progress.title, tokens: progress.tokens)
     }
 
     /// For previews.

@@ -357,7 +357,7 @@ final class SessionModel: ObservableObject {
         guard draftRun.isRunning, gen == generation else { return }
         if draftSteps.last != progress.title { draftSteps.append(progress.title) }
         draftTokens = progress.tokens
-        phase = .working(progress.tokens.map { "\(progress.title)  \($0) tokens" } ?? progress.title)
+        phase = .working(progress.title)
     }
 
     /// Whether there is a note that hasn't been kept. Drafting again would

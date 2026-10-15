@@ -4,23 +4,6 @@ import XCTest
 final class MemoryStatusTests: XCTestCase {
     private let gb: UInt64 = 1 << 30
 
-    func testUsedCountsSwapSoItPassesAHundredWhenSwapping() {
-        XCTAssertEqual(MemoryStatus(totalBytes: 16 * gb, freePercent: 67).usedPercent, 33)
-        XCTAssertEqual(MemoryStatus(totalBytes: 16 * gb, freePercent: 5, swapUsedBytes: 4 * gb, swapTotalBytes: 5 * gb).usedPercent, 120)
-    }
-
-    func testLevelsTurnAtSeventyFiveAndNinety() {
-        XCTAssertEqual(MemoryStatus(totalBytes: 16 * gb, freePercent: 26).level, .ok)
-        XCTAssertEqual(MemoryStatus(totalBytes: 16 * gb, freePercent: 25).level, .high)
-        XCTAssertEqual(MemoryStatus(totalBytes: 16 * gb, freePercent: 10).level, .critical)
-    }
-
-    func testTheSummaryAddsSwapOnlyWhenCritical() {
-        XCTAssertEqual(MemoryStatus(totalBytes: 16 * gb, freePercent: 20, swapUsedBytes: gb, swapTotalBytes: 2 * gb).summary, "Memory 86%")
-        XCTAssertEqual(MemoryStatus(totalBytes: 16 * gb, freePercent: 6, swapUsedBytes: 2254 << 20, swapTotalBytes: 5 * gb).summary,
-                       "Memory 107%, swap 44% (2.2 GB)")
-    }
-
     func testAdviceComesOnlyWhenTheModelWontFitWithRoomToSpare() {
         XCTAssertNil(MemoryStatus(totalBytes: 16 * gb, freePercent: 68).advice(beforeLoading: "Bonsai", needGB: 8))
         XCTAssertEqual(MemoryStatus(totalBytes: 16 * gb, freePercent: 41).advice(beforeLoading: "Bonsai", needGB: 8),

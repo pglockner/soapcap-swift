@@ -4,8 +4,6 @@ import Foundation
 /// How full this Mac's memory is, measured the way Activity Monitor's
 /// memory pressure is.
 public struct MemoryStatus: Equatable, Sendable {
-    public enum Level: Equatable, Sendable { case ok, high, critical }
-
     public var totalBytes: UInt64
     /// The system's own figure for memory still available, as a percentage.
     public var freePercent: Int
@@ -21,26 +19,8 @@ public struct MemoryStatus: Equatable, Sendable {
 
     private static let gigabyte = 1_073_741_824.0
 
-    /// Memory in use as a percentage of RAM, counting swap, so it passes 100
-    /// once the Mac is swapping to make room, which slows a model a lot.
-    public var usedPercent: Int {
-        100 - freePercent + (totalBytes == 0 ? 0 : Int(swapUsedBytes * 100 / totalBytes))
-    }
-
-    public var level: Level { usedPercent >= 90 ? .critical : usedPercent >= 75 ? .high : .ok }
-
     public var totalGB: Double { Double(totalBytes) / Self.gigabyte }
     public var availableGB: Double { totalGB * Double(freePercent) / 100 }
-
-    /// "Memory 82%"; from 90% it adds the swap in use, which is what pushes
-    /// the figure up: "Memory 104%, swap 42% (2.1 GB)".
-    public var summary: String {
-        var text = "Memory \(usedPercent)%"
-        if level == .critical, swapTotalBytes > 0 {
-            text += String(format: ", swap %d%% (%.1f GB)", Int(swapUsedBytes * 100 / swapTotalBytes), Double(swapUsedBytes) / Self.gigabyte)
-        }
-        return text
-    }
 
     /// What to tell someone about to load a model that takes `needGB`, or
     /// nil when there is room for it with a gigabyte to spare.

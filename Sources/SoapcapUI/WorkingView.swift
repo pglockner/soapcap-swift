@@ -87,23 +87,3 @@ struct DraftSteps: View {
         return words < 20 ? "a few words so far" : "about \((words + 5) / 10 * 10) words so far"
     }
 }
-
-/// Memory in use while a note is drafted, in words: green, yellow from 75%,
-/// red from 90%. A test of the model shows it only once it is red.
-struct MemoryLine: View {
-    let memory: MemoryStatus
-
-    var body: some View {
-        Text(memory.summary)
-            .font(.caption).monospacedDigit()
-            .foregroundStyle(color)
-    }
-
-    private var color: Color {
-        switch memory.level {
-        case .ok: .green
-        case .high: .yellow
-        case .critical: .red
-        }
-    }
-}

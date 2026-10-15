@@ -57,3 +57,15 @@ import SwiftUI
         $0.modelTest.show(.problem(model: "llama3.1:8b", reasons: ["ASSESSMENT is empty or \"Not addressed\""]), note: previewSampleNote)
     }
 }
+
+#Preview("Checks, model being tested") {
+    sampleScreen {
+        $0.phase = .checks([
+            Check("Microphone", .ok, "Soapcap can hear your side."),
+            Check("Call audio", .ok, "Soapcap can hear what the Mac is playing."),
+            Check("Note model", .ok, "llama3.1:8b is ready to draft notes."),
+            Check("Memory", .ok, "16 GB, about 10 GB free now."),
+        ])
+        $0.modelTest.show(.running("Drafting a SOAP note…", tokens: 240))
+    }
+}

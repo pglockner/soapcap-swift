@@ -603,9 +603,9 @@ final class SessionModelTests: XCTestCase {
         drafter.warnings = ["proofread it", "the Objective pass failed"]
         let m = await atTranscript()
         m.draft()
-        await waitFor("progress") { m.phase == .working("Drafting…  7 tokens") }
+        await waitFor("progress") { m.draftTokens == 7 }
+        XCTAssertEqual(m.phase, .working("Drafting…"))
         XCTAssertEqual(m.draftSteps, ["Drafting…"])          // each step once, however often it reports
-        XCTAssertEqual(m.draftTokens, 7)
         await waitFor("note") { m.phase == .note }
         XCTAssertEqual(m.notice, "proofread it\nthe Objective pass failed")
         try? await Task.sleep(nanoseconds: 100_000_000)

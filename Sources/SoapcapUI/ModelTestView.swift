@@ -22,9 +22,11 @@ struct ModelTestView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            if case .running(let title) = test.state {
-                ProgressView { Text(title) }.controlSize(.small)
-                if let memory = run.memory, memory.level == .critical { MemoryLine(memory: memory) }
+            // As a session's draft shows itself: the step in hand, and the
+            // Mac's memory meanwhile.
+            if case .running(let title, let tokens) = test.state {
+                DraftSteps(steps: [title], tokens: tokens)
+                MemoryCharts(trail: run.trail)
                 Button("Stop") { test.stop() }
             } else {
                 verdict
