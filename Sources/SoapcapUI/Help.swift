@@ -116,6 +116,9 @@ struct HelpView: View {
                 .background(.bar)
             }
         }
+        // macOS otherwise shows the toolbar's background when the pointer
+        // is over it, which brightens the strip above the page.
+        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .frame(minWidth: 640, minHeight: 420)
     }
 
