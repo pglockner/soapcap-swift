@@ -18,6 +18,9 @@ leave out what was said or add what wasn't: read every note before it goes in
 a record. It is free software provided as is, with no warranty (see
 [LICENSE](LICENSE)).
 
+To report a problem, use **Help › Report a Problem…** in the app, or write
+to support@jukenzie.com. This repository doesn't take issues.
+
 [How it works](#how-it-works) ·
 [Requirements](#requirements) ·
 [Install](#install) ·
