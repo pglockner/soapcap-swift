@@ -1,4 +1,5 @@
 import SoapcapCore
+import Speech
 import XCTest
 @testable import SoapcapCapture
 
@@ -8,12 +9,16 @@ final class FileTranscriberTests: XCTestCase {
     private let spoken = "Thanks for meeting with me today. I wanted to talk about what happened at work last week, because it has been on my mind."
     private var dir: URL!
 
-    override func setUpWithError() throws {
+    /// A Mac without Apple's en-US speech model, such as a fresh CI runner,
+    /// would have to download it first; these tests skip there instead.
+    override func setUp() async throws {
+        let installed = await SpeechTranscriber.installedLocales.contains { $0.identifier(.bcp47) == "en-US" }
+        try XCTSkipUnless(SpeechTranscriber.isAvailable && installed, "the en-US speech model isn't on this Mac")
         dir = FileManager.default.temporaryDirectory.appendingPathComponent("soapcap-capture-tests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
     }
 
-    override func tearDown() { try? FileManager.default.removeItem(at: dir) }
+    override func tearDown() { if let dir { try? FileManager.default.removeItem(at: dir) } }
 
     private func run(_ tool: String, _ args: [String]) throws -> Data {
         let p = Process(), out = Pipe()

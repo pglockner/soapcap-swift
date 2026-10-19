@@ -1,0 +1,41 @@
+# Builds the package and runs its tests on a fresh Mac for every push and
+# pull request. Tests that need a model, the network, audio hardware or
+# Apple's speech model skip there; see the README's Tests section.
+# Signing, notarizing and releasing stay on the developer's Mac.
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: xcode-27
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: |
+          sw_vers
+          xcodebuild -version
+          swift --version
+
+      - name: Cache packages and build products
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: spm-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: Test
+        run: swift test
