@@ -77,6 +77,7 @@ Open Settings with Cmd-comma.
 
 - Choose **Check** in the bar. Each line that isn't green has a button that puts it right.
 - If you allow the microphone in System Settings after refusing it, quit and reopen Soapcap: macOS only tells an app at launch.
+- If Soapcap says it can't find a working microphone, connect one, such as a headset or AirPods, and start again. A Mac mini or Mac Studio has none built in.
 - If a note comes out with a section missing, **Regenerate**, or try the other model.
 - **Help › Report a Problem** shows where to write, with this copy's version and Mac to include. **Open in Mail** starts the email with both filled in; if your mail is in a browser, copy them into a new message. Please describe what happened, but don't include anything from a session.
 

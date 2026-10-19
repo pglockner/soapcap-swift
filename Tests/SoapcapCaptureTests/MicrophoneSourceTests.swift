@@ -64,7 +64,9 @@ final class MicrophoneSourceTests: XCTestCase {
         await source.stop()
     }
 
-    func testWithoutPermissionOrAnInputItRefusesToStart() async {
+    /// Without the permission it says so; with it but no microphone, it
+    /// says to connect one rather than to turn the permission on.
+    func testWithoutPermissionOrAnInputItRefusesToStartAndSaysWhich() async {
         let denied = MicrophoneSource(engine: FakeEngine(), granted: { false })
         do { try await denied.start(format: format) { _ in }; XCTFail("started") } catch {
             XCTAssertEqual(error as? CaptureError, .microphoneDenied)
@@ -73,7 +75,7 @@ final class MicrophoneSourceTests: XCTestCase {
         engine.inputSampleRate = 0
         let noInput = MicrophoneSource(engine: engine, granted: { true })
         do { try await noInput.start(format: format) { _ in }; XCTFail("started") } catch {
-            XCTAssertEqual(error as? CaptureError, .microphoneDenied)
+            XCTAssertEqual(error as? CaptureError, .noMicrophone)
         }
     }
 

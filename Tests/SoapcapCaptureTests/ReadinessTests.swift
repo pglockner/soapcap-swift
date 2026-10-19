@@ -39,6 +39,17 @@ final class ReadinessTests: XCTestCase {
         XCTAssertEqual(refused, .refused)           // silence where the tone should be
     }
 
+    /// Nothing connected is a warning of its own, not a missing permission,
+    /// so the app still opens on the Ready screen.
+    func testNoMicrophoneConnectedIsAWarningNotAPermission() {
+        XCTAssertEqual(Readiness.input(connected: true), [])
+        let missing = Readiness.input(connected: false)
+        XCTAssertEqual(missing.map(\.status), [.warning])
+        let checks = [Readiness.microphone(.authorized)] + missing
+        XCTAssertFalse(checks.lackPermission)
+        XCTAssertFalse(checks.needAttention)
+    }
+
     func testAnUnsupportedLanguageFails() async {
         let checks = await Readiness.speech(locale: Locale(identifier: "tlh"))
         XCTAssertEqual(checks.map(\.status), [.failed])

@@ -22,8 +22,17 @@ public enum Readiness {
     /// `tccutil reset` the app doesn't know it has to ask again for call
     /// audio, so macOS puts its question at this point.)
     public static func checks(locale: Locale = Locale(identifier: Locale.current.identifier)) async -> [Check] {
-        [microphone(AVCaptureDevice.authorizationStatus(for: .audio)),
-         callAudio(await CallAudio.access())] + (await speech(locale: locale))
+        [microphone(AVCaptureDevice.authorizationStatus(for: .audio))]
+            + input(connected: AudioDevice.format(of: AudioDevice.default(.input), .input) != nil)
+            + [callAudio(await CallAudio.access())] + (await speech(locale: locale))
+    }
+
+    /// A line only when no microphone is connected, as on a Mac mini with
+    /// nothing plugged in. A warning, not a permission: it doesn't stop the
+    /// app opening on the Ready screen, since a headset or AirPods are
+    /// often connected only when the call begins.
+    static func input(connected: Bool) -> [Check] {
+        connected ? [] : [Check("Microphone input", .warning, "No microphone is connected. Connect one, such as a headset or AirPods, before a session.")]
     }
 
     static func microphone(_ status: AVAuthorizationStatus) -> Check {

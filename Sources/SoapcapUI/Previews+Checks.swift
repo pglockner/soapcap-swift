@@ -58,6 +58,18 @@ import SwiftUI
     }
 }
 
+#Preview("Checks, no microphone connected") {
+    sampleScreen {
+        $0.phase = .checks([
+            Check("Microphone", .ok, "Soapcap can hear your side."),
+            Check("Microphone input", .warning, "No microphone is connected. Connect one, such as a headset or AirPods, before a session."),
+            Check("Call audio", .ok, "Soapcap can hear what the Mac is playing."),
+            Check("Speech recognition", .ok, "Ready for en-US, on this Mac only."),
+            Check("Note model", .ok, "llama3.1:8b is ready to draft notes."),
+        ])
+    }
+}
+
 #Preview("Checks, model being tested") {
     sampleScreen {
         $0.phase = .checks([

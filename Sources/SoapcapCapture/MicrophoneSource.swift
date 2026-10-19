@@ -44,7 +44,8 @@ final class MicrophoneSource: AudioSource {
         guard await granted() else { throw CaptureError.microphoneDenied }
         let converter = BufferConverter(to: format)
         handler = { buffer in if let converted = converter.convert(buffer) { onBuffer(converted) } }
-        guard listen() else { throw CaptureError.microphoneDenied }
+        // Allowed, so a microphone that won't start is missing or broken.
+        guard listen() else { throw CaptureError.noMicrophone }
         engine.onConfigurationChange = { [changes] in changes.continuation.yield() }
         watcher = Task { [weak self, changes] in
             for await _ in changes.stream { await self?.recover() }
@@ -133,7 +134,7 @@ final class SystemInputEngine: InputEngine {
         stop()
         let device = AudioDevice.default(.input)
         guard let handler = lock.withLock({ handler }), let format = AudioDevice.format(of: device, .input) else {
-            throw CaptureError.microphoneDenied
+            throw CaptureError.noMicrophone
         }
         guard let proc = try? IOProc(device: device, queue: delivery, block: { _, input, _, output, _ in
             // A device that also plays is given silence to play.
@@ -144,7 +145,7 @@ final class SystemInputEngine: InputEngine {
             guard input.pointee.mNumberBuffers > 0 else { return }
             var first = AudioBufferList(mNumberBuffers: 1, mBuffers: input.pointee.mBuffers)
             if let buffer = AVAudioPCMBuffer(pcmFormat: format, bufferListNoCopy: &first) { handler(buffer) }
-        }) else { throw CaptureError.microphoneDenied }
+        }) else { throw CaptureError.noMicrophone }
         lock.withLock { (self.device, self.format, self.proc) = (device, format, proc) }
         listen(to: kAudioDevicePropertyDeviceIsAlive, of: device, true)
         listen(to: kAudioDevicePropertyNominalSampleRate, of: device, true)

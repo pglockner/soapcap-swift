@@ -5,7 +5,11 @@ public enum CaptureError: Error, LocalizedError, Equatable {
     case recognitionUnavailable
     case unsupportedLocale(String)
     case noAudioFormat
+    /// macOS refused the Microphone permission.
     case microphoneDenied
+    /// The permission is there, but no microphone could be started: none
+    /// is connected, or the one there wouldn't start.
+    case noMicrophone
     case callAudioDenied
     /// Core Audio would not set up listening to the Mac's output.
     case callAudioFailed(String)
@@ -16,7 +20,9 @@ public enum CaptureError: Error, LocalizedError, Equatable {
         case .unsupportedLocale(let id): "Speech recognition does not support the language \"\(id)\"."
         case .noAudioFormat: "No audio format is available for speech recognition."
         case .microphoneDenied:
-            "Soapcap can't use a microphone. If none is connected, connect one and start again. Otherwise, turn on Soapcap in System Settings > Privacy & Security > Microphone, then quit and reopen Soapcap."
+            "Soapcap isn't allowed to use the microphone. Turn on Soapcap in System Settings > Privacy & Security > Microphone, then quit and reopen Soapcap."
+        case .noMicrophone:
+            "Soapcap can't find a working microphone. Connect one, such as a headset or AirPods, and start again."
         case .callAudioDenied:
             "Soapcap can't hear the call. Turn on Soapcap in System Settings > Privacy & Security > Screen & System Audio Recording, under System Audio Recording Only, then start again."
         case .callAudioFailed(let why):
