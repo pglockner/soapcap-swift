@@ -30,6 +30,11 @@ jobs:
           xcodebuild -version
           swift --version
 
+      # mlx-swift compiles Metal shaders, and Xcode's Metal compiler is a
+      # separate download that a fresh runner may not have.
+      - name: Metal Toolchain
+        run: xcodebuild -downloadComponent MetalToolchain
+
       - name: Cache packages and build products
         uses: actions/cache@v4
         with:
