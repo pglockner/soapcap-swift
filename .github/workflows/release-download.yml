@@ -1,0 +1,36 @@
+# jukenzie.com's Download button links to the newest release's Soapcap.zip
+# (releases/latest/download/Soapcap.zip). A release published without that
+# file breaks the button at once, so this fails, and GitHub says so, when a
+# published release doesn't serve it within a few minutes.
+name: Release download
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: The site's Download link finds Soapcap.zip
+        env:
+          LINK: https://github.com/${{ github.repository }}/releases/latest/download/Soapcap.zip
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          # The file may still be uploading when the release is published.
+          for attempt in $(seq 1 20); do
+            target=$(curl -sI "$LINK" | awk 'tolower($1) == "location:" { print $2 }' | tr -d '\r')
+            case "$target" in
+              */releases/download/${TAG:-*}/Soapcap.zip)
+                echo "Download link -> $target"
+                exit 0 ;;
+            esac
+            sleep 30
+          done
+          echo "::error::The latest release has no Soapcap.zip, so the Download button on jukenzie.com is broken. Attach it with: gh release upload ${TAG:-<tag>} build/release/Soapcap.zip"
+          exit 1
