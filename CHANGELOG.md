@@ -14,6 +14,8 @@
 - Changed Help › Soapcap Help to list its sections down a sidebar and show one at a time. It is now the only guide to using the app, and gained what only the README said: the bar, Settings, the drafting screen and Stop drafting, and the memory advice (0.12.3)
 - Changed a note model's Test to show its progress as a draft does, with the working dots, how much has been written and the memory charts, in place of a spinning wheel (0.12.3)
 - Changed how the app starts and stops listening to the microphone, the call and its test tone to one shared piece of code, now covered by tests, including ones that run on the Mac's own devices when asked (0.12.3)
+- Changed Help › Report a Problem… to write to support@jukenzie.com (0.12.4)
+- Added a download page at jukenzie.com, which always offers the latest version (0.12.4)
 
 ## 0.11 (2026-10-12 – 2026-10-14)
 
