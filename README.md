@@ -12,6 +12,12 @@ itself.
 **Beta.** Everything below works, and testers are trying it as a signed,
 notarized download. For a finished tool, use soapcap.
 
+**Not a medical device.** Soapcap drafts notes for a clinician to check; it
+does not diagnose or advise. A language model writes the draft, and it can
+leave out what was said or add what wasn't: read every note before it goes in
+a record. It is free software provided as is, with no warranty (see
+[LICENSE](LICENSE)).
+
 [How it works](#how-it-works) ·
 [Requirements](#requirements) ·
 [Install](#install) ·

@@ -4,7 +4,7 @@ import SwiftUI
 /// An email to the developer with what is worth knowing about this copy
 /// already written in, and nothing from a session.
 struct ProblemReport {
-    static let address = "pglockner@gmail.com"
+    static let address = "support@jukenzie.com"
 
     var version: AppVersion
     var macOS: String
