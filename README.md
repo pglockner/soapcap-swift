@@ -53,7 +53,9 @@ to one.
 
 ## Install
 
-Unzip the download, drag **Soapcap** into Applications, and open it from
+Download the latest version from **[jukenzie.com](https://jukenzie.com)**
+(or from this repository's [Releases](https://github.com/pglockner/soapcap-swift/releases/latest)).
+Unzip it, drag **Soapcap** into Applications, and open it from
 there. It is signed and notarized, so macOS asks once whether to open an
 app from the internet and then lets it run. The first run walks through
 setup. Updating and uninstalling are in the app's Help (see
