@@ -1,5 +1,6 @@
 import AVFoundation
 import SoapcapCore
+import Speech
 import XCTest
 @testable import SoapcapCapture
 
@@ -43,7 +44,10 @@ final class ReadinessTests: XCTestCase {
         XCTAssertEqual(checks.map(\.status), [.failed])
     }
 
-    func testEnglishIsRecognized() async {
+    /// Not on a Mac without on-device speech recognition at all, such as a
+    /// CI runner, where the check rightly says it can't be done.
+    func testEnglishIsRecognized() async throws {
+        try XCTSkipUnless(SpeechTranscriber.isAvailable, "on-device speech recognition isn't available on this Mac")
         let checks = await Readiness.speech(locale: Locale(identifier: "en-US"))
         XCTAssertEqual(checks.count, 1)
         XCTAssertNotEqual(checks[0].status, .failed)
