@@ -9,8 +9,9 @@ the command-line tool, and shares its prompts and test cases. It is its own
 implementation: one window that captures, de-identifies and drafts by
 itself.
 
-**Beta.** Everything below works, and testers are trying it as a signed,
-notarized download. For a finished tool, use soapcap.
+**Beta.** Everything below works. The app is a signed, notarized download
+from [jukenzie.com](https://jukenzie.com); for a finished command-line
+tool, use soapcap.
 
 **Not a medical device.** Soapcap drafts notes for a clinician to check; it
 does not diagnose or advise. A language model writes the draft, and it can
@@ -47,7 +48,7 @@ to one.
 | Requirement | Notes |
 |---|---|
 | macOS 26 (Tahoe) or newer, Apple silicon | Built for macOS 26 and tested on macOS 27; not yet run on macOS 26 itself |
-| Full Xcode, and cmake | Only to build it yourself. The Command Line Tools alone are not enough; cmake (`brew install cmake`) builds the note engine |
+| Full Xcode, its Metal Toolchain, and cmake | Only to build it yourself. The Command Line Tools alone are not enough. The Metal Toolchain compiles the de-identifier's GPU code and is a separate download (`xcodebuild -downloadComponent MetalToolchain`); cmake (`brew install cmake`) builds the note engine |
 | A note model | `llama3.1:8b` (the tested default, 4.9 GB) or Bonsai (5.9 GB), each a download from Settings. A model an [Ollama](https://ollama.com) on the Mac already has is used where it is. Recording works without one |
 | The de-identification model (optional) | OpenMed's PII model, about 130 MB, installed from Settings |
 
@@ -213,11 +214,31 @@ It uses credentials stored once with
 `SOAPCAP_OUT` give a build its own identifier and folder, so that it can sit
 beside the usual one with permissions of its own.
 
+### Releases and the download page
+
+`docs/` is the download page, served by GitHub Pages at
+[jukenzie.com](https://jukenzie.com). Its Download button links to
+`releases/latest/download/Soapcap.zip`, so the page needs no change for a
+new version, but every release must have the notarized zip attached under
+that name:
+
+```sh
+gh release upload vX.Y.Z build/release/Soapcap.zip
+```
+
+A release published without it breaks the button. The `Release download`
+workflow checks for it whenever a release is published, and fails if the
+link doesn't find it.
+
 ### Tests
 
 ```sh
 swift test
 ```
+
+The `Test` workflow runs them on GitHub's Xcode 27 runner for every push
+and pull request. The runner has no on-device speech recognition, so the
+transcription tests skip there along with the opt-in ones below.
 
 | Bundle | Covers |
 |---|---|
