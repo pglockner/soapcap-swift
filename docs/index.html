@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Soapcap</title>
+<meta name="description" content="A Mac app that turns a telehealth session into a transcript and a drafted SOAP, DAP or BIRP note, entirely on the Mac.">
+<link rel="icon" href="icon.png">
+<style>
+  :root {
+    --bg: #f4f7f7;
+    --text: #12262b;
+    --muted: #4c6266;
+    --line: #d5e0e1;
+    --card: #ffffff;
+    --accent: #1b5c66;
+    --accent-text: #ffffff;
+    --caution: #8a4b08;
+    --caution-bg: #fbf1e4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1d21;
+      --text: #e6eeef;
+      --muted: #9db2b5;
+      --line: #24393e;
+      --card: #152a30;
+      --accent: #4fb3c2;
+      --accent-text: #0b1a1e;
+      --caution: #f0b46a;
+      --caution-bg: #2a2117;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 17px/1.55 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  }
+  main { max-width: 640px; margin: 0 auto; padding: 56px 16px 64px; }
+  header { display: flex; align-items: center; gap: 18px; }
+  header img { width: 76px; height: 76px; }
+  h1 { font-size: 34px; line-height: 1.1; margin: 0; letter-spacing: -0.01em; }
+  .tagline { margin: 4px 0 0; color: var(--muted); }
+  .lead { font-size: 19px; margin: 28px 0 24px; }
+  .download {
+    display: inline-block;
+    background: var(--accent);
+    color: var(--accent-text);
+    text-decoration: none;
+    font-weight: 600;
+    padding: 12px 22px;
+    border-radius: 10px;
+  }
+  .download:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+  .fine { color: var(--muted); font-size: 15px; margin: 10px 0 0; }
+  h2 { font-size: 20px; margin: 40px 0 10px; }
+  ol, ul { padding-left: 1.3em; margin: 0; }
+  li { margin: 6px 0; }
+  .caution {
+    margin-top: 40px;
+    background: var(--caution-bg);
+    border-left: 4px solid var(--caution);
+    padding: 14px 18px;
+    border-radius: 6px;
+  }
+  .caution strong { color: var(--caution); }
+  a { color: var(--accent); }
+  footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 15px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="icon.png" alt="">
+    <div>
+      <h1>Soapcap</h1>
+      <p class="tagline">Session notes, drafted on your Mac</p>
+    </div>
+  </header>
+
+  <p class="lead">Soapcap listens to a telehealth session as it happens, turns it into a transcript with each speaker marked, and drafts a SOAP, DAP or BIRP note from it. Everything runs on your Mac. No audio is recorded, nothing from a session is sent anywhere, and nothing is saved unless you ask.</p>
+
+  <a class="download" href="https://github.com/pglockner/soapcap-swift/releases/latest/download/Soapcap.zip">Download Soapcap</a>
+  <p class="fine">The latest beta, signed and notarized by Apple. <a href="https://github.com/pglockner/soapcap-swift/releases/latest">What's new</a></p>
+
+  <h2>What you need</h2>
+  <ul>
+    <li>A Mac with Apple silicon, running macOS 26 or later</li>
+    <li>16 GB of memory is best; the note models take 6.5 to 8 GB while they draft</li>
+    <li>About 6 GB of disk for a note model, downloaded from within the app</li>
+  </ul>
+
+  <h2>Installing</h2>
+  <ol>
+    <li>Open the downloaded <b>Soapcap.zip</b> to unzip it.</li>
+    <li>Drag <b>Soapcap</b> into your Applications folder.</li>
+    <li>Open it from Applications. macOS asks once whether to open an app from the internet; choose Open.</li>
+    <li>Soapcap walks you through the two permissions it needs, then lets you download a note model in Settings.</li>
+  </ol>
+
+  <h2>Updating</h2>
+  <p>Quit Soapcap with Cmd-Q, then drag the new version into Applications and choose Replace. Your models, settings and permissions are kept.</p>
+
+  <div class="caution">
+    <strong>Not a medical device.</strong> Soapcap drafts notes for a clinician to check; it does not diagnose or advise. A language model writes the draft, and it can leave out what was said or add what wasn't. Read every note before it goes in a record. Soapcap is free software provided as is, with no warranty.
+  </div>
+
+  <footer>
+    Problems or questions: <a href="mailto:support@jukenzie.com">support@jukenzie.com</a>, or <b>Help › Report a Problem…</b> in the app.<br>
+    Source code: <a href="https://github.com/pglockner/soapcap-swift">github.com/pglockner/soapcap-swift</a>, under the MIT licence.
+  </footer>
+</main>
+</body>
+</html>
