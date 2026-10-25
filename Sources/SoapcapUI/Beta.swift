@@ -101,7 +101,7 @@ struct BetaBadge: View {
     var body: some View {
         Text("Beta")
             .font(.caption2.weight(.semibold))
-            .foregroundStyle(.orange)
+            .foregroundStyle(.caution)
             .padding(.horizontal, 5).padding(.vertical, 1)
             .overlay(Capsule().strokeBorder(.orange.opacity(0.6)))
             .help("Pre-release software: read every note before you use it")

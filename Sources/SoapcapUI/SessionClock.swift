@@ -27,7 +27,9 @@ struct SessionClock: View {
                 .font(.system(size: 56, weight: .light))
                 .monospacedDigit()
                 .contentTransition(.numericText())
-                .foregroundStyle(isWaiting ? .tertiary : .primary)
+                // Secondary, not tertiary: tertiary grey at this size fell
+                // below 3:1 against the window in dark mode.
+                .foregroundStyle(isWaiting ? .secondary : .primary)
         }
         .accessibilityElement(children: .combine)
     }

@@ -67,7 +67,9 @@ struct StageBar: View {
 
     private func label(_ step: SessionModel.Stage) -> some View {
         Text(Self.title(step))
-            .foregroundStyle(step == stage || canGo(step) ? .primary : .tertiary)
+            // Secondary, not tertiary: tertiary grey on the bar's glass fell
+            // to about 2:1 in dark mode.
+            .foregroundStyle(step == stage || canGo(step) ? .primary : .secondary)
             .padding(.horizontal, 12).padding(.vertical, 4)
             .background(.primary.opacity(step == stage ? 0.1 : 0), in: Capsule())
             .accessibilityValue(step == stage ? "current step" : canGo(step) ? "" : "not available")

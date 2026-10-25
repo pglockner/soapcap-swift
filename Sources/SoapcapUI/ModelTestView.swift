@@ -33,7 +33,7 @@ struct ModelTestView: View {
                 Button("Test \(ModelCatalog.displayName(of: model))") { test.start() }.disabled(!test.canStart)
                 Text(hint).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 if advisesOnMemory, let advice = ModelCatalog.memoryAdvice(for: model, memory: MemoryStatus.current()) {
-                    Text(advice).font(.caption).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
+                    Text(advice).font(.caption).foregroundStyle(.caution).fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
@@ -62,7 +62,7 @@ struct ModelTestView: View {
                 Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
             }
             ForEach(reasons, id: \.self) { reason in
-                Text(reason).font(.callout).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
+                Text(reason).font(.callout).foregroundStyle(.caution).fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
             }
             readNote
         default:

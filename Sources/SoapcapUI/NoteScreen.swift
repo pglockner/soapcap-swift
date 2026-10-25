@@ -9,7 +9,7 @@ struct NoteScreen: View {
             Text("\((m.draftedFormat.isEmpty ? m.format : m.draftedFormat).uppercased()) note").font(.headline)
             WarningBanner(text: m.warning)
             ReadingText(text: m.note)
-            if !m.notice.isEmpty { Text(m.notice).font(.caption).foregroundStyle(.orange) }
+            if !m.notice.isEmpty { Text(m.notice).font(.caption).foregroundStyle(.caution) }
             HStack {
                 Button(m.copied ? "Copied" : "Keep") { m.keep() }.keyboardShortcut(.defaultAction)
                 Button("Regenerate") { m.draft() }

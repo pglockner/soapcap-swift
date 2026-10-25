@@ -22,10 +22,10 @@ struct ModelDownloadRow: View {
             ProgressView(value: progress.fraction) { Text(progress.summary) }
             Button("Stop") { download.stop() }
         case .missing, .failed:
-            if case .failed(let why) = download.state { Text(why).foregroundStyle(.orange) }
+            if case .failed(let why) = download.state { Text(why).foregroundStyle(.caution) }
             Text(cost).fixedSize(horizontal: false, vertical: true)
             if let short = shortOfDisk {
-                Text(short).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
+                Text(short).foregroundStyle(.caution).fixedSize(horizontal: false, vertical: true)
             } else {
                 Button(download.keptBytes > 0 ? "Carry on downloading" : "Download \(name)") { download.start() }
             }

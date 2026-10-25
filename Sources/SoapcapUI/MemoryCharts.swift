@@ -69,6 +69,7 @@ private struct MemoryChart: View {
         }
         .frame(width: 160)
         .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isStaticText)
         .accessibilityLabel(title)
         .accessibilityValue(value)
     }

@@ -97,6 +97,7 @@ private struct MinuteBlocks: View {
             .font(.caption.monospacedDigit())
             .foregroundStyle(.secondary)
             .accessibilityElement()
+            .accessibilityAddTraits(.isStaticText)
             .accessibilityLabel("Minute \(block.minute)")
             // The pause's own line says it is one.
             .accessibilityHidden(block.pause != nil || !block.startsMinute)

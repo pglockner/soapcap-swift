@@ -190,7 +190,7 @@ struct SettingsView: View {
                 case .working(let file, let fraction):
                     ProgressView(value: fraction) { Text(file.isEmpty ? "Setting up…" : "Getting \(file)…") }
                 case .missing, .failed:
-                    if case .failed(let why) = setup.state { Text(why).foregroundStyle(.orange) }
+                    if case .failed(let why) = setup.state { Text(why).foregroundStyle(.caution) }
                     Text("Needs OpenMed's PII model, a one-time 130 MB download from huggingface.co. Nothing from a session is sent.")
                         .fixedSize(horizontal: false, vertical: true)
                     Button("Download model") { setup.install() }
@@ -208,7 +208,7 @@ struct SettingsView: View {
             } footer: {
                 if !OllamaBackend.isLocal(host) {
                     Text("This is not this Mac: transcripts will be sent to that machine over the network.")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(.caution)
                 }
             }
             Section {

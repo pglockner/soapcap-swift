@@ -32,11 +32,11 @@ struct TranscriptScreen: View {
             }
             WarningBanner(text: m.warning)
             TranscriptView(text: m.transcript, times: m.lineTimes, pauses: m.pauses)
-            if !m.notice.isEmpty { Text(m.notice).font(.caption).foregroundStyle(.orange) }
+            if !m.notice.isEmpty { Text(m.notice).font(.caption).foregroundStyle(.caution) }
             // Memory changes as apps open and close, so this is asked again every few seconds.
             TimelineView(.periodic(from: .now, by: 5)) { _ in
                 if let advice = m.memoryAdvice {
-                    Label(advice, systemImage: "memorychip").font(.caption).foregroundStyle(.orange)
+                    Label(advice, systemImage: "memorychip").font(.caption).foregroundStyle(.caution)
                 }
             }
             HStack {
