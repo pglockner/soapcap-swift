@@ -151,10 +151,9 @@ struct SettingsView: View {
             }
             Section {
                 if OllamaBackend.has(ModelCatalog.defaultModel, in: pulled), llama.state == .missing {
-                    Label("Ollama has \(ModelCatalog.defaultModel), and Soapcap drafts with that copy.", systemImage: "checkmark.circle.fill")
-                } else {
-                    ModelDownloadRow(name: NoteModel.llama.displayName, needGB: NoteModel.llama.memoryNeedGB, download: llama)
+                    Label("Ollama has \(ModelCatalog.defaultModel), and Soapcap drafts with that copy until it has its own, checked against a fixed checksum.", systemImage: "checkmark.circle.fill")
                 }
+                ModelDownloadRow(name: NoteModel.llama.displayName, needGB: NoteModel.llama.memoryNeedGB, download: llama)
             } header: {
                 Text(ModelCatalog.defaultModel)
             } footer: {

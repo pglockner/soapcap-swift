@@ -49,7 +49,7 @@ to one.
 |---|---|
 | macOS 26 (Tahoe) or newer, Apple silicon | Built for macOS 26 and tested on macOS 27; not yet run on macOS 26 itself |
 | Full Xcode, its Metal Toolchain, and cmake | Only to build it yourself. The Command Line Tools alone are not enough. The Metal Toolchain compiles the de-identifier's GPU code and is a separate download (`xcodebuild -downloadComponent MetalToolchain`); cmake (`brew install cmake`) builds the note engine |
-| A note model | `llama3.1:8b` (the tested default, 4.9 GB) or Bonsai (5.9 GB), each a download from Settings. A model an [Ollama](https://ollama.com) on the Mac already has is used where it is. Recording works without one |
+| A note model | `llama3.1:8b` (the tested default, 4.9 GB) or Bonsai (5.9 GB), each a download from Settings. An [Ollama](https://ollama.com) on the Mac that has `llama3.1:8b` is used until the app has its own copy. Recording works without one |
 | The de-identification model (optional) | OpenMed's PII model, about 130 MB, installed from Settings |
 
 ## Install
@@ -102,9 +102,10 @@ and note model to include.
   that convention skip it.
 - **Downloads only, nothing uploaded.** The note models and the
   de-identification model come from huggingface.co, and each file is
-  checked against a pinned checksum. A copy soapcap or Ollama already has
-  is used instead. Those downloads are the only time the app goes online,
-  and nothing from a session is sent.
+  checked against a pinned checksum. A copy soapcap already has is used
+  instead, and Ollama's `llama3.1:8b` when the app has no copy of its own.
+  Those downloads are the only time the app goes online, and nothing from a
+  session is sent.
 - **Ollama on another machine breaks the promise.** If its address is not
   this Mac, the transcript travels over the network, and the note says so.
 

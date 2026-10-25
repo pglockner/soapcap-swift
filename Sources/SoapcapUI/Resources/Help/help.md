@@ -52,7 +52,7 @@ The window lists the steps of the draft as they are done, with two small charts:
 
 ## Note models
 
-`llama3.1:8b` is fast, usually under a minute a note, and needs about 6.5 GB of memory. Bonsai is more careful and slower, a few minutes a note, and needs about 8 GB. They are the two the prompts were tested with, and no other model is offered. Both run inside Soapcap, except that `llama3.1:8b` is left to Ollama when Ollama already has it.
+`llama3.1:8b` is fast, usually under a minute a note, and needs about 6.5 GB of memory. Bonsai is more careful and slower, a few minutes a note, and needs about 8 GB. They are the two the prompts were tested with, and no other model is offered. Both run inside Soapcap from files it downloaded and checked itself; `llama3.1:8b` is left to Ollama only when Soapcap has no copy of its own and Ollama has it.
 
 - When memory is short for the chosen model, the transcript suggests closing other apps first. When the Mac is also deep in swap, Soapcap asks before drafting. A Mac with too little memory for the model is told that drafting will be very slow.
 - **Test**, under the model's name in Settings and on the checks screen's Note model line, drafts a note from a made-up session and answers Good when every section came out filled, or Problem with what was wrong. The note can be read either way. It takes as long as drafting a note does, nothing is kept, and it isn't offered while a session is being recorded.
@@ -64,7 +64,7 @@ Open Settings with Cmd-comma.
 - **Speaker labels**: who your microphone is and who the call is. Each transcript line starts with one of them.
 - **Language**: the language to transcribe in, this Mac's unless you choose another.
 - **Note**: the model that drafts, and the session type on the note's first line ("53 minutes, telehealth").
-- **llama3.1:8b**, **Bonsai** and **De-identification**: each model says how big it is before it downloads. **Remove** deletes a note model again. `llama3.1:8b` isn't offered for download when Ollama already has it. **De-identify by default** is here too.
+- **llama3.1:8b**, **Bonsai** and **De-identification**: each model says how big it is before it downloads. **Remove** deletes a note model again. When Ollama already has `llama3.1:8b`, it is used until Soapcap's own copy is downloaded. **De-identify by default** is here too.
 - **Advanced**: Ollama's address. An address that isn't this Mac sends the transcript over the network, and Settings and the note say so.
 
 ## Privacy

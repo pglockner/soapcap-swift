@@ -48,14 +48,15 @@ public enum ModelCatalog {
         (try? await OllamaBackend(model: "", host: host).models()) ?? []
     }
 
-    /// `bonsai` runs on the app's engine. So does the default model, from
-    /// the app's own file, unless Ollama has it: a model Ollama already
-    /// holds is used where it is. Every other name is a model in Ollama.
+    /// `bonsai` runs on the app's engine. So does the default model when the
+    /// app has its own file, checked against its pin when downloaded; only
+    /// without that file is Ollama's copy used. Every other name is a model
+    /// in Ollama.
     public static func backend(for model: String, pulled: [String], host: URL = OllamaBackend.defaultHost,
                                bonsai: EngineBackend.Install = NoteModel.bonsai.install,
                                llama: EngineBackend.Install = NoteModel.llama.install) -> any NoteBackend {
         if model == self.bonsai { return EngineBackend(.bonsai, install: bonsai) }
-        if model == defaultModel, !OllamaBackend.has(model, in: pulled) { return EngineBackend(.llama, install: llama) }
+        if model == defaultModel, llama.isPresent || !OllamaBackend.has(model, in: pulled) { return EngineBackend(.llama, install: llama) }
         return OllamaBackend(model: model, host: host)
     }
 

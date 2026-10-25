@@ -11,7 +11,7 @@ final class ModelCatalogTests: XCTestCase {
         XCTAssertEqual(ModelCatalog.displayName(of: "llama3.1:8b"), "llama3.1:8b")
     }
 
-    func testTheDefaultModelRunsInOllamaWhenOllamaHasItAndOnTheAppsEngineOtherwise() {
+    func testTheDefaultModelRunsInOllamaOnlyWhenTheAppHasNoFileOfItsOwn() {
         let llama = EngineBackend.Install(server: URL(fileURLWithPath: "/nowhere/llama-server"), weights: URL(fileURLWithPath: "/nowhere/llama.gguf"))
         XCTAssertTrue(ModelCatalog.backend(for: "llama3.1:8b", pulled: ["llama3.1:8b"], llama: llama) is OllamaBackend)
         let own = ModelCatalog.backend(for: "llama3.1:8b", pulled: ["qwen3:8b"], llama: llama) as? EngineBackend
@@ -20,6 +20,18 @@ final class ModelCatalogTests: XCTestCase {
         XCTAssertEqual(own?.resumesFromSharedOpening, false)        // prompts in the order Ollama gets them
         XCTAssertTrue(ModelCatalog.backend(for: "qwen3:8b", pulled: [], llama: llama) is OllamaBackend)   // any other name is Ollama's
         XCTAssertEqual((ModelCatalog.backend(for: "bonsai", pulled: ["llama3.1:8b"], llama: llama) as? EngineBackend)?.label, "Bonsai")
+    }
+
+    func testTheAppsOwnFileIsUsedEvenWhenOllamaHasTheModel() throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "soapcap-catalog-tests-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let server = root.appending(path: "llama-server"), weights = root.appending(path: "llama.gguf")
+        try Data("#!/bin/sh\n".utf8).write(to: server)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: server.path)
+        try Data("weights".utf8).write(to: weights)
+        let here = EngineBackend.Install(server: server, weights: weights)
+        XCTAssertEqual((ModelCatalog.backend(for: "llama3.1:8b", pulled: ["llama3.1:8b"], llama: here) as? EngineBackend)?.install, here)
     }
 
     func testWithNeitherOllamaNorItsFileTheDefaultModelPointsAtSettings() async {
