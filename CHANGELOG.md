@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13 (2026-10-18 – 2026-10-24)
+
+- Changed the app to use nothing that soapcap installed, after the eMudhra certificate authority compromise of October 2026: Bonsai and `llama-server` from `~/.local/share/soapcap` are no longer used, and the de-identification model is always downloaded and checked rather than copied from soapcap's cache. A Mac that had soapcap's Bonsai needs to download it once from Settings, which says why
+- Changed `llama3.1:8b` to run from the app's own checksummed copy whenever it has one, even when Ollama has the model; Ollama's copy is used only until then, and Settings now offers the download on a Mac whose Ollama has it
+- Fixed a Mac with no microphone connected being told to turn the microphone permission on; it is now told to connect a microphone, and the checks warn when none is connected
+
 ## 0.12 (2026-10-14)
 
 - Added a beta notice: every version below 1.0 opens on a notice to acknowledge once per version (pre-release, read every note before using it, sessions stay on this Mac), the Ready screen carries a Beta mark, and the About box says Beta after the version
