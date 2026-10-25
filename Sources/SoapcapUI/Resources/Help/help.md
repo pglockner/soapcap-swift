@@ -91,4 +91,4 @@ Your models, settings and permissions are kept. Don't use **Uninstall Soapcap…
 
 ## Uninstalling
 
-**Uninstall Soapcap…**, at the bottom of Settings, removes the models Soapcap downloaded, its settings and its permissions, then moves the app to the Trash. A Bonsai or an Ollama that something else installed is left alone, and so is a transcript you saved: that file is yours, wherever you put it.
+**Uninstall Soapcap…**, at the bottom of Settings, removes the models Soapcap downloaded, its settings and its permissions, then moves the app to the Trash. Models that Ollama installed are left alone, and so is a transcript you saved: that file is yours, wherever you put it.

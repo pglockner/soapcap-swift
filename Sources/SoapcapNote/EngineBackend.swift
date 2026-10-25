@@ -23,24 +23,11 @@ public actor EngineBackend: NoteBackend {
             URL.applicationSupportDirectory.appending(path: "Soapcap/note-models", directoryHint: .isDirectory)
         }
 
-        /// Where soapcap's installer puts Bonsai and the engine it builds.
-        static var soapcapDirectory: URL {
-            FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".local/share/soapcap/bonsai")
-        }
-
-        /// The engine inside the app, or else the one soapcap's installer built.
-        /// SOAPCAP_ENGINE names a different llama-server, for trying a build.
-        static var servers: [URL] {
-            let named = ProcessInfo.processInfo.environment["SOAPCAP_ENGINE"].map { [URL(fileURLWithPath: $0)] } ?? []
-            return named + [Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/llama-server"),
-                            soapcapDirectory.appendingPathComponent("llama.cpp/build/bin/llama-server")]
-        }
-
-        /// The first of each that is there. When none is, the first, so that
-        /// what gets reported missing is the place the app would put it.
-        static func found(servers: [URL], weights: [URL]) -> Install {
-            func first(_ urls: [URL]) -> URL { urls.first { FileManager.default.fileExists(atPath: $0.path) } ?? urls[0] }
-            return Install(server: first(servers), weights: first(weights))
+        /// The engine inside the app. SOAPCAP_ENGINE names a different
+        /// llama-server, for trying a build.
+        static var server: URL {
+            ProcessInfo.processInfo.environment["SOAPCAP_ENGINE"].map { URL(fileURLWithPath: $0) }
+                ?? Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/llama-server")
         }
 
         public var isPresent: Bool {

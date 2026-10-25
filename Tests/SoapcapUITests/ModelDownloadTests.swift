@@ -15,7 +15,6 @@ final class ModelDownloadTests: XCTestCase {
     override func tearDown() async throws { try? FileManager.default.removeItem(at: root) }
 
     private var target: URL { root.appending(path: "mine/model.gguf") }
-    private var soapcaps: URL { root.appending(path: "soapcap/model.gguf") }
 
     private func write(_ url: URL, _ text: String = "weights") throws {
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -24,7 +23,7 @@ final class ModelDownloadTests: XCTestCase {
 
     /// A fetch that reports halfway, waits, then does what `end` says.
     private func download(_ end: @escaping @Sendable (URL) throws -> Void) -> ModelDownload {
-        ModelDownload(file: file, target: target, elsewhere: soapcaps) { file, target, progress in
+        ModelDownload(file: file, target: target) { file, target, progress in
             progress(FetchProgress(bytes: 500, total: file.bytes, bytesPerSecond: 100))
             try await Task.sleep(for: .milliseconds(150))
             try end(target)
@@ -61,16 +60,6 @@ final class ModelDownloadTests: XCTestCase {
         download.stop()
         await waitFor("stopped") { download.state == .missing }
         XCTAssertEqual(download.keptBytes, 4)
-    }
-
-    func testACopySomethingElseInstalledIsUsedAndNeverRemoved() throws {
-        try write(soapcaps)
-        let download = download { _ in }
-        XCTAssertEqual(download.state, .elsewhere)
-        XCTAssertTrue(download.isInstalled)
-        download.remove()
-        XCTAssertTrue(FileManager.default.fileExists(atPath: soapcaps.path))
-        XCTAssertEqual(download.state, .elsewhere)
     }
 
     func testRemovingDeletesTheAppsCopyAndWhatAStoppedDownloadLeft() throws {

@@ -112,6 +112,12 @@ struct SettingsView: View {
         models.contains(chosenModel) ? models : [chosenModel] + models
     }
 
+    /// Where soapcap's installer put Bonsai. Looked at only to say why it
+    /// isn't used; the app never reads it.
+    private static var soapcapsBonsai: URL {
+        FileManager.default.homeDirectoryForCurrentUser.appending(path: ".local/share/soapcap/bonsai/\(NoteModel.bonsai.weights.name)")
+    }
+
     var body: some View {
         Form {
             Section {
@@ -161,6 +167,11 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
             Section {
+                if bonsai.state == .missing, FileManager.default.fileExists(atPath: Self.soapcapsBonsai.path) {
+                    Text("The copy of Bonsai that soapcap installed isn't used: Soapcap only runs model files it downloaded and checked itself.")
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 ModelDownloadRow(name: NoteModel.bonsai.displayName, needGB: NoteModel.bonsai.memoryNeedGB, download: bonsai)
             } header: {
                 Text(NoteModel.bonsai.displayName)
@@ -180,11 +191,9 @@ struct SettingsView: View {
                     ProgressView(value: fraction) { Text(file.isEmpty ? "Setting up…" : "Getting \(file)…") }
                 case .missing, .failed:
                     if case .failed(let why) = setup.state { Text(why).foregroundStyle(.orange) }
-                    Text(setup.canCopyFromSoapcap
-                         ? "soapcap's copy of the model is on this Mac. It will be copied; nothing is downloaded."
-                         : "Needs OpenMed's PII model, a one-time 130 MB download from huggingface.co. Nothing from a session is sent.")
+                    Text("Needs OpenMed's PII model, a one-time 130 MB download from huggingface.co. Nothing from a session is sent.")
                         .fixedSize(horizontal: false, vertical: true)
-                    Button(setup.canCopyFromSoapcap ? "Set up" : "Download model") { setup.install() }
+                    Button("Download model") { setup.install() }
                 }
             } header: {
                 Text("De-identification")

@@ -18,8 +18,6 @@ struct ModelDownloadRow: View {
                 Spacer()
                 Button("Remove") { download.remove() }
             }
-        case .elsewhere:
-            Label("Using the copy of \(name) that soapcap installed.", systemImage: "checkmark.circle.fill")
         case .working(let progress):
             ProgressView(value: progress.fraction) { Text(progress.summary) }
             Button("Stop") { download.stop() }

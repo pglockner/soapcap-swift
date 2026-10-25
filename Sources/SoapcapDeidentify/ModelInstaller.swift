@@ -13,49 +13,30 @@ public enum ModelInstallError: Error, LocalizedError, Equatable {
     }
 }
 
-/// Puts the model's files in place: from soapcap's copy when there is one,
-/// otherwise by downloading. Every file is checked against its pinned
+/// Downloads the model's files. Every file is checked against its pinned
 /// checksum, and nothing is moved into place unless all of them pass.
 /// The download is the only time the app uses the network; it sends no session data.
 public struct ModelInstaller: Sendable {
-    public enum Source: Equatable, Sendable { case soapcap, download }
-
     var files = ModelFiles.pinned
     var directory = ModelFiles.directory
-    var soapcapModels = ModelFiles.soapcapModels
     var session = URLSession.shared
 
     public init() {}
 
-    /// Whether soapcap's copy can supply every file, so no download is needed.
-    public var canCopyFromSoapcap: Bool {
-        files.allSatisfy { FileManager.default.fileExists(atPath: $0.soapcapCopy(in: soapcapModels).path) }
-    }
-
     /// `progress` gets the file being fetched and how far along it is (0 to 1).
-    /// Returns `.download` if any file came from the network.
-    @discardableResult
-    public func install(progress: @escaping @Sendable (String, Double) -> Void = { _, _ in }) async throws -> Source {
+    public func install(progress: @escaping @Sendable (String, Double) -> Void = { _, _ in }) async throws {
         let fm = FileManager.default
         let staging = directory.deletingLastPathComponent().appending(path: ".\(directory.lastPathComponent)-\(UUID().uuidString)")
         try fm.createDirectory(at: staging, withIntermediateDirectories: true)
         defer { try? fm.removeItem(at: staging) }
 
-        var source = Source.soapcap
         for file in files {
             let target = staging.appending(path: file.name)
-            let copy = file.soapcapCopy(in: soapcapModels)
-            if (try? Self.sha256(of: copy)) == file.sha256 {
-                try fm.copyItem(at: copy.resolvingSymlinksInPath(), to: target)
-                continue
-            }
-            source = .download
             try await download(file, to: target, progress: progress)
             guard try Self.sha256(of: target) == file.sha256 else { throw ModelInstallError.checksum(file: file.name) }
         }
         try? fm.removeItem(at: directory)
         try fm.moveItem(at: staging, to: directory)
-        return source
     }
 
     private func download(_ file: ModelFile, to target: URL, progress: @escaping @Sendable (String, Double) -> Void) async throws {

@@ -12,13 +12,11 @@ final class ModelDownload: ObservableObject {
         case failed(String)
         /// The app's own copy is in place.
         case ready
-        /// A copy something else installed is on this Mac, and is used where it is.
-        case elsewhere
     }
 
     typealias Fetch = @Sendable (PinnedFile, URL, @escaping @Sendable (FetchProgress) -> Void) async throws -> Void
 
-    /// Bonsai's weights: the app's copy, or the one soapcap's installer made.
+    /// Bonsai's weights.
     static let bonsai = ModelDownload(model: .bonsai)
 
     /// The default model's weights, for a Mac whose Ollama doesn't have it.
@@ -27,24 +25,22 @@ final class ModelDownload: ObservableObject {
     @Published private(set) var state = State.missing
     let file: PinnedFile
     private let target: URL
-    private let elsewhere: URL?
     private let fetch: Fetch
     private var task: Task<Void, Never>?
 
-    init(file: PinnedFile, target: URL, elsewhere: URL? = nil, fetch: @escaping Fetch = { try await Fetcher().fetch($0, to: $1, progress: $2) }) {
+    init(file: PinnedFile, target: URL, fetch: @escaping Fetch = { try await Fetcher().fetch($0, to: $1, progress: $2) }) {
         self.file = file
         self.target = target
-        self.elsewhere = elsewhere
         self.fetch = fetch
         refresh()
     }
 
     convenience init(model: NoteModel) {
-        self.init(file: model.weights, target: model.ownWeights, elsewhere: model.elsewhere)
+        self.init(file: model.weights, target: model.ownWeights)
     }
 
-    /// True when the model can be used, whoever put it there.
-    var isInstalled: Bool { state == .ready || state == .elsewhere }
+    /// True when the model can be used.
+    var isInstalled: Bool { state == .ready }
     /// How much an attempt that was stopped has already brought in.
     var keptBytes: Int64 { Fetcher.size(of: Fetcher.part(of: target)) }
     /// Room on the disk the model would go to.
@@ -53,9 +49,7 @@ final class ModelDownload: ObservableObject {
     /// Looks at the disk again, unless a download is running.
     func refresh() {
         if case .working = state { return }
-        let fm = FileManager.default
-        state = fm.fileExists(atPath: target.path) ? .ready
-            : elsewhere.map({ fm.fileExists(atPath: $0.path) }) == true ? .elsewhere : .missing
+        state = FileManager.default.fileExists(atPath: target.path) ? .ready : .missing
     }
 
     /// Downloads the file, carrying on from where a stopped attempt got to.
@@ -81,8 +75,7 @@ final class ModelDownload: ObservableObject {
     /// Stops a download. What has arrived is kept for next time.
     func stop() { task?.cancel() }
 
-    /// Deletes the app's copy and anything a stopped download left. A copy
-    /// that something else installed is never touched.
+    /// Deletes the app's copy and anything a stopped download left.
     func remove() {
         task?.cancel()
         try? FileManager.default.removeItem(at: target)

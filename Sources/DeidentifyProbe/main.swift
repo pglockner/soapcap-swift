@@ -13,10 +13,10 @@ import SoapcapPII
 let args = CommandLine.arguments.dropFirst()
 if args.first == "--install" {
     do {
-        let source = try await ModelInstaller().install { file, fraction in
+        try await ModelInstaller().install { file, fraction in
             FileHandle.standardError.write(Data("\r\(file) \(Int(fraction * 100))%   ".utf8))
         }
-        print("\nmodel ready in \(ModelFiles.directory.path) (\(source == .soapcap ? "copied from soapcap" : "downloaded"))")
+        print("\nmodel ready in \(ModelFiles.directory.path)")
         exit(0)
     } catch {
         FileHandle.standardError.write(Data("\ninstall failed: \(error.localizedDescription)\n".utf8))

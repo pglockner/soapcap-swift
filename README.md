@@ -102,10 +102,9 @@ and note model to include.
   that convention skip it.
 - **Downloads only, nothing uploaded.** The note models and the
   de-identification model come from huggingface.co, and each file is
-  checked against a pinned checksum. A copy soapcap already has is used
-  instead, and Ollama's `llama3.1:8b` when the app has no copy of its own.
-  Those downloads are the only time the app goes online, and nothing from a
-  session is sent.
+  checked against a pinned checksum. Ollama's `llama3.1:8b` is used only
+  when the app has no copy of its own. Those downloads are the only time the
+  app goes online, and nothing from a session is sent.
 - **Ollama on another machine breaks the promise.** If its address is not
   this Mac, the transcript travels over the network, and the note says so.
 
@@ -133,8 +132,9 @@ and note model to include.
 | Settings | `config.sh` | Its own Settings window |
 
 They share the prompts, the Objective frame and the checks applied to a
-draft, and the app's tests reuse soapcap's cases so the two agree. A Bonsai
-that soapcap installed is used where it is.
+draft, and the app's tests reuse soapcap's cases so the two agree. Nothing
+soapcap installed is used: its models and its `llama-server` are left alone,
+and the app downloads and checks its own.
 
 ## Development
 
@@ -177,8 +177,7 @@ The model is kept in
 folder to remove it. The text is read twice and the findings merged: a
 detection pass in short overlapping chunks, and a context pass in long
 ones. When the app is started from a terminal, `SOAPCAP_DEIDENTIFY_MODEL`
-names a different folder, and `SOAPCAP_DEIDENTIFY_DIR` says where soapcap's
-de-identify install is.
+names a different folder.
 
 ### Signing and notarizing
 

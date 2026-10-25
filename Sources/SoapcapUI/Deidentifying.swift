@@ -41,9 +41,6 @@ import SoapcapPII
         state = isReady ? .ready : .missing
     }
 
-    /// True when soapcap's copy is on this Mac, so nothing needs downloading.
-    var canCopyFromSoapcap: Bool { installer.canCopyFromSoapcap }
-
     func install() {
         if case .working = state { return }
         state = .working(file: "", fraction: 0)

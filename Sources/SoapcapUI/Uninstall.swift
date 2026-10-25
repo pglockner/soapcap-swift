@@ -2,8 +2,8 @@ import AppKit
 import SoapcapCore
 import SwiftUI
 
-/// What the app leaves on a Mac, and removing it. A model that soapcap or
-/// Ollama installed is not the app's and is never touched.
+/// What the app leaves on a Mac, and removing it. A model that Ollama
+/// installed is not the app's and is never touched.
 struct Uninstaller {
     var bundleID = Bundle.main.bundleIdentifier ?? "com.jukenzie.soapcap"
     var library = FileManager.default.homeDirectoryForCurrentUser.appending(path: "Library")
@@ -47,7 +47,7 @@ struct Uninstaller {
     }
 
     var summary: String {
-        "This removes the models Soapcap downloaded (\(ByteCount.text(bytes))), its settings, and its Microphone and System Audio Recording permissions, then moves Soapcap to the Trash.\n\nA Bonsai or an Ollama that something else installed is left alone."
+        "This removes the models Soapcap downloaded (\(ByteCount.text(bytes))), its settings, and its Microphone and System Audio Recording permissions, then moves Soapcap to the Trash.\n\nModels that Ollama installed are left alone."
     }
 
     /// Deletes the leftovers, and returns any that would not go.

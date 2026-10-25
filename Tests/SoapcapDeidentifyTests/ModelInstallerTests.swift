@@ -44,16 +44,15 @@ final class ModelInstallerTests: XCTestCase {
         var installer = ModelInstaller()
         installer.files = files
         installer.directory = directory
-        installer.soapcapModels = root.appending(path: "soapcap/models")
         installer.session = StubDownloads.session()
         try? FileManager.default.createDirectory(at: directory.deletingLastPathComponent(), withIntermediateDirectories: true)
         return installer
     }
 
-    private func file(_ name: String, _ body: String, cache: String = "openmed") throws -> ModelFile {
+    private func file(_ name: String, _ body: String) throws -> ModelFile {
         let scratch = root.appending(path: "hash-\(name)")
         try Data(body.utf8).write(to: scratch)
-        return ModelFile(name, repo: "Org/Model", revision: "abc", sha256: try ModelInstaller.sha256(of: scratch), soapcapCache: cache)
+        return ModelFile(name, repo: "Org/Model", revision: "abc", sha256: try ModelInstaller.sha256(of: scratch))
     }
 
     private func leftovers() -> [String] {
@@ -64,8 +63,7 @@ final class ModelInstallerTests: XCTestCase {
         let files = [try file("weights.bin", "weights"), try file("tokenizer.json", "{}")]
         StubDownloads.bodies = ["/Org/Model/resolve/abc/weights.bin": Data("weights".utf8), "/Org/Model/resolve/abc/tokenizer.json": Data("{}".utf8)]
         XCTAssertFalse(ModelFiles.isReady(in: directory, files: files))
-        let source = try await installer(files).install()
-        XCTAssertEqual(source, .download)
+        try await installer(files).install()
         XCTAssertTrue(ModelFiles.isReady(in: directory, files: files))
         XCTAssertEqual(try String(contentsOf: directory.appending(path: "weights.bin"), encoding: .utf8), "weights")
         XCTAssertEqual(leftovers(), ["deidentify-model"])
@@ -87,35 +85,6 @@ final class ModelInstallerTests: XCTestCase {
             XCTAssertEqual(error as? ModelInstallError, .download(file: "weights.bin", detail: "the server answered 404"))
         }
         XCTAssertEqual(leftovers(), [])
-    }
-
-    func testSoapcapsCopyIsUsedWithoutTheNetwork() async throws {
-        let files = [try file("weights.bin", "weights"), try file("tokenizer.json", "{}", cache: "hub")]
-        let made = installer(files)
-        XCTAssertFalse(made.canCopyFromSoapcap)
-        for f in files {
-            let copy = f.soapcapCopy(in: made.soapcapModels)
-            try FileManager.default.createDirectory(at: copy.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try Data((f.name == "weights.bin" ? "weights" : "{}").utf8).write(to: copy)
-        }
-        XCTAssertTrue(made.canCopyFromSoapcap)
-        XCTAssertTrue(files[1].soapcapCopy(in: made.soapcapModels).path.hasSuffix("soapcap/models/hub/models--Org--Model/snapshots/abc/tokenizer.json"))
-        let source = try await made.install()
-        XCTAssertEqual(source, .soapcap)
-        XCTAssertEqual(StubDownloads.asked, [])
-        XCTAssertTrue(ModelFiles.isReady(in: directory, files: files))
-    }
-
-    func testASoapcapCopyThatFailsItsChecksumIsDownloadedInstead() async throws {
-        let files = [try file("weights.bin", "weights")]
-        let made = installer(files)
-        let copy = files[0].soapcapCopy(in: made.soapcapModels)
-        try FileManager.default.createDirectory(at: copy.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try Data("older weights".utf8).write(to: copy)
-        StubDownloads.bodies = ["/Org/Model/resolve/abc/weights.bin": Data("weights".utf8)]
-        let source = try await made.install()
-        XCTAssertEqual(source, .download)
-        XCTAssertEqual(StubDownloads.asked, ["/Org/Model/resolve/abc/weights.bin"])
     }
 
     func testInstallingAgainReplacesWhatWasThere() async throws {
