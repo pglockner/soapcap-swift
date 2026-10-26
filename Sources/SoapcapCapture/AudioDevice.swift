@@ -42,6 +42,15 @@ enum AudioDevice {
         address = Self.address(kAudioStreamPropertyVirtualFormat)
         guard AudioObjectGetPropertyData(streams[0], &address, 0, nil, &size, &layout) == noErr,
               layout.mSampleRate > 0, layout.mChannelsPerFrame > 0 else { return nil }
-        return AVAudioFormat(streamDescription: &layout)
+        return format(of: layout)
+    }
+
+    /// More than 2 channels makes a format only with a channel layout. A
+    /// Mac's own microphone has 3 while a call app such as FaceTime uses it.
+    static func format(of description: AudioStreamBasicDescription) -> AVAudioFormat? {
+        var description = description
+        guard description.mChannelsPerFrame > 2 else { return AVAudioFormat(streamDescription: &description) }
+        guard let channels = AVAudioChannelLayout(layoutTag: kAudioChannelLayoutTag_DiscreteInOrder | description.mChannelsPerFrame) else { return nil }
+        return AVAudioFormat(streamDescription: &description, channelLayout: channels)
     }
 }

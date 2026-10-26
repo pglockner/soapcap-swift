@@ -21,6 +21,12 @@ final class BufferConverter {
     func convert(_ buffer: AVAudioPCMBuffer) -> AVAudioPCMBuffer? {
         if converter?.inputFormat != buffer.format { converter = AVAudioConverter(from: buffer.format, to: target) }
         guard let converter else { return nil }
+        // Channels with no names, as a microphone array's are, map to none
+        // and come out silent. The first ones are taken instead.
+        if converter.channelMap.contains(-1) {
+            let last = Int(buffer.format.channelCount) - 1
+            converter.channelMap = (0..<Int(target.channelCount)).map { NSNumber(value: min($0, last)) }
+        }
         let capacity = AVAudioFrameCount((Double(buffer.frameLength) * target.sampleRate / buffer.format.sampleRate).rounded(.up))
         guard capacity > 0, let out = AVAudioPCMBuffer(pcmFormat: target, frameCapacity: capacity) else { return nil }
         var error: NSError?

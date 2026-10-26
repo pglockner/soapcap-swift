@@ -136,13 +136,22 @@ final class SystemInputEngine: InputEngine {
         guard let handler = lock.withLock({ handler }), let format = AudioDevice.format(of: device, .input) else {
             throw CaptureError.noMicrophone
         }
-        guard let proc = try? IOProc(device: device, queue: delivery, block: { _, input, _, output, _ in
+        var changeTold = false
+        guard let proc = try? IOProc(device: device, queue: delivery, block: { [weak self] _, input, _, output, _ in
             // A device that also plays is given silence to play.
             for buffer in UnsafeMutableAudioBufferListPointer(output) {
                 if let data = buffer.mData { memset(data, 0, Int(buffer.mDataByteSize)) }
             }
             // The first buffer is the device's first input stream.
             guard input.pointee.mNumberBuffers > 0 else { return }
+            // A call app starting mid-session can change the channels of a
+            // Mac's own microphone at the same rate, which no property
+            // listened to says. Buffers that don't fit are dropped until the
+            // start that follows, which reads the format again.
+            guard input.pointee.mBuffers.mNumberChannels == (format.isInterleaved ? format.channelCount : 1) else {
+                if !changeTold { changeTold = true; self?.events.async { self?.onConfigurationChange?() } }
+                return
+            }
             var first = AudioBufferList(mNumberBuffers: 1, mBuffers: input.pointee.mBuffers)
             if let buffer = AVAudioPCMBuffer(pcmFormat: format, bufferListNoCopy: &first) { handler(buffer) }
         }) else { throw CaptureError.noMicrophone }
