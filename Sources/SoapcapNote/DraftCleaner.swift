@@ -42,11 +42,12 @@ public enum DraftCleaner {
 
     /// The SOAP prompt says Plan always states the plan of care, but a model
     /// can still leave it empty or "Not addressed". Either becomes the
-    /// plan-of-care sentence. Plan is the last section, so it runs to the end.
+    /// plan-of-care sentence. Plan is the last section, so it runs to the end,
+    /// and it can start on the header line.
     static func defaultingPlan(_ note: String) -> String {
         let lines = NoteText.lines(note)
         guard let plan = lines.lastIndex(where: { NoteText.isHeader($0, "PLAN") }),
-              NoteText.isHollow(lines[(plan + 1)...].joined()) else { return NoteText.join(lines) }
-        return NoteText.join(lines[...plan] + [planOfCare])
+              NoteText.isHollow(NoteText.afterHeader(lines[plan]) + lines[(plan + 1)...].joined()) else { return NoteText.join(lines) }
+        return NoteText.join(lines[..<plan] + ["PLAN:", planOfCare])
     }
 }

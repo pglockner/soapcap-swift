@@ -34,11 +34,15 @@ final class DraftCleanerTests: XCTestCase {
         XCTAssertEqual(DraftCleaner.defaultingPlan("A:\nx\n\nPLAN:\nNot addressed in this session.\n"),
                        "A:\nx\n\nPLAN:\nThe current plan of care will continue.")
         XCTAssertEqual(DraftCleaner.defaultingPlan("PLAN:\n\n"), "PLAN:\nThe current plan of care will continue.")
+        XCTAssertEqual(DraftCleaner.defaultingPlan("A:\nx\n\nPLAN: Not addressed in this session.\n"),
+                       "A:\nx\n\nPLAN:\nThe current plan of care will continue.")
     }
 
     func testARealPlanAndOtherSectionsAreLeftAlone() {
         XCTAssertEqual(DraftCleaner.defaultingPlan("PLAN:\nWeekly sessions. Not addressed in this session.\n"),
                        "PLAN:\nWeekly sessions. Not addressed in this session.")
+        XCTAssertEqual(DraftCleaner.defaultingPlan("PLAN: Weekly sessions. The current plan of care will continue.\n\n"),
+                       "PLAN: Weekly sessions. The current plan of care will continue.")
         XCTAssertEqual(DraftCleaner.defaultingPlan("ASSESSMENT:\nNot addressed in this session.\n\nPLAN:\nContinue.\n"),
                        "ASSESSMENT:\nNot addressed in this session.\n\nPLAN:\nContinue.")
     }
