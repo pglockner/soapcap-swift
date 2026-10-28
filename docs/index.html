@@ -55,6 +55,18 @@
   }
   .download:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
   .fine { color: var(--muted); font-size: 15px; margin: 10px 0 0; }
+  .badge {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 10px;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: var(--caution-bg);
+    color: var(--caution);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
   h2 { font-size: 20px; margin: 40px 0 10px; }
   ol, ul { padding-left: 1.3em; margin: 0; }
   li { margin: 6px 0; }
@@ -75,7 +87,7 @@
   <header>
     <img src="icon.png" alt="">
     <div>
-      <h1>Soapcap</h1>
+      <h1>Soapcap<span class="badge" id="beta" hidden>Beta</span></h1>
       <p class="tagline">Session notes, drafted on your Mac</p>
     </div>
   </header>
@@ -83,12 +95,12 @@
   <p class="lead">Soapcap listens to a telehealth session as it happens, turns it into a transcript with each speaker marked, and drafts a SOAP, DAP or BIRP note from it. Everything runs on your Mac. No audio is recorded, nothing from a session is sent anywhere, and nothing is saved unless you ask.</p>
 
   <a class="download" href="https://github.com/pglockner/soapcap-swift/releases/latest/download/Soapcap.zip">Download Soapcap</a>
-  <p class="fine">The latest beta, signed and notarized by Apple. <a href="https://github.com/pglockner/soapcap-swift/releases/latest">What's new</a></p>
+  <p class="fine"><span id="version">The latest version</span>, signed and notarized by Apple. <a href="https://github.com/pglockner/soapcap-swift/releases/latest">What's new</a></p>
 
   <h2>What you need</h2>
   <ul>
     <li>A Mac with Apple silicon, running macOS 26 or later</li>
-    <li>16 GB of memory is best; the note models take 6.5 to 8 GB while they draft</li>
+    <li>16 GB of memory is best; the note models take 6.5 to 8.5 GB while they draft</li>
     <li>About 6 GB of disk for a note model, downloaded from within the app</li>
   </ul>
 
@@ -112,5 +124,19 @@
     Source code: <a href="https://github.com/pglockner/soapcap-swift">github.com/pglockner/soapcap-swift</a>, under the MIT licence.
   </footer>
 </main>
+<script>
+  // The version the Download button gives, from GitHub's latest release;
+  // anything below 1.0.0 is a beta. Without an answer the page stays as is.
+  fetch("https://api.github.com/repos/pglockner/soapcap-swift/releases/latest")
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(release => {
+      const version = String(release.tag_name || "").replace(/^v/, "");
+      if (!/^\d+\.\d+\.\d+$/.test(version)) return;
+      const beta = Number(version.split(".")[0]) < 1;
+      document.getElementById("version").textContent = "Version " + version + (beta ? ", a beta" : "");
+      document.getElementById("beta").hidden = !beta;
+    })
+    .catch(() => {});
+</script>
 </body>
 </html>
