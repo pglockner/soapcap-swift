@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.14 (2026-10-27)
+
+- Changed the default note model to Gemma 4 E4B and added Qwen3.5 9B as another choice beside Bonsai. Each is a download from Settings, checked against a fixed checksum, and runs inside the app
+- Removed `llama3.1:8b` and Ollama: a Mac that had chosen `llama3.1:8b` now drafts with Gemma 4 E4B, and the Ollama address setting is gone
+- Added a cleanup when the app opens: it deletes the file of any note model it no longer offers, so updating frees the disk `llama3.1:8b` took
+- Fixed a SOAP note ending with "The current plan of care will continue." twice when the model wrote its Plan on the PLAN line itself
+- Added a caution to Gemma 4 E4B's description and to Help: it now and then gives a client a pronoun from their name, so proofread pronouns, or turn on De-identify by default
+
 ## 0.13 (2026-10-18 – 2026-10-25)
 
 - Changed the app to use nothing that soapcap installed, after the eMudhra certificate authority compromise of October 2026: Bonsai and `llama-server` from `~/.local/share/soapcap` are no longer used, and the de-identification model is always downloaded and checked rather than copied from soapcap's cache. A Mac that had soapcap's Bonsai needs to download it once from Settings, which says why
