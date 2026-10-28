@@ -133,7 +133,7 @@
       const version = String(release.tag_name || "").replace(/^v/, "");
       if (!/^\d+\.\d+\.\d+$/.test(version)) return;
       const beta = Number(version.split(".")[0]) < 1;
-      document.getElementById("version").textContent = "Version " + version + (beta ? ", a beta" : "");
+      document.getElementById("version").textContent = "Version " + version + (beta ? " (beta)" : "");
       document.getElementById("beta").hidden = !beta;
     })
     .catch(() => {});
