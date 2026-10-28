@@ -52,7 +52,7 @@ The window lists the steps of the draft as they are done, with two small charts:
 
 ## Note models
 
-Gemma 4 E4B, the default, is fast, under two minutes for a long session, and needs about 6.5 GB of memory. Qwen3.5 9B writes a little differently, takes about two minutes, and needs up to 8.5 GB. Bonsai is slower, a few minutes a note, and needs about 8 GB. They are the ones the prompts were tested with, and no other model is offered. All run inside Soapcap from files it downloaded and checked itself.
+Gemma 4 E4B, the default, is fast, under two minutes for a long session, and needs about 6.5 GB of memory. Now and then it calls a client "he" or "she" when the session never said which, going by their name; proofread pronouns, or turn on **De-identify by default**, so that it drafts from a transcript with the names taken out. Qwen3.5 9B writes a little differently, takes about two minutes, and needs up to 8.5 GB. Bonsai is slower, a few minutes a note, and needs about 8 GB. They are the ones the prompts were tested with, and no other model is offered. All run inside Soapcap from files it downloaded and checked itself.
 
 - When memory is short for the chosen model, the transcript suggests closing other apps first. When the Mac is also deep in swap, Soapcap asks before drafting. A Mac with too little memory for the model is told that drafting will be very slow.
 - **Test**, under the model's name in Settings and on the checks screen's Note model line, drafts a note from a made-up session and answers Good when every section came out filled, or Problem with what was wrong. The note can be read either way. It takes as long as drafting a note does, nothing is kept, and it isn't offered while a session is being recorded.

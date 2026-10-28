@@ -52,7 +52,7 @@ public struct NoteModel: Equatable, Sendable {
             url: URL(string: "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/resolve/bfc15c382204943c3a8fff0c750b94ae2364d7a3/gemma-4-E4B-it-Q4_K_M.gguf")!,
             sha256: "85a896a047553e842f25297ee5b031d64ff30147d9c4af17b1e4b394cd1fab87", bytes: 4_977_171_584),
         memoryNeedGB: 6.5,
-        description: "Fast, under two minutes for a long session, and needs the least memory.",
+        description: "Fast, under two minutes for a long session, and needs the least memory. Now and then it gives a client a pronoun from their name; proofread pronouns, or turn on De-identify by default.",
         resumesFromSharedOpening: true, serverArguments: ["--checkpoint-min-step", "0"])
 
     /// Qwen3.5 9B at 4 bits, in unsloth's conversion. Measured at about
