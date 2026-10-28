@@ -14,17 +14,16 @@ import SoapcapNote
 /// Drafts with whichever model Settings names, switching when that changes.
 @MainActor final class ModelDrafting: Drafting {
     private let settings: SessionSettings
-    private var loaded: (model: String, host: URL, backend: any NoteBackend)?
+    private var loaded: (model: String, backend: any NoteBackend)?
 
     init(settings: SessionSettings) { self.settings = settings }
 
     func draft(format: NoteFormat, transcript: String, minutes: Int, systemLabel: String,
                progress: @escaping @Sendable (DraftProgress) -> Void) async throws -> DraftedNote {
-        let model = settings.noteModel, host = settings.ollamaHost
-        if let loaded, loaded.model != model || loaded.host != host { await release() }
-        let backend: any NoteBackend
-        if let loaded { backend = loaded.backend } else { backend = await ModelCatalog.backend(for: model, host: host) }
-        loaded = (model, host, backend)
+        let model = settings.noteModel
+        if let loaded, loaded.model != model { await release() }
+        let backend = loaded?.backend ?? ModelCatalog.backend(for: model)
+        loaded = (model, backend)
         var drafter = NoteDrafter(backend: backend)
         drafter.systemLabel = systemLabel
         drafter.sessionType = settings.sessionType

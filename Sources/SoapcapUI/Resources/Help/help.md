@@ -4,7 +4,7 @@
 
 Soapcap opens on a setup screen the first time. It asks for the two permissions macOS needs to give it: **Microphone**, for your side, and **System Audio Recording**, for what the Mac plays, which is the other side of the call. Each button says what you are about to see, and the answer counts at once. Soapcap hears sound only, never the screen. macOS can't tell an app whether it has System Audio Recording, so Soapcap finds out by playing itself a tone you won't hear.
 
-Then download a note model in **Settings** (Cmd-comma). `llama3.1:8b` is 4.9 GB and Bonsai 5.9 GB; a download that stops carries on where it left off. The de-identification model, about 130 MB, is downloaded there too.
+Then download a note model in **Settings** (Cmd-comma). Gemma 4 E4B, the default, is 5.0 GB, Qwen3.5 9B 5.7 GB and Bonsai 5.9 GB; a download that stops carries on where it left off. The de-identification model, about 130 MB, is downloaded there too.
 
 **Check**, in the bar at the top, brings the setup screen back at any time, with speech recognition for your language, the note model, the de-identification model and free memory as well. Soapcap looks these over whenever it opens: if a permission or the note model is missing, Check turns into an orange warning sign and the Ready screen offers to show what needs attention.
 
@@ -52,7 +52,7 @@ The window lists the steps of the draft as they are done, with two small charts:
 
 ## Note models
 
-`llama3.1:8b` is fast, usually under a minute a note, and needs about 6.5 GB of memory. Bonsai is more careful and slower, a few minutes a note, and needs about 8 GB. They are the two the prompts were tested with, and no other model is offered. Both run inside Soapcap from files it downloaded and checked itself; `llama3.1:8b` is left to Ollama only when Soapcap has no copy of its own and Ollama has it.
+Gemma 4 E4B, the default, is fast, under two minutes for a long session, and needs about 6.5 GB of memory. Qwen3.5 9B writes a little differently, takes about two minutes, and needs up to 8.5 GB. Bonsai is slower, a few minutes a note, and needs about 8 GB. They are the ones the prompts were tested with, and no other model is offered. All run inside Soapcap from files it downloaded and checked itself.
 
 - When memory is short for the chosen model, the transcript suggests closing other apps first. When the Mac is also deep in swap, Soapcap asks before drafting. A Mac with too little memory for the model is told that drafting will be very slow.
 - **Test**, under the model's name in Settings and on the checks screen's Note model line, drafts a note from a made-up session and answers Good when every section came out filled, or Problem with what was wrong. The note can be read either way. It takes as long as drafting a note does, nothing is kept, and it isn't offered while a session is being recorded.
@@ -64,8 +64,7 @@ Open Settings with Cmd-comma.
 - **Speaker labels**: who your microphone is and who the call is. Each transcript line starts with one of them.
 - **Language**: the language to transcribe in, this Mac's unless you choose another.
 - **Note**: the model that drafts, and the session type on the note's first line ("53 minutes, telehealth").
-- **llama3.1:8b**, **Bonsai** and **De-identification**: each model says how big it is before it downloads. **Remove** deletes a note model again. When Ollama already has `llama3.1:8b`, it is used until Soapcap's own copy is downloaded. **De-identify by default** is here too.
-- **Advanced**: Ollama's address. An address that isn't this Mac sends the transcript over the network, and Settings and the note say so.
+- **Gemma 4 E4B**, **Qwen3.5 9B**, **Bonsai** and **De-identification**: each model says how big it is before it downloads. **Remove** deletes a note model again. **De-identify by default** is here too.
 
 ## Privacy
 
@@ -91,4 +90,6 @@ Your models, settings and permissions are kept. Don't use **Uninstall Soapcap…
 
 ## Uninstalling
 
-**Uninstall Soapcap…**, at the bottom of Settings, removes the models Soapcap downloaded, its settings and its permissions, then moves the app to the Trash. Models that Ollama installed are left alone, and so is a transcript you saved: that file is yours, wherever you put it.
+**Uninstall Soapcap…**, at the bottom of Settings, removes the models Soapcap downloaded, its settings and its permissions, then moves the app to the Trash. A transcript you saved is left alone: that file is yours, wherever you put it.
+
+After an update, Soapcap deletes the file of any note model it no longer offers the next time it opens.

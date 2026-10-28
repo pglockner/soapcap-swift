@@ -1,9 +1,9 @@
 import AppKit
 import SoapcapCore
+import SoapcapNote
 import SwiftUI
 
-/// What the app leaves on a Mac, and removing it. A model that Ollama
-/// installed is not the app's and is never touched.
+/// What the app leaves on a Mac, and removing it.
 struct Uninstaller {
     var bundleID = Bundle.main.bundleIdentifier ?? "com.jukenzie.soapcap"
     var library = FileManager.default.homeDirectoryForCurrentUser.appending(path: "Library")
@@ -36,6 +36,21 @@ struct Uninstaller {
     /// fetched in one run is still on disk in the next.
     func removeCache() { try? FileManager.default.removeItem(at: cache) }
 
+    /// Settings an earlier version kept that this one no longer reads.
+    static let retiredSettings = ["ollamaHost"]
+
+    /// Deletes what an earlier version left and this one no longer uses:
+    /// the file of a note model it no longer offers, and retired settings.
+    /// Done whenever the app opens. The file of a model it does offer is
+    /// kept, and so is a download of one still under way or stopped.
+    func removeRetired(defaults: UserDefaults = .standard) {
+        let noteModels = models.appending(path: "note-models")
+        let kept = Set(NoteModel.all.flatMap { [$0.ownWeights, Fetcher.part(of: $0.ownWeights)].map(\.lastPathComponent) })
+        let files = (try? FileManager.default.contentsOfDirectory(at: noteModels, includingPropertiesForKeys: nil)) ?? []
+        for file in files where !kept.contains(file.lastPathComponent) { try? FileManager.default.removeItem(at: file) }
+        for key in Self.retiredSettings { defaults.removeObject(forKey: key) }
+    }
+
     /// Those of them that are there.
     var leftovers: [URL] { places.filter { FileManager.default.fileExists(atPath: $0.path) } }
 
@@ -47,7 +62,7 @@ struct Uninstaller {
     }
 
     var summary: String {
-        "This removes the models Soapcap downloaded (\(ByteCount.text(bytes))), its settings, and its Microphone and System Audio Recording permissions, then moves Soapcap to the Trash.\n\nModels that Ollama installed are left alone."
+        "This removes the models Soapcap downloaded (\(ByteCount.text(bytes))), its settings, and its Microphone and System Audio Recording permissions, then moves Soapcap to the Trash."
     }
 
     /// Deletes the leftovers, and returns any that would not go.

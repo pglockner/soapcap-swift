@@ -9,7 +9,7 @@ import SwiftUI
             Check("Microphone", .ok, "Soapcap can hear your side."),
             Check("Call audio", .ok, "Soapcap can hear what the Mac is playing."),
             Check("Speech recognition", .ok, "Ready for en-US, on this Mac only."),
-            Check("Note model", .ok, "llama3.1:8b is ready to draft notes."),
+            Check("Note model", .ok, "Gemma 4 E4B is ready to draft notes."),
             Check("De-identify", .ok, "The model is installed."),
             Check("Memory", .ok, "16 GB, about 10 GB free now."),
         ])
@@ -22,7 +22,7 @@ import SwiftUI
             Check("Microphone", .ok, "Soapcap can hear your side."),
             Check("Call audio", .ok, "Soapcap can hear what the Mac is playing."),
             Check("Speech recognition", .ok, "Ready for en-US, on this Mac only."),
-            Check("Note model", .failed, "The model 'llama3.1:8b' is not pulled. Run: ollama pull llama3.1:8b\nOr choose another model in Settings.",
+            Check("Note model", .failed, "Gemma 4 E4B's model file isn't on this Mac. Get it in Settings (Cmd-comma).\nOr choose another model in Settings.",
                   fix: .init(label: "Open Settings", action: .showSettings)),
             Check("De-identify", .warning, "Optional and not set up. The model is a 130 MB download in Settings.",
                   fix: .init(label: "Open Settings", action: .showSettings)),
@@ -39,7 +39,7 @@ import SwiftUI
                   "Needed to hear the other side. macOS will ask whether Soapcap may record your system audio; choose Allow. Only sound is heard, never the screen, and none of it is kept.",
                   fix: .init(label: "Allow call audio", action: .askForCallAudio)),
             Check("Speech recognition", .ok, "Ready for en-US, on this Mac only."),
-            Check("Note model", .ok, "llama3.1:8b is ready to draft notes."),
+            Check("Note model", .ok, "Gemma 4 E4B is ready to draft notes."),
             Check("De-identify", .warning, "Optional and not set up. The model is a 130 MB download in Settings.",
                   fix: .init(label: "Open Settings", action: .showSettings)),
         ])
@@ -51,10 +51,10 @@ import SwiftUI
         $0.phase = .checks([
             Check("Microphone", .ok, "Soapcap can hear your side."),
             Check("Call audio", .ok, "Soapcap can hear what the Mac is playing."),
-            Check("Note model", .ok, "llama3.1:8b is ready to draft notes."),
+            Check("Note model", .ok, "Gemma 4 E4B is ready to draft notes."),
             Check("Memory", .ok, "16 GB, about 10 GB free now."),
         ])
-        $0.modelTest.show(.problem(model: "llama3.1:8b", reasons: ["ASSESSMENT is empty or \"Not addressed\""]), note: previewSampleNote)
+        $0.modelTest.show(.problem(model: "gemma4-e4b", reasons: ["ASSESSMENT is empty or \"Not addressed\""]), note: previewSampleNote)
     }
 }
 
@@ -65,7 +65,7 @@ import SwiftUI
             Check("Microphone input", .warning, "No microphone is connected. Connect one, such as a headset or AirPods, before a session."),
             Check("Call audio", .ok, "Soapcap can hear what the Mac is playing."),
             Check("Speech recognition", .ok, "Ready for en-US, on this Mac only."),
-            Check("Note model", .ok, "llama3.1:8b is ready to draft notes."),
+            Check("Note model", .ok, "Gemma 4 E4B is ready to draft notes."),
         ])
     }
 }
@@ -75,7 +75,7 @@ import SwiftUI
         $0.phase = .checks([
             Check("Microphone", .ok, "Soapcap can hear your side."),
             Check("Call audio", .ok, "Soapcap can hear what the Mac is playing."),
-            Check("Note model", .ok, "llama3.1:8b is ready to draft notes."),
+            Check("Note model", .ok, "Gemma 4 E4B is ready to draft notes."),
             Check("Memory", .ok, "16 GB, about 10 GB free now."),
         ])
         $0.modelTest.show(.running("Drafting a SOAP note…", tokens: 240))

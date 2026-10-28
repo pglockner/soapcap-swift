@@ -36,7 +36,7 @@ to support@jukenzie.com. This repository doesn't take issues.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="Assets/how-it-works-dark.svg">
-  <img src="Assets/how-it-works-light.svg" alt="Call audio and your microphone feed Record (Apple SpeechAnalyzer, no audio recorded), which produces a transcript. The transcript goes straight to Draft note (Llama 3.1 or Bonsai, a local model), or first through the optional De-identify step, which redacts names and identifiers. The draft note is shown in the window, and Keep copies it. Everything runs on this Mac and is held in memory only; nothing is saved to disk unless you ask.">
+  <img src="Assets/how-it-works-light.svg" alt="Call audio and your microphone feed Record (Apple SpeechAnalyzer, no audio recorded), which produces a transcript. The transcript goes straight to Draft note (Gemma, Qwen or Bonsai, a local model), or first through the optional De-identify step, which redacts names and identifiers. The draft note is shown in the window, and Keep copies it. Everything runs on this Mac and is held in memory only; nothing is saved to disk unless you ask.">
 </picture>
 
 The app listens to **what the Mac is playing** and to **your microphone**,
@@ -49,7 +49,7 @@ to one.
 |---|---|
 | macOS 26 (Tahoe) or newer, Apple silicon | Built for macOS 26 and tested on macOS 27; not yet run on macOS 26 itself |
 | Full Xcode, its Metal Toolchain, and cmake | Only to build it yourself. The Command Line Tools alone are not enough. The Metal Toolchain compiles the de-identifier's GPU code and is a separate download (`xcodebuild -downloadComponent MetalToolchain`); cmake (`brew install cmake`) builds the note engine |
-| A note model | `llama3.1:8b` (the tested default, 4.9 GB) or Bonsai (5.9 GB), each a download from Settings. An [Ollama](https://ollama.com) on the Mac that has `llama3.1:8b` is used until the app has its own copy. Recording works without one |
+| A note model | Gemma 4 E4B (the default, 5.0 GB), Qwen3.5 9B (5.7 GB) or Bonsai (5.9 GB), each a download from Settings. Recording works without one |
 | The de-identification model (optional) | OpenMed's PII model, about 130 MB, installed from Settings |
 
 ## Install
@@ -102,11 +102,8 @@ and note model to include.
   that convention skip it.
 - **Downloads only, nothing uploaded.** The note models and the
   de-identification model come from huggingface.co, and each file is
-  checked against a pinned checksum. Ollama's `llama3.1:8b` is used only
-  when the app has no copy of its own. Those downloads are the only time the
+  checked against a pinned checksum. Those downloads are the only time the
   app goes online, and nothing from a session is sent.
-- **Ollama on another machine breaks the promise.** If its address is not
-  this Mac, the transcript travels over the network, and the note says so.
 
 ## Roadmap
 
@@ -166,9 +163,11 @@ the app, which starts it for a draft and gives it a key only the app knows.
 the probes.
 
 The note models' files go in
-`~/Library/Application Support/Soapcap/note-models`. `llama3.1:8b` is Meta's
-Llama 3.1 8B Instruct in second-state's 4-bit conversion, under the Llama 3.1
-Community License.
+`~/Library/Application Support/Soapcap/note-models`. Gemma 4 E4B and
+Qwen3.5 9B are unsloth's 4-bit conversions, under the Apache 2.0 license.
+When the app opens it deletes any file there that isn't one of the current
+models or a download of one in progress, so an update that drops a model
+also frees its disk.
 
 ### De-identification model
 

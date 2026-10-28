@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import SoapcapCore
 import SoapcapNote
@@ -16,11 +17,15 @@ final class ModelDownload: ObservableObject {
 
     typealias Fetch = @Sendable (PinnedFile, URL, @escaping @Sendable (FetchProgress) -> Void) async throws -> Void
 
-    /// Bonsai's weights.
-    static let bonsai = ModelDownload(model: .bonsai)
+    /// One for each note model's weights, in `NoteModel.all`'s order, made
+    /// once so that every view shows the same download.
+    static let all = NoteModel.all.map { ModelDownload(model: $0) }
 
-    /// The default model's weights, for a Mac whose Ollama doesn't have it.
-    static let llama = ModelDownload(model: .llama)
+    /// Fires when any of them changes, and once at once, for a view that
+    /// lists the models on this Mac.
+    static var changes: AnyPublisher<Void, Never> {
+        Publishers.MergeMany(all.map { $0.$state.map { _ in () } }).eraseToAnyPublisher()
+    }
 
     @Published private(set) var state = State.missing
     let file: PinnedFile

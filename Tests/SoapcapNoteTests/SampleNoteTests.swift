@@ -44,10 +44,8 @@ final class SampleNoteTests: XCTestCase {
         // The engine engine.sh builds, on a port of its own so that a
         // Soapcap that is open is left alone.
         let engine = root.appendingPathComponent(".build/engine/llama-server")
-        let backend = ModelCatalog.backend(
-            for: model, pulled: await ModelCatalog.pulled(),
-            bonsai: .init(server: engine, weights: NoteModel.bonsai.install.weights, port: 18090),
-            llama: .init(server: engine, weights: NoteModel.llama.ownWeights, port: 18090))
+        let chosen = NoteModel.named(model) ?? .gemma
+        let backend = EngineBackend(chosen, install: .init(server: engine, weights: chosen.ownWeights, port: 18090))
         do { try await backend.check() } catch {
             throw XCTSkip("\(model) can't draft on this Mac: \(error.localizedDescription)")
         }

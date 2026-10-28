@@ -4,20 +4,20 @@ import SoapcapCore
 /// Which note models there are, and how to reach each.
 public enum ModelCatalog {
     public static let bonsai = NoteModel.bonsai.id
-    public static let defaultModel = NoteModel.llama.id
+    public static let defaultModel = NoteModel.gemma.id
 
     /// What to call a model on screen.
     public static func displayName(of model: String) -> String {
         NoteModel.named(model)?.displayName ?? model
     }
 
-    /// What the clinician should know about each of the two models.
+    /// What the clinician should know about each model.
     public static func description(of model: String) -> String {
         NoteModel.named(model)?.description ?? ""
     }
 
-    /// Roughly how much memory a model takes once loaded; nil for any
-    /// model but the two.
+    /// Roughly how much memory a model takes once loaded; nil for a name
+    /// that isn't one of the models.
     public static func memoryNeedGB(of model: String) -> Double? {
         NoteModel.named(model)?.memoryNeedGB
     }
@@ -43,44 +43,22 @@ public enum ModelCatalog {
         return Check("Memory", .ok, size)
     }
 
-    /// What the Ollama at `host` has pulled; nothing when it doesn't answer.
-    public static func pulled(host: URL = OllamaBackend.defaultHost) async -> [String] {
-        (try? await OllamaBackend(model: "", host: host).models()) ?? []
+    /// The app's engine running `model`, or the default model for a name
+    /// that isn't one of them.
+    public static func backend(for model: String) -> any NoteBackend {
+        EngineBackend(NoteModel.named(model) ?? NoteModel.gemma)
     }
 
-    /// `bonsai` runs on the app's engine. So does the default model when the
-    /// app has its own file, checked against its pin when downloaded; only
-    /// without that file is Ollama's copy used. Every other name is a model
-    /// in Ollama.
-    public static func backend(for model: String, pulled: [String], host: URL = OllamaBackend.defaultHost,
-                               bonsai: EngineBackend.Install = NoteModel.bonsai.install,
-                               llama: EngineBackend.Install = NoteModel.llama.install) -> any NoteBackend {
-        if model == self.bonsai { return EngineBackend(.bonsai, install: bonsai) }
-        if model == defaultModel, llama.isPresent || !OllamaBackend.has(model, in: pulled) { return EngineBackend(.llama, install: llama) }
-        return OllamaBackend(model: model, host: host)
-    }
-
-    public static func backend(for model: String, host: URL = OllamaBackend.defaultHost) async -> any NoteBackend {
-        backend(for: model, pulled: model == bonsai ? [] : await pulled(host: host), host: host)
-    }
-
-    /// The models that could draft right now: Bonsai if it is set up, and
-    /// the default model if the app or Ollama has its file. They are the two
-    /// the prompts were tested with, and no other is offered.
-    public static func installed(pulled: [String], bonsai: EngineBackend.Install = NoteModel.bonsai.install,
-                                 llama: EngineBackend.Install = NoteModel.llama.install) -> [String] {
-        let hasDefault = llama.isPresent || OllamaBackend.has(defaultModel, in: pulled)
-        return (bonsai.isPresent ? [self.bonsai] : []) + (hasDefault ? [defaultModel] : [])
-    }
-
-    /// The models that could draft right now, asking the Ollama at `host` what it has.
-    public static func installed(host: URL) async -> [String] {
-        installed(pulled: await pulled(host: host))
+    /// The models that could draft right now: those whose file the app has
+    /// downloaded and checked. They are the ones the prompts were tested
+    /// with, and no other is offered.
+    public static func installed(isPresent: (NoteModel) -> Bool = { $0.install.isPresent }) -> [String] {
+        NoteModel.all.filter(isPresent).map(\.id)
     }
 
     /// Whether `model` is ready to draft, as a line for the checks screen.
-    public static func check(_ model: String, host: URL = OllamaBackend.defaultHost) async -> Check {
-        let backend = await backend(for: model, host: host)
+    public static func check(_ model: String) async -> Check {
+        let backend = backend(for: model)
         do {
             try await backend.check()
             let caution = backend.cautions.first

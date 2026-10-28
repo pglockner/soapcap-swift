@@ -212,7 +212,7 @@ final class SessionModelTests: XCTestCase {
     }
 
     func testADraftsStepsAreWordedForTheScreen() {
-        XCTAssertEqual(DraftSteps.done("Loading llama3.1:8b…"), "Loading llama3.1:8b")
+        XCTAssertEqual(DraftSteps.done("Loading Gemma 4 E4B…"), "Loading Gemma 4 E4B")
         XCTAssertEqual(DraftSteps.done("Stopping"), "Stopping")
         XCTAssertEqual(DraftSteps.written(7), "a few words so far")
         XCTAssertEqual(DraftSteps.written(412), "about 310 words so far")
@@ -232,7 +232,7 @@ final class SessionModelTests: XCTestCase {
         await waitFor("transcript") { m.phase == .transcript }
         await deidentifying(m)
         let transcript = m.transcript
-        drafter.error = NoteError.notReady("Can't reach Ollama at http://localhost:11434.")
+        drafter.error = NoteError.notReady("The note engine is missing.")
         m.draft()
         await waitFor("the failure") { if case .error = m.phase { true } else { false } }
         m.back()
@@ -467,8 +467,8 @@ final class SessionModelTests: XCTestCase {
         m.newSession()
         m.perform(.askForCallAudio)
         await waitFor("checked once more") { m.phase == .checks(after) }  // and so does this one, with no reopening
-        m.perform(.open(URL(string: "https://ollama.com")!))
-        XCTAssertEqual(seen.did, ["ask microphone", "ask call audio", "open https://ollama.com"])
+        m.perform(.open(URL(string: "https://example.com")!))
+        XCTAssertEqual(seen.did, ["ask microphone", "ask call audio", "open https://example.com"])
     }
 
     func testTheDeidentifyCheckFollowsTheModelFiles() {
@@ -526,7 +526,7 @@ final class SessionModelTests: XCTestCase {
     func testClosingAppsIsAdvisedWhenMemoryIsShort() {
         let short = { MemoryStatus(totalBytes: 16 << 30, freePercent: 41) }
         let m = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier, memory: short)
-        XCTAssertTrue(m.memoryAdvice?.contains("llama3.1:8b takes") == true, m.memoryAdvice ?? "nil")
+        XCTAssertTrue(m.memoryAdvice?.contains("Gemma 4 E4B takes") == true, m.memoryAdvice ?? "nil")
         defaults.set("bonsai", forKey: SessionSettings.Key.noteModel)
         XCTAssertTrue(m.memoryAdvice?.contains("Close other apps") == true, m.memoryAdvice ?? "nil")
         let roomy = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier,
@@ -613,12 +613,12 @@ final class SessionModelTests: XCTestCase {
     }
 
     func testAFailedDraftShowsWhy() async {
-        drafter.error = NoteError.notReady("Can't reach Ollama at http://localhost:11434.")
+        drafter.error = NoteError.notReady("The note engine is missing.")
         let m = await atTranscript()
         m.draft()
         await waitFor("error") { if case .error = m.phase { true } else { false } }
         guard case .error(let message) = m.phase else { return }
-        XCTAssertTrue(message.contains("Can't reach Ollama"), message)
+        XCTAssertTrue(message.contains("The note engine is missing"), message)
         XCTAssertEqual(drafter.releases, 1, "a failed draft must not leave the model loaded")
     }
 
@@ -634,16 +634,14 @@ final class SessionModelTests: XCTestCase {
     }
 
     func testNoteSettingsHaveSoapcapsDefaults() {
-        XCTAssertEqual(settings.noteModel, "llama3.1:8b")
-        XCTAssertEqual(settings.ollamaHost.absoluteString, "http://localhost:11434")
+        XCTAssertEqual(settings.noteModel, "gemma4-e4b")
         XCTAssertEqual(settings.sessionType, "telehealth")
         settings.defaults.set("bonsai", forKey: SessionSettings.Key.noteModel)
-        settings.defaults.set("not a url", forKey: SessionSettings.Key.ollamaHost)
         settings.defaults.set("in person", forKey: SessionSettings.Key.sessionType)
         XCTAssertEqual(settings.noteModel, "bonsai")
-        XCTAssertEqual(settings.ollamaHost.absoluteString, "http://localhost:11434")
         XCTAssertEqual(settings.sessionType, "in person")
-        settings.defaults.set("http://192.168.1.5:11434", forKey: SessionSettings.Key.ollamaHost)
-        XCTAssertEqual(settings.ollamaHost.absoluteString, "http://192.168.1.5:11434")
+        // A model an earlier version offered means the default now.
+        settings.defaults.set("llama3.1:8b", forKey: SessionSettings.Key.noteModel)
+        XCTAssertEqual(settings.noteModel, "gemma4-e4b")
     }
 }

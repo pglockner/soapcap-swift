@@ -37,8 +37,9 @@ final class EngineBackendTests: XCTestCase {
 
     override func tearDown() { try? FileManager.default.removeItem(at: dir) }
 
-    private func backend() -> EngineBackend {
-        EngineBackend(install: install, label: "Bonsai", session: StubHTTP.session(), loadTimeout: 5, pollInterval: 0.05)
+    private func backend(serverArguments: [String] = []) -> EngineBackend {
+        EngineBackend(install: install, label: "Bonsai", serverArguments: serverArguments, session: StubHTTP.session(),
+                      loadTimeout: 5, pollInterval: 0.05)
     }
 
     private var log: [String] {
@@ -71,6 +72,13 @@ final class EngineBackendTests: XCTestCase {
         await bonsai.stop()
         XCTAssertEqual(log.last, "stopped")
         await bonsai.stop()
+    }
+
+    func testAModelsOwnFlagsFollowTheOnesEveryModelGets() async throws {
+        let gemma = backend(serverArguments: NoteModel.gemma.serverArguments)
+        try await gemma.start(context: 100)
+        XCTAssertEqual(log.first?.hasSuffix("--cache-type-v q8_0 --checkpoint-min-step 0"), true, log.first ?? "nothing started")
+        await gemma.stop()
     }
 
     func testARunningServerIsReusedUnlessTheContextMustGrow() async throws {
