@@ -4,6 +4,8 @@
 build/
 *.xcodeproj/
 xcuserdata/
+# Local scripts that name this Mac's signing identity.
+*.local.sh
 
 # Never commit captured PHI.
 *.transcript
