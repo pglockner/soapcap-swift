@@ -11,7 +11,6 @@ struct SessionSettings {
         static let format = "format"
         static let deidentify = "deidentify"
         static let noteModel = "noteModel"
-        static let ollamaHost = "ollamaHost"
         static let sessionType = "sessionType"
         /// The last version whose beta notice was acknowledged.
         static let betaNoticeSeen = "betaNoticeSeen"
@@ -52,28 +51,14 @@ struct SessionSettings {
         (defaults.string(forKey: key) ?? "").trimmingCharacters(in: .whitespaces)
     }
 
-    /// The model that drafts notes: `bonsai`, or a model pulled into Ollama.
-    /// Chosen in Settings, or beside Draft note and Regenerate.
+    /// The model that drafts notes, one of `NoteModel.all`. Chosen in
+    /// Settings, or beside Draft note and Regenerate.
     var noteModel: String { Self.noteModel(stored: defaults.string(forKey: Key.noteModel) ?? "") }
 
-    /// What a stored choice of model means: Bonsai, or else the default
-    /// model. A name left from when any model in Ollama could be chosen
-    /// counts as none.
+    /// What a stored choice of model means: that model, or else the default
+    /// one. A name left from a model the app no longer offers counts as none.
     static func noteModel(stored: String) -> String {
-        stored.trimmingCharacters(in: .whitespaces) == ModelCatalog.bonsai ? ModelCatalog.bonsai : ModelCatalog.defaultModel
-    }
-
-    /// Where Ollama is. Anything but this Mac sends the transcript over the network.
-    var ollamaHost: URL { Self.ollamaHost(stored: text(Key.ollamaHost)) }
-
-    /// What a stored address means: itself if it is a web address, and
-    /// otherwise Ollama's usual place on this Mac.
-    static func ollamaHost(stored: String) -> URL {
-        let stored = stored.trimmingCharacters(in: .whitespaces)
-        guard let url = URL(string: stored), url.scheme?.hasPrefix("http") == true, url.host() != nil else {
-            return OllamaBackend.defaultHost
-        }
-        return url
+        NoteModel.named(stored.trimmingCharacters(in: .whitespaces))?.id ?? ModelCatalog.defaultModel
     }
 
     /// The second half of the note's first line, e.g. "53 minutes, telehealth".
@@ -85,27 +70,23 @@ struct SettingsView: View {
     @AppStorage(SessionSettings.Key.systemLabel) private var systemLabel = ""
     @AppStorage(SessionSettings.Key.language) private var language = ""
     @AppStorage(SessionSettings.Key.noteModel) private var noteModel = ""
-    @AppStorage(SessionSettings.Key.ollamaHost) private var ollamaHost = ""
     @AppStorage(SessionSettings.Key.sessionType) private var sessionType = ""
     @AppStorage(SessionSettings.Key.deidentify) private var deidentify = true
     @State private var languages: [Locale] = []
+    /// The note models on this Mac.
     @State private var models: [String] = []
-    /// What Ollama has, so that a model it already holds isn't offered again.
-    @State private var pulled: [String] = []
     /// Trying the chosen note model on the sample session.
     let test: ModelTest
     @ObservedObject var setup = ModelSetup.shared
-    @ObservedObject var bonsai = ModelDownload.bonsai
-    @ObservedObject var llama = ModelDownload.llama
+    /// One for each note model, in `NoteModel.all`'s order.
+    var downloads = ModelDownload.all
     /// Ends a draft and frees the note model, before the app is uninstalled.
     var stop: () async -> Void = {}
 
-    /// The chosen model and Ollama's address, read from the settings this
-    /// view holds and not from the stored settings: a window is drawn again
-    /// only for a setting its body has read, and otherwise the picker went
-    /// on showing the model it had.
+    /// The chosen model, read from the setting this view holds and not from
+    /// the stored settings: a window is drawn again only for a setting its
+    /// body has read, and otherwise the picker went on showing the model it had.
     private var chosenModel: String { SessionSettings.noteModel(stored: noteModel) }
-    private var host: URL { SessionSettings.ollamaHost(stored: ollamaHost) }
 
     /// The installed models, plus the chosen one even if it has since gone.
     private var choices: [String] {
@@ -144,9 +125,8 @@ struct SettingsView: View {
                 }
                 TextField("Session type", text: $sessionType, prompt: Text("telehealth"))
                 // A model still to be downloaded can't be tried, as on the
-                // checks screen. Asked here, not read from `models`, which is
-                // empty until the window has asked Ollama.
-                if ModelCatalog.installed(pulled: pulled).contains(chosenModel) {
+                // checks screen.
+                if models.contains(chosenModel) {
                     ModelTestView(test: test, model: chosenModel)
                 } else {
                     Text("\(ModelCatalog.displayName(of: chosenModel)) can be tested once it is downloaded below.")
@@ -155,28 +135,19 @@ struct SettingsView: View {
             } header: {
                 Text("Note")
             }
-            Section {
-                if OllamaBackend.has(ModelCatalog.defaultModel, in: pulled), llama.state == .missing {
-                    Label("Ollama has \(ModelCatalog.defaultModel), and Soapcap drafts with that copy until it has its own, checked against a fixed checksum.", systemImage: "checkmark.circle.fill")
+            ForEach(Array(zip(NoteModel.all, downloads)), id: \.0.id) { model, download in
+                Section {
+                    if model == .bonsai, !models.contains(model.id), FileManager.default.fileExists(atPath: Self.soapcapsBonsai.path) {
+                        Text("The copy of Bonsai that soapcap installed isn't used: Soapcap only runs model files it downloaded and checked itself.")
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    ModelDownloadRow(name: model.displayName, needGB: model.memoryNeedGB, download: download)
+                } header: {
+                    Text(model.id == ModelCatalog.defaultModel ? "\(model.displayName) (default)" : model.displayName)
+                } footer: {
+                    Text(model.description).foregroundStyle(.secondary)
                 }
-                ModelDownloadRow(name: NoteModel.llama.displayName, needGB: NoteModel.llama.memoryNeedGB, download: llama)
-            } header: {
-                Text(ModelCatalog.defaultModel)
-            } footer: {
-                Text(ModelCatalog.description(of: ModelCatalog.defaultModel) + " Built with Llama: Meta's Llama 3.1, under its Community License.")
-                    .foregroundStyle(.secondary)
-            }
-            Section {
-                if bonsai.state == .missing, FileManager.default.fileExists(atPath: Self.soapcapsBonsai.path) {
-                    Text("The copy of Bonsai that soapcap installed isn't used: Soapcap only runs model files it downloaded and checked itself.")
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                ModelDownloadRow(name: NoteModel.bonsai.displayName, needGB: NoteModel.bonsai.memoryNeedGB, download: bonsai)
-            } header: {
-                Text(NoteModel.bonsai.displayName)
-            } footer: {
-                Text(ModelCatalog.description(of: ModelCatalog.bonsai)).foregroundStyle(.secondary)
             }
             Section {
                 switch setup.state {
@@ -202,16 +173,6 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
             Section {
-                TextField("Ollama address", text: $ollamaHost, prompt: Text(OllamaBackend.defaultHost.absoluteString))
-            } header: {
-                Text("Advanced")
-            } footer: {
-                if !OllamaBackend.isLocal(host) {
-                    Text("This is not this Mac: transcripts will be sent to that machine over the network.")
-                        .foregroundStyle(.caution)
-                }
-            }
-            Section {
                 UninstallButton(stop: stop)
             } footer: {
                 Text("Removes the models Soapcap downloaded, its settings and its permissions, then moves Soapcap to the Trash. It asks first.")
@@ -224,10 +185,7 @@ struct SettingsView: View {
         .frame(width: 440, height: 640)
         .task { languages = await Readiness.supportedLanguages() }
         // Asked again when a model arrives or goes, so the list above follows.
-        .task(id: "\(ollamaHost) \(bonsai.isInstalled) \(llama.isInstalled)") {
-            pulled = await ModelCatalog.pulled(host: host)
-            models = ModelCatalog.installed(pulled: pulled)
-        }
+        .onReceive(ModelDownload.changes) { models = ModelCatalog.installed() }
     }
 }
 

@@ -1,3 +1,4 @@
+import SoapcapNote
 import XCTest
 @testable import SoapcapUI
 
@@ -57,5 +58,25 @@ final class UninstallerTests: XCTestCase {
         uninstaller.removeCache()
         for gone in cached { XCTAssertFalse(FileManager.default.fileExists(atPath: gone.path), gone.path) }
         for there in kept { XCTAssertTrue(FileManager.default.fileExists(atPath: there.path), there.path) }
+    }
+
+    func testAfterAnUpgradeARetiredModelAndRetiredSettingsGoAndTheRestStays() throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "soapcap-uninstall-tests-\(UUID().uuidString)"))
+        defaults.set("http://localhost:11434", forKey: "ollamaHost")
+        defaults.set("bonsai", forKey: SessionSettings.Key.noteModel)
+        let uninstaller = uninstaller()
+        uninstaller.removeRetired(defaults: defaults)      // nothing there yet: no harm done
+
+        let retired = try write("Application Support/Soapcap/note-models/Llama-3.1-8B-Instruct-Q4_K_M.gguf")
+        let kept = [try write("Application Support/Soapcap/note-models/\(NoteModel.bonsai.weights.name)"),
+                    // A download of a model the app offers, stopped part way.
+                    try write("Application Support/Soapcap/note-models/\(NoteModel.gemma.weights.name).part"),
+                    try write("Application Support/Soapcap/deidentify-model/weights.safetensors")]
+
+        uninstaller.removeRetired(defaults: defaults)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: retired.path))
+        for there in kept { XCTAssertTrue(FileManager.default.fileExists(atPath: there.path), there.path) }
+        XCTAssertNil(defaults.object(forKey: "ollamaHost"))
+        XCTAssertEqual(defaults.string(forKey: SessionSettings.Key.noteModel), "bonsai")
     }
 }

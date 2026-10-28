@@ -21,7 +21,7 @@ final class ModelTestTests: XCTestCase {
     /// A test whose clock moves 48 s between its two readings.
     private func modelTest(cautions: [String] = []) -> ModelTest {
         var times = [Date(timeIntervalSince1970: 0), Date(timeIntervalSince1970: 48)]
-        return ModelTest(run: run, settings: settings, cautions: { _, _ in cautions }, now: { times.count > 1 ? times.removeFirst() : times[0] })
+        return ModelTest(run: run, settings: settings, cautions: { _ in cautions }, now: { times.count > 1 ? times.removeFirst() : times[0] })
     }
 
     func testAWholeNoteFromTheSampleSessionIsGoodAndTheModelIsLetGo() async throws {
@@ -31,7 +31,7 @@ final class ModelTestTests: XCTestCase {
         XCTAssertTrue(test.isRunning)
         XCTAssertFalse(test.canStart)
         await waitFor("a verdict") { !test.isRunning }
-        XCTAssertEqual(test.state, .good(model: "llama3.1:8b", seconds: 48))
+        XCTAssertEqual(test.state, .good(model: "gemma4-e4b", seconds: 48))
         XCTAssertEqual(test.note, whole)
         // The sample went to the model as a nine-minute SOAP session.
         XCTAssertEqual(drafter.asked.count, 1)
@@ -47,7 +47,7 @@ final class ModelTestTests: XCTestCase {
         let test = modelTest()
         test.start()
         await waitFor("a verdict") { !test.isRunning }
-        XCTAssertEqual(test.state, .problem(model: "llama3.1:8b", reasons: [
+        XCTAssertEqual(test.state, .problem(model: "gemma4-e4b", reasons: [
             "ASSESSMENT is empty or \"Not addressed\"", "The Objective pass failed — complete the Objective by hand.",
         ]))
         XCTAssertNotNil(test.note)
@@ -59,15 +59,15 @@ final class ModelTestTests: XCTestCase {
         let test = modelTest(cautions: [elsewhere])
         test.start()
         await waitFor("a verdict") { !test.isRunning }
-        XCTAssertEqual(test.state, .good(model: "llama3.1:8b", seconds: 48))
+        XCTAssertEqual(test.state, .good(model: "gemma4-e4b", seconds: 48))
     }
 
     func testAModelThatCannotDraftIsAProblemThatSaysWhy() async {
-        drafter.error = NoteError.notReady("llama3.1:8b's model file isn't on this Mac. Get it in Settings (Cmd-comma).")
+        drafter.error = NoteError.notReady("Gemma 4 E4B's model file isn't on this Mac. Get it in Settings (Cmd-comma).")
         let test = modelTest()
         test.start()
         await waitFor("a verdict") { !test.isRunning }
-        XCTAssertEqual(test.state, .problem(model: "llama3.1:8b", reasons: ["llama3.1:8b's model file isn't on this Mac. Get it in Settings (Cmd-comma)."]))
+        XCTAssertEqual(test.state, .problem(model: "gemma4-e4b", reasons: ["Gemma 4 E4B's model file isn't on this Mac. Get it in Settings (Cmd-comma)."]))
         XCTAssertNil(test.note)
     }
 

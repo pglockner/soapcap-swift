@@ -22,7 +22,7 @@ struct Checkup {
     static func everything(settings: SessionSettings, memory: @escaping () -> MemoryStatus?) -> () async -> [Check] {
         {
             await Readiness.checks(locale: settings.locale)
-                + [await ModelCatalog.check(settings.noteModel, host: settings.ollamaHost)] + [ModelSetup.check()]
+                + [await ModelCatalog.check(settings.noteModel)] + [ModelSetup.check()]
                 + [ModelCatalog.memoryCheck(memory(), model: settings.noteModel)]
         }
     }

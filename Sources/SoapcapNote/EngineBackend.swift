@@ -45,6 +45,8 @@ public actor EngineBackend: NoteBackend {
     /// Measured on a 22-minute session: the Objective pass took 97 s
     /// re-reading it and 43 s resuming after it.
     public nonisolated let resumesFromSharedOpening: Bool
+    /// The model's own flags, after the ones every model gets.
+    nonisolated let serverArguments: [String]
     nonisolated let session: URLSession
     /// How long to wait for the model to load, and how often to ask.
     private let loadTimeout: TimeInterval
@@ -57,19 +59,20 @@ public actor EngineBackend: NoteBackend {
     private var key = ""
     private let log = LogTail()
 
-    /// One of the two note models, from where it was found unless `install` says.
+    /// One of the note models, from where it was found unless `install` says.
     public init(_ model: NoteModel, install: Install? = nil) {
         self.init(install: install ?? model.install, label: model.displayName,
-                  resumesFromSharedOpening: model.resumesFromSharedOpening)
+                  resumesFromSharedOpening: model.resumesFromSharedOpening, serverArguments: model.serverArguments)
     }
 
     /// Any GGUF model: the same server runs them all.
     public init(install: Install, label: String,
-                resumesFromSharedOpening: Bool = true, session: URLSession = .keepingNothing,
+                resumesFromSharedOpening: Bool = true, serverArguments: [String] = [], session: URLSession = .keepingNothing,
                 loadTimeout: TimeInterval = 180, pollInterval: TimeInterval = 1) {
         self.install = install
         self.label = label
         self.resumesFromSharedOpening = resumesFromSharedOpening
+        self.serverArguments = serverArguments
         self.session = session
         self.loadTimeout = loadTimeout
         self.pollInterval = pollInterval
@@ -114,7 +117,7 @@ public actor EngineBackend: NoteBackend {
         server.executableURL = install.server
         server.arguments = ["-m", install.weights.path, "--host", "127.0.0.1", "--port", String(install.port),
                             "-ngl", "99", "-c", String(wanted), "--parallel", "1",
-                            "--cache-type-k", "q8_0", "--cache-type-v", "q8_0"]
+                            "--cache-type-k", "q8_0", "--cache-type-v", "q8_0"] + serverArguments
         key = (0..<32).map { _ in String(format: "%02x", UInt8.random(in: .min ... .max)) }.joined()
         // In its environment, not its arguments, which any process can list.
         server.environment = ProcessInfo.processInfo.environment.merging(["LLAMA_API_KEY": key]) { _, new in new }

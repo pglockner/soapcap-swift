@@ -56,13 +56,13 @@ final class BetaAndHelpTests: XCTestCase {
 
     func testAProblemReportNamesTheVersionAndKeepsItsTextIntact() throws {
         let report = ProblemReport(version: AppVersion(marketing: "0.11.0", build: "149"),
-                                   macOS: "Version 26.1 (Build 25B78)", memoryGB: 16, noteModel: "llama3.1:8b")
+                                   macOS: "Version 26.1 (Build 25B78)", memoryGB: 16, noteModel: "gemma4-e4b")
         let url = report.mailURL
         XCTAssertEqual(url.scheme, "mailto")
         XCTAssertFalse(url.absoluteString.contains(" "))
         let items = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems)
         XCTAssertEqual(items.first { $0.name == "subject" }?.value, "Soapcap 0.11.0 (149): a problem")
         let body = try XCTUnwrap(items.first { $0.name == "body" }?.value)
-        XCTAssertTrue(body.contains("Soapcap 0.11.0 (149)\nmacOS Version 26.1 (Build 25B78)\nMemory 16 GB\nNote model llama3.1:8b"))
+        XCTAssertTrue(body.contains("Soapcap 0.11.0 (149)\nmacOS Version 26.1 (Build 25B78)\nMemory 16 GB\nNote model gemma4-e4b"))
     }
 }

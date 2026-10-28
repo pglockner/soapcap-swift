@@ -41,6 +41,8 @@ final class FakeCapture: Capturing {
     var releases = 0
     /// How long the model takes to go, in nanoseconds.
     var releaseDelay: UInt64 = 0
+    /// How long a draft takes, in nanoseconds, unless it is stopped.
+    var draftDelay: UInt64 = 150_000_000
     /// "draft" as each draft starts and "released" as each release ends.
     var events: [String] = []
 
@@ -49,7 +51,7 @@ final class FakeCapture: Capturing {
         asked.append((format, transcript, minutes, systemLabel))
         events.append("draft")
         progress(DraftProgress(title: "Drafting…", tokens: 7))
-        try? await Task.sleep(nanoseconds: 150_000_000)
+        try? await Task.sleep(nanoseconds: draftDelay)
         if let error { throw error }
         return DraftedNote(text: text ?? "SUBJECTIVE:\nformat \(format.rawValue)\nNote about Bob", warnings: warnings)
     }

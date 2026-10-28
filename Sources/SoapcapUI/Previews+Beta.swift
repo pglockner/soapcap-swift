@@ -10,5 +10,5 @@ import SwiftUI
 
 #Preview("Report a Problem") {
     ProblemReportView(report: ProblemReport(version: AppVersion(marketing: "0.12.1", build: "161"),
-                                            macOS: "Version 27.0.1 (Build 27A5301)", memoryGB: 16, noteModel: "llama3.1:8b"))
+                                            macOS: "Version 27.0.1 (Build 27A5301)", memoryGB: 16, noteModel: "gemma4-e4b"))
 }

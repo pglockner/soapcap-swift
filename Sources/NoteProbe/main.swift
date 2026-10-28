@@ -2,10 +2,10 @@
 // checking drafting without the window:
 //   swift run NoteProbe FILE [soap|dap|birp] [MODEL] [MINUTES]
 // FILE can be `sample`, for the sample session that ships with the app.
-// MODEL is `bonsai`, a model's name as Settings shows it (run as the app
-// would: by Ollama if Ollama has it, or else the default model from the
-// app's own file), or `gguf:PATH` to run a model file with the app's engine
-// and the prompts in the order Ollama gets them.
+// MODEL is a note model's name as Settings stores it (`gemma4-e4b`, the
+// default, `qwen3.5-9b` or `bonsai`), run as the app would from its own
+// file, or `gguf:PATH` to run any model file with the app's engine, each
+// pass reading the whole transcript.
 import Foundation
 import SoapcapNote
 
@@ -18,14 +18,17 @@ guard let path = args.first, let transcript = isSample ? try? SampleSession.tran
     exit(2)
 }
 let format = args.dropFirst().first.flatMap(NoteFormat.init) ?? .soap
-let model = args.dropFirst(2).first ?? "llama3.1:8b"
+let model = args.dropFirst(2).first ?? ModelCatalog.defaultModel
 let backend: any NoteBackend
 if model.hasPrefix("gguf:") {
     let weights = URL(fileURLWithPath: String(model.dropFirst(5)))
     backend = EngineBackend(install: .init(server: NoteModel.bonsai.install.server, weights: weights),
                             label: "llama-server", resumesFromSharedOpening: false)
+} else if NoteModel.named(model) != nil {
+    backend = ModelCatalog.backend(for: model)
 } else {
-    backend = await ModelCatalog.backend(for: model)
+    say("unknown model \(model): use \(NoteModel.all.map(\.id).joined(separator: ", ")) or gguf:PATH")
+    exit(2)
 }
 let drafter = NoteDrafter(backend: backend)
 

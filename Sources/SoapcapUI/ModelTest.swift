@@ -24,7 +24,7 @@ final class ModelTest: ObservableObject {
 
     let run: DraftRun
     private let settings: SessionSettings
-    private let cautions: (String, URL) async -> [String]
+    private let cautions: (String) async -> [String]
     private let now: () -> Date
     /// Bumped by each start and stop, so a test that was stopped can't
     /// report over the one after it.
@@ -33,7 +33,7 @@ final class ModelTest: ObservableObject {
     /// `cautions` are what a model's notes are always cautioned about (an
     /// untested model, say); they are no fault of the note being judged.
     init(run: DraftRun, settings: SessionSettings,
-         cautions: @escaping (String, URL) async -> [String] = { await ModelCatalog.backend(for: $0, host: $1).cautions },
+         cautions: @escaping (String) async -> [String] = { ModelCatalog.backend(for: $0).cautions },
          now: @escaping () -> Date = Date.init) {
         self.run = run
         self.settings = settings
@@ -46,13 +46,13 @@ final class ModelTest: ObservableObject {
 
     func start() {
         guard canStart else { return }
-        let model = settings.noteModel, host = settings.ollamaHost, began = now()
+        let model = settings.noteModel, began = now()
         current += 1
         let mine = current
         state = .running("Starting…")
         note = nil
         Task {
-            let standing = await cautions(model, host)
+            let standing = await cautions(model)
             guard mine == current else { return }
             do {
                 // Nil when stopped, or when a session's draft took the model.

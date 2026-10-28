@@ -1,12 +1,11 @@
 import Foundation
 import SoapcapCore
 
-/// One of the two note models the prompts were tested with: the name
-/// Settings stores, what to call it, its file, and what it needs. Both run
-/// on the app's engine (`EngineBackend`); `llama3.1:8b` may be Ollama's
-/// instead (see `ModelCatalog.backend`).
+/// One of the note models the prompts were tested with: the name Settings
+/// stores, what to call it, its file, and what it needs. All run on the
+/// app's engine (`EngineBackend`).
 public struct NoteModel: Equatable, Sendable {
-    /// The name Settings stores, and Ollama's name for it.
+    /// The name Settings stores.
     public let id: String
     /// What to call it on screen.
     public let displayName: String
@@ -18,6 +17,8 @@ public struct NoteModel: Equatable, Sendable {
     public let description: String
     /// See `EngineBackend.resumesFromSharedOpening`.
     public let resumesFromSharedOpening: Bool
+    /// Flags this model needs from the engine beyond the ones every model gets.
+    public let serverArguments: [String]
 
     /// The app's own copy of the file.
     public var ownWeights: URL { EngineBackend.Install.modelsDirectory.appendingPathComponent(weights.name) }
@@ -36,28 +37,41 @@ public struct NoteModel: Equatable, Sendable {
             url: URL(string: "https://huggingface.co/prism-ml/Ternary-Bonsai-2-27B-gguf/resolve/65f27a86966957c534ea6ad12149286e01ca7cc0/Ternary-Bonsai-2-27B-PTQ1_0.gguf")!,
             sha256: "53107f530aa52eb00912263ab1ee29bd199261c87cd7b4ad4ca1318c1fe33ee3", bytes: 5_946_648_928),
         memoryNeedGB: 8,
-        description: "More careful: best at pronouns and at not inventing in-session reactions. Slower, a few minutes a note.",
-        resumesFromSharedOpening: true)
+        description: "Slower, a few minutes a note, and needs the most memory.",
+        resumesFromSharedOpening: true, serverArguments: [])
 
-    /// Llama 3.1 8B Instruct at 4 bits, in second-state's conversion. Of
-    /// the files that need no sign-up it is the nearest to the copy Ollama
-    /// serves, which the prompts were tested with: 276 of its 292 tensors
-    /// are the same bytes, and so is the chat template. Measured at 6.5 GB
-    /// on the app's engine with the smallest context the app uses; Ollama's
-    /// copy is taken to need about the same. Its prompts go in the order
-    /// Ollama gets them, as the two were compared.
-    public static let llama = NoteModel(
-        id: "llama3.1:8b", displayName: "llama3.1:8b",
+    /// Gemma 4 E4B Instruct at 4 bits, in unsloth's conversion; the default.
+    /// Measured at 5–6.5 GB on the app's engine. Its attention looks back
+    /// over a sliding window, so the engine can return to the end of the
+    /// shared opening only from a checkpoint; without one taken at every
+    /// request, the Objective pass reads the whole transcript again.
+    public static let gemma = NoteModel(
+        id: "gemma4-e4b", displayName: "Gemma 4 E4B",
         weights: PinnedFile(
-            name: "Llama-3.1-8B-Instruct-Q4_K_M.gguf",
-            url: URL(string: "https://huggingface.co/second-state/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/6d6118a261564da05fd7e651f4bc069eb7c38c20/Llama-3.1-8B-Instruct-Q4_K_M.gguf")!,
-            sha256: "599024f21235045ea4ad7aecc5d46e794920e201d669328f577b1971cf98c904", bytes: 4_920_739_200),
+            name: "gemma-4-E4B-it-Q4_K_M.gguf",
+            url: URL(string: "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/resolve/bfc15c382204943c3a8fff0c750b94ae2364d7a3/gemma-4-E4B-it-Q4_K_M.gguf")!,
+            sha256: "85a896a047553e842f25297ee5b031d64ff30147d9c4af17b1e4b394cd1fab87", bytes: 4_977_171_584),
         memoryNeedGB: 6.5,
-        description: "Fast, usually under a minute. Often assumes a client's pronoun from their name; proofread pronouns and the Objective.",
-        resumesFromSharedOpening: false)
+        description: "Fast, under two minutes for a long session, and needs the least memory. Now and then it gives a client a pronoun from their name; proofread pronouns, or turn on De-identify by default.",
+        resumesFromSharedOpening: true, serverArguments: ["--checkpoint-min-step", "0"])
 
-    /// The model Settings means by `id`, if it is one of the two.
+    /// Qwen3.5 9B at 4 bits, in unsloth's conversion. Measured at about
+    /// 6 GB on the app's engine, rising to 8.5 GB on some sessions.
+    public static let qwen = NoteModel(
+        id: "qwen3.5-9b", displayName: "Qwen3.5 9B",
+        weights: PinnedFile(
+            name: "Qwen3.5-9B-Q4_K_M.gguf",
+            url: URL(string: "https://huggingface.co/unsloth/Qwen3.5-9B-GGUF/resolve/3885219b6810b007914f3a7950a8d1b469d598a5/Qwen3.5-9B-Q4_K_M.gguf")!,
+            sha256: "03b74727a860a56338e042c4420bb3f04b2fec5734175f4cb9fa853daf52b7e8", bytes: 5_680_522_464),
+        memoryNeedGB: 8.5,
+        description: "Writes a little differently from Gemma; about two minutes for a long session, and needs more memory.",
+        resumesFromSharedOpening: true, serverArguments: [])
+
+    /// Every model, the default first.
+    public static let all = [gemma, qwen, bonsai]
+
+    /// The model Settings means by `id`, if it is one of them.
     public static func named(_ id: String) -> NoteModel? {
-        [bonsai, llama].first { $0.id == id }
+        all.first { $0.id == id }
     }
 }

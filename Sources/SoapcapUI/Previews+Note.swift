@@ -17,8 +17,8 @@ private func previewTrail(from: Int, to: Int, swapGB: Double = 0) -> [MemoryStat
 #Preview("Drafting") {
     sampleScreen {
         $0.phase = .note
-        $0.phase = .working("Drafting a SOAP note with llama3.1:8b…  412 tokens")
-        $0.draftSteps = ["Loading llama3.1:8b…", "Drafting a SOAP note with llama3.1:8b…"]
+        $0.phase = .working("Drafting a SOAP note with Gemma 4 E4B…  412 tokens")
+        $0.draftSteps = ["Loading Gemma 4 E4B…", "Drafting a SOAP note with Gemma 4 E4B…"]
         $0.draftTokens = 412
         $0.draftRun.show(trail: previewTrail(from: 54, to: 38))
     }
@@ -49,8 +49,8 @@ private func previewTrail(from: Int, to: Int, swapGB: Double = 0) -> [MemoryStat
     sampleScreen {
         $0.note = "53 minutes, telehealth\n\nSUBJECTIVE:\nThe client reported sleeping better."
         $0.phase = .note
-        $0.phase = .working("Drafting a SOAP note with llama3.1:8b…  188 tokens")
-        $0.draftSteps = ["Loading llama3.1:8b…", "Drafting a SOAP note with llama3.1:8b…"]
+        $0.phase = .working("Drafting a SOAP note with Gemma 4 E4B…  188 tokens")
+        $0.draftSteps = ["Loading Gemma 4 E4B…", "Drafting a SOAP note with Gemma 4 E4B…"]
         $0.draftTokens = 188
         $0.draftRun.show(trail: previewTrail(from: 50, to: 31))
     }

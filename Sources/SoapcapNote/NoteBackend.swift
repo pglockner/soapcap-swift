@@ -26,8 +26,8 @@ public enum NoteError: Error, LocalizedError, Equatable {
     }
 }
 
-/// A local model that drafts notes. `OllamaBackend` and `EngineBackend` are
-/// the two; a new one is one more type like them.
+/// A local model that drafts notes. `EngineBackend` is the one the app
+/// uses; tests stand in their own.
 public protocol NoteBackend: Sendable {
     /// The model's name as shown while drafting.
     var label: String { get }

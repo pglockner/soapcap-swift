@@ -58,6 +58,9 @@ final class DraftRunTests: XCTestCase {
 
     func testANewDraftEndsTheOneInFlightAndWaitsForItsModelToGo() async throws {
         drafter.releaseDelay = 200_000_000
+        // Long enough that the second draft starts while the first is still
+        // going, even on a slow CI runner.
+        drafter.draftDelay = 1_000_000_000
         let run = DraftRun(drafting: drafter, memory: { nil })
         let first = draft(run)
         await waitFor("drafting") { run.isRunning }
