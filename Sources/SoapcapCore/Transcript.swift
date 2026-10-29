@@ -17,9 +17,12 @@ public enum Transcript {
     /// through the speakers (the other party) is audible in the room, so the
     /// microphone hears it too and it is transcribed a second time under the
     /// mic label. The reverse doesn't happen. A mic-side segment whose wording
-    /// is largely contained in a system-side segment nearby in time is that
-    /// echo. Bias is toward NOT dropping when unsure: a missed echo is a
-    /// harmless duplicate line, a wrongly dropped segment is lost content.
+    /// is largely contained in a system-side segment nearby in time, and no
+    /// longer than it, is that echo: an echo is a piece of what was played,
+    /// so a longer mic segment that a short reply repeats a few words of is
+    /// the mic's own speech. Bias is toward NOT dropping when unsure: a
+    /// missed echo is a harmless duplicate line, a wrongly dropped segment is
+    /// lost content.
     public struct Dedupe: Equatable, Sendable {
         /// How far apart (s) two segments can be and still be "the same moment".
         public var window = 3.5
@@ -72,6 +75,7 @@ public enum Transcript {
             guard said.count >= dedupe.minWords else { return true }
             return !heard.contains { s, theirs in
                 m.start - dedupe.window <= s.end && s.start <= m.end + dedupe.window
+                    && said.count <= theirs.count
                     && containment(said, theirs) >= dedupe.threshold
             }
         }

@@ -32,6 +32,12 @@ final class TranscriptTests: XCTestCase {
                        "Client: going overall\nTherapist: going overall")
     }
 
+    func testKeepsLongerMicSegmentAShortReplyRepeats() {
+        XCTAssertEqual(render([seg("Therapist", 0, 2, 1, "So you barely slept this week"),
+                               seg("Client", 2.5, 3, 2, "barely slept")]),
+                       "Therapist: So you barely slept this week\nClient: barely slept")
+    }
+
     func testNeverDropsBackchannelBelowMinWords() {
         XCTAssertEqual(render([seg("Client", 0, 1, 1, "Okay"), seg("Therapist", 0.5, 1, 2, "Okay")]),
                        "Client: Okay\nTherapist: Okay")
