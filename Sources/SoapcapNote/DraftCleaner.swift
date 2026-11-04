@@ -2,12 +2,11 @@ import Foundation
 
 /// Safety nets against known ways a model's prose draft goes wrong.
 public enum DraftCleaner {
-    static let fallback = "No observable presentation details available from a text-only transcript."
     static let planOfCare = "The current plan of care will continue."
 
     /// Every net, in order; the Plan default applies to SOAP only.
     public static func clean(_ draft: String, format: NoteFormat) -> String {
-        let cleaned = strippingTrailingDisclaimer(strippingContaminatedFallback(strippingTranscriptEcho(draft)))
+        let cleaned = strippingTrailingDisclaimer(strippingTranscriptEcho(draft))
         return format == .soap ? defaultingPlan(cleaned) : cleaned
     }
 
@@ -16,16 +15,6 @@ public enum DraftCleaner {
     /// than duplicate PHI into the output.
     static func strippingTranscriptEcho(_ note: String) -> String {
         NoteText.join(Array(NoteText.lines(note).prefix { !$0.matches("^TRANSCRIPT:\\s*$") }))
-    }
-
-    /// The Objective fallback sentence is meant to stand alone. A model
-    /// sometimes appends it to a line that has a real observation, which
-    /// then contradicts itself; drop the fallback from such a line.
-    static func strippingContaminatedFallback(_ note: String) -> String {
-        NoteText.join(NoteText.lines(note).map { line in
-            guard line != fallback, let found = line.range(of: fallback) else { return line }
-            return String(line[..<found.lowerBound]).replacing(pattern: "[ \\t]+$", with: "")
-        })
     }
 
     /// Drops one trailing paragraph that opens like an aside about the

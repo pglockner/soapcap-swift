@@ -10,13 +10,6 @@ final class DraftCleanerTests: XCTestCase {
                        "SUBJECTIVE:\nNormal note, no echo.")
     }
 
-    func testTheFallbackIsStrippedOnlyWhenAppendedToARealObservation() {
-        let fallback = "No observable presentation details available from a text-only transcript."
-        XCTAssertEqual(DraftCleaner.strippingContaminatedFallback("The client appeared to be tearing up during the session. \(fallback)\n"),
-                       "The client appeared to be tearing up during the session.")
-        XCTAssertEqual(DraftCleaner.strippingContaminatedFallback(fallback + "\n"), fallback)
-    }
-
     func testATrailingDisclaimerParagraphIsDropped() {
         XCTAssertEqual(DraftCleaner.strippingTrailingDisclaimer("PLAN:\nContinue weekly sessions.\n\nNote: this appears to be a test recording, not a real session.\n"),
                        "PLAN:\nContinue weekly sessions.")
