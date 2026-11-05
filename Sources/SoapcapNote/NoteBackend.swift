@@ -38,6 +38,9 @@ public protocol NoteBackend: Sendable {
     func check() async throws
     /// Gets the model ready for a note's requests, each within `context` tokens.
     func start(context: Int) async throws
+    /// What loading showed about this model on this Mac that the clinician
+    /// should know, for the note's warnings.
+    func loadWarnings() async -> [String]
     /// One request. `cap` is the output cap in tokens: without one, a model
     /// that starts repeating itself runs until the request times out.
     /// `schema`, if given, is a JSON schema the reply must match. `tokens` is
@@ -54,6 +57,7 @@ public protocol NoteBackend: Sendable {
 
 public extension NoteBackend {
     var resumesFromSharedOpening: Bool { false }
+    func loadWarnings() async -> [String] { [] }
 }
 
 public extension URLSession {

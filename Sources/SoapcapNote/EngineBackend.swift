@@ -61,6 +61,8 @@ public actor EngineBackend: NoteBackend {
     /// The GPU ran out of memory: the server can compute nothing more, so it
     /// has been stopped, and every request fails with this until `start`.
     private var fault: NoteError?
+    /// Why the loaded model may fail on this Mac's GPU, if it may.
+    private var gpuWarning: String?
     /// The model to suggest instead when this one runs out of GPU memory.
     nonisolated let lighter: String?
 
@@ -112,12 +114,14 @@ public actor EngineBackend: NoteBackend {
     /// Launches the server with a context of at least 8192 tokens and waits
     /// until the model has loaded. A server still running from an earlier
     /// draft is reused when its context is big enough. The flags are the ones
-    /// soapcap's prompts were tested with.
+    /// soapcap's prompts were tested with, and `-lv 4`, under which the
+    /// server logs its GPU memory (never the prompt).
     public func start(context wanted: Int) async throws {
         let wanted = max(wanted, 8192)
         if isRunning, context >= wanted { return }
         await stop()
         fault = nil
+        gpuWarning = nil
         try await check()
         try Task.checkCancellation()
 
@@ -125,7 +129,7 @@ public actor EngineBackend: NoteBackend {
         server.executableURL = install.server
         server.arguments = ["-m", install.weights.path, "--host", "127.0.0.1", "--port", String(install.port),
                             "-ngl", "99", "-c", String(wanted), "--parallel", "1",
-                            "--cache-type-k", "q8_0", "--cache-type-v", "q8_0"] + serverArguments
+                            "--cache-type-k", "q8_0", "--cache-type-v", "q8_0", "-lv", "4"] + serverArguments
         key = (0..<32).map { _ in String(format: "%02x", UInt8.random(in: .min ... .max)) }.joined()
         // In its environment, not its arguments, which any process can list.
         server.environment = ProcessInfo.processInfo.environment.merging(["LLAMA_API_KEY": key]) { _, new in new }
@@ -148,12 +152,31 @@ public actor EngineBackend: NoteBackend {
             }
             // A draft given up on while loading must not leave the server behind.
             if Task.isCancelled { await stop(); throw CancellationError() }
-            if await healthy() == true { return }
+            if await healthy() == true {
+                gpuWarning = await gpuCheck()
+                return
+            }
             try? await Task.sleep(for: .seconds(pollInterval))
         }
         await stop()
         throw NoteError.notReady("\(label) didn't finish loading within \(Int(loadTimeout))s.")
     }
+
+    /// A warning when the model just loaded takes more GPU memory than
+    /// macOS lets one program use (Metal's recommendedMaxWorkingSetSize):
+    /// past that a draft can fail. Over total memory it would only be
+    /// slow, which isn't warned of here. Both figures are from the log.
+    private func gpuCheck() async -> String? {
+        // The figures are logged before the server answers, but may not
+        // have been read yet.
+        for _ in 0..<10 where log.gpuUse == nil { await Self.wait(milliseconds: 50) }
+        guard let use = log.gpuUse, use.buffers > use.budget else { return nil }
+        func gb(_ mib: Double) -> String { String(format: "%.1f GB", mib * 1_048_576 / 1e9) }
+        let instead = lighter.map { " \($0) needs less." } ?? " Closing other apps won't help; a shorter session might."
+        return "\(label) took \(gb(use.buffers)) of GPU memory for this note, more than the \(gb(use.budget)) this Mac allows one app, so drafting may fail.\(instead)"
+    }
+
+    public func loadWarnings() async -> [String] { gpuWarning.map { [$0] } ?? [] }
 
     /// One chat request to the running server. Thinking is always off: with
     /// it on a note takes many minutes longer, and the prompts were tested
@@ -242,9 +265,11 @@ final class LogTail: @unchecked Sendable {
     /// The start of a line not yet ended.
     private var partial = ""
     private var gpuFailed = false
+    private var budget: Double?
+    private var buffers = 0.0
 
     func follow(_ pipe: Pipe) {
-        lock.withLock { text = ""; partial = ""; gpuFailed = false }
+        lock.withLock { text = ""; partial = ""; gpuFailed = false; budget = nil; buffers = 0 }
         pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let data = handle.availableData
             guard !data.isEmpty else { handle.readabilityHandler = nil; return }
@@ -258,7 +283,11 @@ final class LogTail: @unchecked Sendable {
             if text.count > 2000 { text = String(text.suffix(2000)) }
             var lines = (partial + chunk).split(separator: "\n", omittingEmptySubsequences: false)
             partial = String(lines.removeLast())
-            for line in lines where Self.isGPUFailure(line) { gpuFailed = true }
+            for line in lines {
+                if Self.isGPUFailure(line) { gpuFailed = true }
+                if let total = Self.gpuBudget(line) { budget = total }
+                if let size = Self.gpuBuffer(line) { buffers += size }
+            }
         }
     }
 
@@ -269,7 +298,29 @@ final class LogTail: @unchecked Sendable {
             || line.contains("error state from a previous command buffer failure")
     }
 
+    /// The GPU's memory in MiB, from the device list logged at startup:
+    /// `- MTL0    : Apple M4 (12124 MiB, 12123 MiB free)`. On a Mac this is
+    /// Metal's recommendedMaxWorkingSetSize.
+    static func gpuBudget(_ line: Substring) -> Double? {
+        guard let m = line.firstMatch(of: /- MTL0\s*: .*\((\d+) MiB, \d+ MiB free\)/) else { return nil }
+        return Double(m.1)
+    }
+
+    /// The size in MiB of one buffer the model put on the GPU: its weights,
+    /// KV cache or compute buffer, as
+    /// `MTL0_Mapped model buffer size =  4731.51 MiB`.
+    static func gpuBuffer(_ line: Substring) -> Double? {
+        guard let m = line.firstMatch(of: /\sMTL0\S*\s+.*buffer size\s*=\s*([\d.]+) MiB/) else { return nil }
+        return Double(m.1)
+    }
+
     var sawGPUFailure: Bool { lock.withLock { gpuFailed } }
+
+    /// What the server has put on the GPU and what the GPU allows, in MiB,
+    /// once both have been logged.
+    var gpuUse: (buffers: Double, budget: Double)? {
+        lock.withLock { budget.flatMap { buffers > 0 ? (buffers, $0) : nil } }
+    }
 
     /// The last five lines.
     var tail: String {

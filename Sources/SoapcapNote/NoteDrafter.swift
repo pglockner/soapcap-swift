@@ -83,6 +83,7 @@ public struct NoteDrafter: Sendable {
                           objectivePrompt.map { ContextSize.estimate($0, headroom: 3072) } ?? 0)
         progress(DraftProgress(title: "Loading \(label)…"))
         try await backend.start(context: context)
+        warnings += await backend.loadWarnings()
         if shared {
             // The reply is not used. If this fails the draft still works; it
             // just reads the transcript itself.

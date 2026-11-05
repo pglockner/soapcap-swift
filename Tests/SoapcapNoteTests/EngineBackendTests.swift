@@ -4,12 +4,14 @@ import XCTest
 /// A stand-in llama-server, as in soapcap's tests: notes the key it was
 /// given, logs its arguments, then runs until signalled. With the `crash` file present it exits at once, as a
 /// failed model load does; with `stubborn` it ignores a polite stop; `gpufail` makes it log, once, the
-/// Metal failure the engine logs when the GPU runs out of memory.
+/// Metal failure the engine logs when the GPU runs out of memory; the lines in `gpu` are logged before
+/// it answers, as the engine logs the GPU's memory and the model's buffers while loading.
 private let fakeServer = #"""
 #!/usr/bin/env bash
 dir=$(dirname "$0")
 if [ -f "$dir/crash" ]; then echo "llama_model_load: error loading model" >&2; exit 1; fi
 echo "$LLAMA_API_KEY" > "$dir/key"
+if [ -f "$dir/gpu" ]; then cat "$dir/gpu" >&2; fi
 echo "started $*" >> "$dir/log"
 if [ -f "$dir/stubborn" ]; then trap '' TERM; else trap 'echo stopped >> "$dir/log"; exit 0' TERM INT; fi
 while :; do
@@ -72,7 +74,7 @@ final class EngineBackendTests: XCTestCase {
     func testStartLaunchesTheServerWithSoapcapsFlagsAndStopEndsIt() async throws {
         let bonsai = backend()
         try await bonsai.start(context: 100)
-        XCTAssertEqual(log, ["started -m \(install.weights.path) --host 127.0.0.1 --port 18999 -ngl 99 -c 8192 --parallel 1 --cache-type-k q8_0 --cache-type-v q8_0"])
+        XCTAssertEqual(log, ["started -m \(install.weights.path) --host 127.0.0.1 --port 18999 -ngl 99 -c 8192 --parallel 1 --cache-type-k q8_0 --cache-type-v q8_0 -lv 4"])
         await bonsai.stop()
         XCTAssertEqual(log.last, "stopped")
         await bonsai.stop()
@@ -81,7 +83,7 @@ final class EngineBackendTests: XCTestCase {
     func testAModelsOwnFlagsFollowTheOnesEveryModelGets() async throws {
         let gemma = backend(serverArguments: NoteModel.gemma.serverArguments)
         try await gemma.start(context: 100)
-        XCTAssertEqual(log.first?.hasSuffix("--cache-type-v q8_0 --checkpoint-min-step 0"), true, log.first ?? "nothing started")
+        XCTAssertEqual(log.first?.hasSuffix("--cache-type-v q8_0 -lv 4 --checkpoint-min-step 0"), true, log.first ?? "nothing started")
         await gemma.stop()
     }
 
@@ -215,6 +217,52 @@ final class EngineBackendTests: XCTestCase {
         XCTAssertEqual(NoteModel.qwen.lighter, .gemma)
         XCTAssertEqual(NoteModel.bonsai.lighter, .gemma)
         XCTAssertNil(NoteModel.gemma.lighter)
+    }
+
+    /// As the engine logs them loading Gemma at a 32k context on a 16 GB Mac,
+    /// with the CPU's buffers among them.
+    private func gpuLog(budget: Int) -> String {
+        """
+        0.00.041.465 I cmn  common_param:   - MTL0    : Apple M4 (\(budget) MiB, \(budget - 1) MiB free)
+        0.00.041.471 I cmn  common_param:   - CPU     : Apple M4 (16384 MiB, 16384 MiB free)
+        0.00.826.782 I load_tensors:   CPU_Mapped model buffer size =  2208.00 MiB
+        0.00.826.783 I load_tensors:  MTL0_Mapped model buffer size =  4731.51 MiB
+        0.00.829.922 I llama_context:        CPU  output buffer size =     1.00 MiB
+        0.00.837.030 I llama_kv_cache:       MTL0 KV buffer size =   272.00 MiB
+        0.00.847.262 I llama_kv_cache:       MTL0 KV buffer size =    21.25 MiB
+        0.00.869.458 I sched_reserve:       MTL0 compute buffer size =   227.71 MiB
+        0.00.869.460 I sched_reserve:        CPU compute buffer size =    65.30 MiB
+
+        """
+    }
+
+    func testAModelTooBigForTheGPUIsWarnedOfOnceLoaded() async throws {
+        // 5252 MiB on the GPU: within 16 GB's 12124 MiB, beyond a budget of 5000.
+        try gpuLog(budget: 12124).write(to: dir.appendingPathComponent("gpu"), atomically: true, encoding: .utf8)
+        let qwen = EngineBackend(install: install, label: "Qwen3.5 9B", lighter: "Gemma 4 E4B", session: StubHTTP.session(),
+                                 loadTimeout: 5, pollInterval: 0.05)
+        try await qwen.start(context: 8192)
+        let fits = await qwen.loadWarnings()
+        XCTAssertEqual(fits, [])
+        await qwen.stop()
+
+        try gpuLog(budget: 5000).write(to: dir.appendingPathComponent("gpu"), atomically: true, encoding: .utf8)
+        try await qwen.start(context: 8192)
+        let over = await qwen.loadWarnings()
+        XCTAssertEqual(over, ["Qwen3.5 9B took 5.5 GB of GPU memory for this note, more than the 5.2 GB this Mac allows one app, so drafting may fail. Gemma 4 E4B needs less."])
+        await qwen.stop()
+    }
+
+    func testGPUFiguresAreReadAcrossChunksAndStartAfreshWithEachServer() {
+        let tail = LogTail()
+        let lines = gpuLog(budget: 12124)
+        let cut = lines.index(lines.startIndex, offsetBy: 300)       // mid-line
+        tail.add(String(lines[..<cut]))
+        tail.add(String(lines[cut...]))
+        XCTAssertEqual(tail.gpuUse?.budget, 12124)
+        XCTAssertEqual(tail.gpuUse?.buffers ?? 0, 5252.47, accuracy: 0.001)
+        tail.follow(Pipe())
+        XCTAssertNil(tail.gpuUse)
     }
 
     func testNothingSentOrReceivedIsCachedUnlessAnotherSessionIsGiven() {
