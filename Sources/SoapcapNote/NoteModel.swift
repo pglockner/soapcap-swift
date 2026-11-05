@@ -74,4 +74,10 @@ public struct NoteModel: Equatable, Sendable {
     public static func named(_ id: String) -> NoteModel? {
         all.first { $0.id == id }
     }
+
+    /// The model needing the least memory, if this isn't it: what to try
+    /// when this one runs out.
+    public var lighter: NoteModel? {
+        Self.all.filter { $0.memoryNeedGB < memoryNeedGB }.min { $0.memoryNeedGB < $1.memoryNeedGB }
+    }
 }

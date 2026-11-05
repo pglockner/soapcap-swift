@@ -3,7 +3,8 @@ import XCTest
 
 /// A stand-in llama-server, as in soapcap's tests: notes the key it was
 /// given, logs its arguments, then runs until signalled. With the `crash` file present it exits at once, as a
-/// failed model load does; with `stubborn` it ignores a polite stop.
+/// failed model load does; with `stubborn` it ignores a polite stop; `gpufail` makes it log, once, the
+/// Metal failure the engine logs when the GPU runs out of memory.
 private let fakeServer = #"""
 #!/usr/bin/env bash
 dir=$(dirname "$0")
@@ -11,7 +12,10 @@ if [ -f "$dir/crash" ]; then echo "llama_model_load: error loading model" >&2; e
 echo "$LLAMA_API_KEY" > "$dir/key"
 echo "started $*" >> "$dir/log"
 if [ -f "$dir/stubborn" ]; then trap '' TERM; else trap 'echo stopped >> "$dir/log"; exit 0' TERM INT; fi
-while :; do sleep 0.05; done
+while :; do
+  if [ -f "$dir/gpufail" ]; then rm "$dir/gpufail"; echo "ggml_metal_synchronize: error: command buffer 0 failed with status 5" >&2; fi
+  sleep 0.05
+done
 """#
 
 final class EngineBackendTests: XCTestCase {
@@ -181,6 +185,36 @@ final class EngineBackendTests: XCTestCase {
         do { _ = try await backend().request(prompt: "P", cap: 10, schema: nil) { _ in }; XCTFail("replied") } catch {
             XCTAssertEqual(error as? NoteError, .requestFailed("Bonsai returned no content."))
         }
+    }
+
+    func testRunningOutOfGPUMemoryStopsTheServerAndNamesALighterModel() async throws {
+        StubHTTP.replies["/v1/chat/completions"] = #"{"error": {"message": "Compute error."}}"#
+        let qwen = EngineBackend(install: install, label: "Qwen3.5 9B", lighter: "Gemma 4 E4B", session: StubHTTP.session(),
+                                 loadTimeout: 5, pollInterval: 0.05)
+        try await qwen.start(context: 8192)
+        touch("gpufail")
+        let expected = NoteError.requestFailed("Qwen3.5 9B ran out of GPU memory. Choose Gemma 4 E4B in Settings, which needs less, or close other apps and draft again.")
+        do { _ = try await qwen.request(prompt: "P", cap: 10, schema: nil) { _ in }; XCTFail("replied") } catch {
+            XCTAssertEqual(error as? NoteError, expected)
+        }
+        XCTAssertEqual(log.last, "stopped", "a server whose GPU has failed computes nothing more")
+        // Later requests fail the same way without reaching a server; a fresh start clears it.
+        let sent = StubHTTP.sent.count
+        do { _ = try await qwen.request(prompt: "P", cap: 10, schema: nil) { _ in }; XCTFail("replied") } catch {
+            XCTAssertEqual(error as? NoteError, expected)
+        }
+        XCTAssertEqual(StubHTTP.sent.count, sent)
+        StubHTTP.replies["/v1/chat/completions"] = #"{"choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}]}"#
+        try await qwen.start(context: 8192)
+        let again = try await qwen.request(prompt: "P", cap: 10, schema: nil) { _ in }
+        XCTAssertEqual(again.text, "ok")
+        await qwen.stop()
+    }
+
+    func testTheLighterModelIsTheOneNeedingLeastMemory() {
+        XCTAssertEqual(NoteModel.qwen.lighter, .gemma)
+        XCTAssertEqual(NoteModel.bonsai.lighter, .gemma)
+        XCTAssertNil(NoteModel.gemma.lighter)
     }
 
     func testNothingSentOrReceivedIsCachedUnlessAnotherSessionIsGiven() {

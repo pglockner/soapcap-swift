@@ -58,21 +58,28 @@ public actor EngineBackend: NoteBackend {
     /// web page open in a browser.
     private var key = ""
     private let log = LogTail()
+    /// The GPU ran out of memory: the server can compute nothing more, so it
+    /// has been stopped, and every request fails with this until `start`.
+    private var fault: NoteError?
+    /// The model to suggest instead when this one runs out of GPU memory.
+    nonisolated let lighter: String?
 
     /// One of the note models, from where it was found unless `install` says.
     public init(_ model: NoteModel, install: Install? = nil) {
         self.init(install: install ?? model.install, label: model.displayName,
-                  resumesFromSharedOpening: model.resumesFromSharedOpening, serverArguments: model.serverArguments)
+                  resumesFromSharedOpening: model.resumesFromSharedOpening, serverArguments: model.serverArguments,
+                  lighter: model.lighter?.displayName)
     }
 
     /// Any GGUF model: the same server runs them all.
     public init(install: Install, label: String,
-                resumesFromSharedOpening: Bool = true, serverArguments: [String] = [], session: URLSession = .keepingNothing,
-                loadTimeout: TimeInterval = 180, pollInterval: TimeInterval = 1) {
+                resumesFromSharedOpening: Bool = true, serverArguments: [String] = [], lighter: String? = nil,
+                session: URLSession = .keepingNothing, loadTimeout: TimeInterval = 180, pollInterval: TimeInterval = 1) {
         self.install = install
         self.label = label
         self.resumesFromSharedOpening = resumesFromSharedOpening
         self.serverArguments = serverArguments
+        self.lighter = lighter
         self.session = session
         self.loadTimeout = loadTimeout
         self.pollInterval = pollInterval
@@ -110,6 +117,7 @@ public actor EngineBackend: NoteBackend {
         let wanted = max(wanted, 8192)
         if isRunning, context >= wanted { return }
         await stop()
+        fault = nil
         try await check()
         try Task.checkCancellation()
 
@@ -151,6 +159,7 @@ public actor EngineBackend: NoteBackend {
     /// it on a note takes many minutes longer, and the prompts were tested
     /// without it. The server doesn't stream here, so `tokens` is not called.
     public func request(prompt: String, cap: Int, schema: Data?, tokens: @escaping @Sendable (Int) -> Void) async throws -> ModelReply {
+        if let fault { throw fault }
         var body: [String: Any] = [
             "messages": [["role": "user", "content": prompt]], "stream": false,
             "chat_template_kwargs": ["enable_thinking": false],
@@ -169,17 +178,33 @@ public actor EngineBackend: NoteBackend {
 
         let data: Data
         do { (data, _) = try await session.data(for: request) } catch {
-            throw NoteError.requestFailed("The request to \(label) failed: \(error.localizedDescription)")
+            throw await failure("The request to \(label) failed: \(error.localizedDescription)")
         }
         let reply = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
         if let error = reply["error"] {
             let message = (error as? [String: Any])?["message"] as? String ?? "\(error)"
-            throw NoteError.requestFailed("\(label) error: \(message)")
+            throw await failure("\(label) error: \(message)")
         }
         let choice = (reply["choices"] as? [[String: Any]])?.first
         let text = (choice?["message"] as? [String: Any])?["content"] as? String ?? ""
         guard !text.isEmpty else { throw NoteError.requestFailed("\(label) returned no content.") }
         return ModelReply(text: text, cutOff: choice?["finish_reason"] as? String == "length")
+    }
+
+    /// What a failed request means. When the GPU ran out of memory the
+    /// server is left unable to compute anything until it is restarted
+    /// (the engine's Metal backend keeps the error), so it is stopped.
+    private func failure(_ message: String) async -> NoteError {
+        // The server replies before its log line about the failure may
+        // have been read.
+        for _ in 0..<10 where !log.sawGPUFailure { await Self.wait(milliseconds: 50) }
+        guard log.sawGPUFailure else { return .requestFailed(message) }
+        await stop()
+        let instead = lighter.map { "Choose \($0) in Settings, which needs less, or close other apps and draft again." }
+            ?? "Close other apps and draft again."
+        let fault = NoteError.requestFailed("\(label) ran out of GPU memory. \(instead)")
+        self.fault = fault
+        return fault
     }
 
     /// Stops the server and waits for it, so its memory is released before
@@ -208,23 +233,43 @@ public actor EngineBackend: NoteBackend {
     }
 }
 
-/// Keeps the last part of a process's output in memory, for an error message.
-/// Nothing is written to disk.
+/// Keeps the last part of a process's output in memory, for an error
+/// message, and notes what it says about the GPU as it passes. Nothing is
+/// written to disk.
 final class LogTail: @unchecked Sendable {
     private let lock = NSLock()
     private var text = ""
+    /// The start of a line not yet ended.
+    private var partial = ""
+    private var gpuFailed = false
 
     func follow(_ pipe: Pipe) {
-        lock.withLock { text = "" }
+        lock.withLock { text = ""; partial = ""; gpuFailed = false }
         pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let data = handle.availableData
             guard !data.isEmpty else { handle.readabilityHandler = nil; return }
-            self?.lock.withLock {
-                self?.text += String(decoding: data, as: UTF8.self)
-                if let text = self?.text, text.count > 2000 { self?.text = String(text.suffix(2000)) }
-            }
+            self?.add(String(decoding: data, as: UTF8.self))
         }
     }
+
+    func add(_ chunk: String) {
+        lock.withLock {
+            text += chunk
+            if text.count > 2000 { text = String(text.suffix(2000)) }
+            var lines = (partial + chunk).split(separator: "\n", omittingEmptySubsequences: false)
+            partial = String(lines.removeLast())
+            for line in lines where Self.isGPUFailure(line) { gpuFailed = true }
+        }
+    }
+
+    /// A Metal command buffer failed, which on these Macs means the GPU ran
+    /// out of memory; every later computation then fails as well.
+    static func isGPUFailure(_ line: Substring) -> Bool {
+        line.contains("failed with status") && line.contains("command buffer")
+            || line.contains("error state from a previous command buffer failure")
+    }
+
+    var sawGPUFailure: Bool { lock.withLock { gpuFailed } }
 
     /// The last five lines.
     var tail: String {

@@ -112,8 +112,9 @@ public struct NoteDrafter: Sendable {
                     progress(DraftProgress(title: title, tokens: $0))
                 }
             } catch {
-                if best != nil { break }
-                throw error
+                guard best != nil else { throw error }
+                warnings.append("Drafting the note again failed: \(error.localizedDescription)")
+                break
             }
             let note = DraftCleaner.clean(reply.text, format: format)
             let faults = NoteFaults.faults(in: note, sections: format.draftSections, lenient: lenient)
@@ -138,10 +139,14 @@ public struct NoteDrafter: Sendable {
                 // the Objective then says plainly that it needs completing.
                 let title = "Drafting the Objective with \(label)…"
                 progress(DraftProgress(title: title))
-                if let found = await structured(prompt: objectivePrompt, title: title, progress: progress) {
-                    objective = found
-                } else {
-                    warnings.append("The Objective pass failed — complete the Objective by hand.")
+                do {
+                    if let found = try await structured(prompt: objectivePrompt, title: title, progress: progress) {
+                        objective = found
+                    } else {
+                        warnings.append("The Objective pass failed — complete the Objective by hand.")
+                    }
+                } catch {
+                    warnings.append("The Objective pass failed — complete the Objective by hand. \(error.localizedDescription)")
                 }
             }
             note = Objective.splice(Objective.render(objective, note: note), into: note)
@@ -151,14 +156,16 @@ public struct NoteDrafter: Sendable {
 
     /// The Objective request. The schema is enforced by the server, but a
     /// reply can still be cut off or malformed, so one bad reply is retried
-    /// once. The low cap stops a field that runs on from costing minutes.
+    /// once; nil when neither is usable. The low cap stops a field that runs
+    /// on from costing minutes. A failed request throws, so its reason
+    /// reaches the clinician.
     private func structured(prompt: String, title: String,
-                            progress: @escaping @Sendable (DraftProgress) -> Void) async -> Objective.Result? {
+                            progress: @escaping @Sendable (DraftProgress) -> Void) async throws -> Objective.Result? {
         guard let schema = try? Prompts.objectiveSchema() else { return nil }
         for _ in 1...2 {
-            guard let reply = try? await backend.request(prompt: prompt, cap: 600, schema: schema, tokens: {
+            let reply = try await backend.request(prompt: prompt, cap: 600, schema: schema, tokens: {
                 progress(DraftProgress(title: title, tokens: $0))
-            }) else { return nil }
+            })
             if !reply.cutOff, Self.hasEveryField(reply.text),
                case .assessed(let found) = Objective.result(fromJSON: reply.text) {
                 return .assessed(found)
