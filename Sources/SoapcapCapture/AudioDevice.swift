@@ -53,4 +53,23 @@ enum AudioDevice {
         guard let channels = AVAudioChannelLayout(layoutTag: kAudioChannelLayoutTag_DiscreteInOrder | description.mChannelsPerFrame) else { return nil }
         return AVAudioFormat(streamDescription: &description, channelLayout: channels)
     }
+
+    /// Whether `device` is the Mac's own speakers: built in, and playing
+    /// through its internal speaker rather than headphones. Bluetooth, USB
+    /// and display audio never count, since headphones there can't be told
+    /// from speakers.
+    static func isMacSpeakers(_ device: AudioObjectID) -> Bool {
+        func read(_ selector: AudioObjectPropertySelector, _ scope: AudioObjectPropertyScope) -> UInt32? {
+            var value: UInt32 = 0
+            var size = UInt32(MemoryLayout<UInt32>.size)
+            var address = address(selector, scope: scope)
+            return AudioObjectGetPropertyData(device, &address, 0, nil, &size, &value) == noErr ? value : nil
+        }
+        guard device != none else { return false }
+        return read(kAudioDevicePropertyTransportType, kAudioObjectPropertyScopeGlobal) == kAudioDeviceTransportTypeBuiltIn
+            && read(kAudioDevicePropertyDataSource, kAudioObjectPropertyScopeOutput) == internalSpeaker
+    }
+
+    /// The data source a Mac's speakers report ('ispk'); headphones are 'hdpn'.
+    private static let internalSpeaker: UInt32 = 0x6973_706B
 }

@@ -20,7 +20,7 @@ final class FakeCapture: Capturing {
         self.startError = startError
     }
 
-    func start(micLabel: String, systemLabel: String, locale: Locale) async throws {
+    func start(micLabel: String, systemLabel: String, locale: Locale, echoCancellation: Bool) async throws {
         calls.append("start")
         started = (micLabel, systemLabel, locale.identifier)
         if let startError { throw startError }

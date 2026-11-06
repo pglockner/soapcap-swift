@@ -28,11 +28,15 @@ public final class CaptureSession: @unchecked Sendable {
         (live, liveContinuation) = AsyncStream.makeStream(of: LiveLine.self)
     }
 
+    /// With `echoCancellation`, the microphone is heard through Apple's voice
+    /// processing, which takes out what the Mac's speakers play.
     public func start(micLabel: String = "Therapist", systemLabel: String = "Client",
-                      locale: Locale = Locale(identifier: Locale.current.identifier)) async throws {
+                      locale: Locale = Locale(identifier: Locale.current.identifier),
+                      echoCancellation: Bool = true) async throws {
         let continuation = liveContinuation
         var made: [Track] = []
-        for (source, label) in [(MicrophoneSource() as AudioSource, micLabel), (SystemAudioSource(), systemLabel)] {
+        let microphone = MicrophoneSource(engine: SystemInputEngine(cancelsEcho: echoCancellation))
+        for (source, label) in [(microphone as AudioSource, micLabel), (SystemAudioSource(), systemLabel)] {
             let transcriber = try await Recognizer.transcriber(locale: locale, live: true)
             made.append(Track(source: source, speaker: label, transcriber: transcriber) { continuation.yield($0) })
         }

@@ -1,6 +1,7 @@
 // Records for a few seconds and prints what was heard. A development aid for
-// checking capture without the window: `swift run CaptureProbe [seconds] [pause]`.
-// With `pause`, the middle third of the time is paused. `CaptureProbe check`
+// checking capture without the window: `swift run CaptureProbe [seconds] [pause] [noecho]`.
+// With `pause`, the middle third of the time is paused; with `noecho`, the
+// microphone is heard without echo cancellation. `CaptureProbe check`
 // only says whether the Mac's audio can be heard. Run from a terminal, it is
 // the terminal that macOS asks about, not Soapcap.
 import Foundation
@@ -9,6 +10,7 @@ import SoapcapCore
 
 let seconds = CommandLine.arguments.dropFirst().compactMap(Double.init).first ?? 10
 let pauses = CommandLine.arguments.contains("pause")
+let echoCancellation = !CommandLine.arguments.contains("noecho")
 func say(_ s: String) { FileHandle.standardError.write(Data((s + "\n").utf8)) }
 
 if CommandLine.arguments.contains("check") {
@@ -17,12 +19,13 @@ if CommandLine.arguments.contains("check") {
 }
 
 let session = CaptureSession()
-do { try await session.start() } catch {
+let starting = ContinuousClock.now
+do { try await session.start(echoCancellation: echoCancellation) } catch {
     say("could not start: \(error.localizedDescription)")
     exit(1)
 }
 let printer = Task { for await line in session.live { say("  \(line.isFinal ? "=" : "~") \(line.speaker): \(line.text)") } }
-say("recording for \(Int(seconds))s…")
+say("started in \(starting.duration(to: .now)); recording for \(Int(seconds))s…")
 if pauses {
     try await Task.sleep(for: .seconds(seconds / 3))
     session.pause(); say("paused")

@@ -98,7 +98,13 @@ final class MicrophoneSource: AudioSource {
 /// `AudioTap` reads what the Mac plays. AVAudioEngine did this before: asked
 /// about its input at the moment AirPods left, a new engine never answered,
 /// and the session could not be stopped. Core Audio answers with an error.
+///
+/// With `cancelsEcho`, while the Mac's own speakers play, it is heard
+/// through `VoiceProcessedInput`, which takes out what they play. With
+/// headphones or other outputs, or where that can't start, it is heard as
+/// it is. Plugging headphones in or out mid-session starts it again.
 final class SystemInputEngine: InputEngine {
+    let cancelsEcho: Bool
     private let lock = NSLock()
     private let delivery = DispatchQueue(label: "soapcap.microphone.buffers")
     private let events = DispatchQueue(label: "soapcap.microphone.events")
@@ -106,7 +112,11 @@ final class SystemInputEngine: InputEngine {
     private var handler: ((AVAudioPCMBuffer) -> Void)?
     private var device = AudioDevice.none
     private var format: AVAudioFormat?
-    private var proc: IOProc?
+    /// The output whose changes matter, with `cancelsEcho`; `none` otherwise.
+    private var output = AudioDevice.none
+    /// Whether `output` was the Mac's speakers when it started.
+    private var speakers = false
+    private var proc: (any RunningInput)?
     /// One block for every listener, so that each can be taken off again.
     private var listener: AudioObjectPropertyListenerBlock?
 
@@ -115,14 +125,17 @@ final class SystemInputEngine: InputEngine {
         set { lock.withLock { onChange = newValue } }
     }
 
-    init() {
+    init(cancelsEcho: Bool = false) {
+        self.cancelsEcho = cancelsEcho
         listener = { [weak self] _, _ in self?.somethingChanged() }
         listen(to: kAudioHardwarePropertyDefaultInputDevice, of: AudioDevice.system, true)
+        if cancelsEcho { listen(to: kAudioHardwarePropertyDefaultOutputDevice, of: AudioDevice.system, true) }
     }
 
     deinit {
         stop()
         listen(to: kAudioHardwarePropertyDefaultInputDevice, of: AudioDevice.system, false)
+        if cancelsEcho { listen(to: kAudioHardwarePropertyDefaultOutputDevice, of: AudioDevice.system, false) }
     }
 
     var inputSampleRate: Double { AudioDevice.format(of: AudioDevice.default(.input), .input)?.sampleRate ?? 0 }
@@ -136,6 +149,40 @@ final class SystemInputEngine: InputEngine {
         guard let handler = lock.withLock({ handler }), let format = AudioDevice.format(of: device, .input) else {
             throw CaptureError.noMicrophone
         }
+        let output = cancelsEcho ? AudioDevice.default(.output) : AudioDevice.none
+        let speakers = AudioDevice.isMacSpeakers(output)
+        let proc: any RunningInput
+        var watched = format
+        if speakers, let voice = try? VoiceProcessedInput(sampleRate: format.sampleRate, handler: handler) {
+            proc = voice
+            // Voice processing can change the device's channels as it
+            // starts; what counts as a change is measured from here.
+            watched = AudioDevice.format(of: device, .input) ?? format
+        } else {
+            proc = try plain(device, format, handler)
+        }
+        lock.withLock { (self.device, self.format, self.output, self.speakers, self.proc) = (device, watched, output, speakers, proc) }
+        listen(to: kAudioDevicePropertyDeviceIsAlive, of: device, true)
+        listen(to: kAudioDevicePropertyNominalSampleRate, of: device, true)
+        // Headphones plugged into some Macs switch the speakers' source rather than the device.
+        if output != AudioDevice.none { listen(to: kAudioDevicePropertyDataSource, of: output, true, scope: kAudioObjectPropertyScopeOutput) }
+    }
+
+    func stop() {
+        let (device, output, proc) = lock.withLock {
+            defer { (self.device, self.format, self.output, self.speakers, self.proc) = (AudioDevice.none, nil, AudioDevice.none, false, nil) }
+            return (self.device, self.output, self.proc)
+        }
+        guard let proc else { return }
+        listen(to: kAudioDevicePropertyDeviceIsAlive, of: device, false)
+        listen(to: kAudioDevicePropertyNominalSampleRate, of: device, false)
+        if output != AudioDevice.none { listen(to: kAudioDevicePropertyDataSource, of: output, false, scope: kAudioObjectPropertyScopeOutput) }
+        proc.stop()
+    }
+
+    /// The device's own buffers, as it gives them.
+    private func plain(_ device: AudioObjectID, _ format: AVAudioFormat,
+                       _ handler: @escaping (AVAudioPCMBuffer) -> Void) throws -> IOProc {
         var changeTold = false
         guard let proc = try? IOProc(device: device, queue: delivery, block: { [weak self] _, input, _, output, _ in
             // A device that also plays is given silence to play.
@@ -155,35 +202,26 @@ final class SystemInputEngine: InputEngine {
             var first = AudioBufferList(mNumberBuffers: 1, mBuffers: input.pointee.mBuffers)
             if let buffer = AVAudioPCMBuffer(pcmFormat: format, bufferListNoCopy: &first) { handler(buffer) }
         }) else { throw CaptureError.noMicrophone }
-        lock.withLock { (self.device, self.format, self.proc) = (device, format, proc) }
-        listen(to: kAudioDevicePropertyDeviceIsAlive, of: device, true)
-        listen(to: kAudioDevicePropertyNominalSampleRate, of: device, true)
-    }
-
-    func stop() {
-        let (device, proc) = lock.withLock {
-            defer { (self.device, self.format, self.proc) = (AudioDevice.none, nil, nil) }
-            return (self.device, self.proc)
-        }
-        guard let proc else { return }
-        listen(to: kAudioDevicePropertyDeviceIsAlive, of: device, false)
-        listen(to: kAudioDevicePropertyNominalSampleRate, of: device, false)
-        proc.stop()
+        return proc
     }
 
     /// Passes a change on only if it means starting again: another device
     /// is the default input, or the one in use went away or changed its
-    /// format. AirPods change their rate as they go into their call mode,
-    /// which starting to listen causes; that alone must not start it again.
+    /// format, or, with `cancelsEcho`, the Mac's speakers started or stopped
+    /// being what plays. AirPods change their rate as they go into their
+    /// call mode, which starting to listen causes; that alone must not
+    /// start it again.
     private func somethingChanged() {
-        let (device, format, onChange) = lock.withLock { (self.device, self.format, self.onChange) }
-        if device != AudioDevice.none, AudioDevice.default(.input) == device, AudioDevice.format(of: device, .input) == format { return }
+        let (device, format, speakers, onChange) = lock.withLock { (self.device, self.format, self.speakers, self.onChange) }
+        if device != AudioDevice.none, AudioDevice.default(.input) == device, AudioDevice.format(of: device, .input) == format,
+           !cancelsEcho || AudioDevice.isMacSpeakers(AudioDevice.default(.output)) == speakers { return }
         onChange?()
     }
 
-    private func listen(to selector: AudioObjectPropertySelector, of object: AudioObjectID, _ on: Bool) {
+    private func listen(to selector: AudioObjectPropertySelector, of object: AudioObjectID, _ on: Bool,
+                        scope: AudioObjectPropertyScope = kAudioObjectPropertyScopeGlobal) {
         guard let listener else { return }
-        var address = AudioDevice.address(selector)
+        var address = AudioDevice.address(selector, scope: scope)
         if on {
             AudioObjectAddPropertyListenerBlock(object, &address, events, listener)
         } else {
@@ -191,3 +229,11 @@ final class SystemInputEngine: InputEngine {
         }
     }
 }
+
+/// A capture that is running until stopped.
+protocol RunningInput: AnyObject {
+    func stop()
+}
+
+extension IOProc: RunningInput {}
+extension VoiceProcessedInput: RunningInput {}

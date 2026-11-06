@@ -132,12 +132,15 @@ final class SessionModel: ObservableObject {
         notice = ""; warning = ""; copied = false; liveLines = []; stopwatch = Stopwatch(); elapsed = 0
         phase = .working("Starting…")
         labels = (settings.micLabel, settings.systemLabel)
-        let locale = settings.locale
+        let locale = settings.locale, echoCancellation = settings.echoCancellation
         let capture = makeCapture()
         self.capture = capture
         let gen = generation
         Task {
-            do { try await capture.start(micLabel: labels.mic, systemLabel: labels.system, locale: locale) } catch {
+            do {
+                try await capture.start(micLabel: labels.mic, systemLabel: labels.system, locale: locale,
+                                        echoCancellation: echoCancellation)
+            } catch {
                 guard gen == generation else { return }
                 self.capture = nil
                 phase = .error(error.localizedDescription); return

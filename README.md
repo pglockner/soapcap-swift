@@ -145,7 +145,8 @@ the commit count.
 Three probes run a piece of the app without the window:
 
 - `swift run CaptureProbe 15` records for 15 seconds and prints the
-  transcript. `swift run CaptureProbe check` only says whether the Mac's
+  transcript; add `noecho` to hear the microphone without echo
+  cancellation. `swift run CaptureProbe check` only says whether the Mac's
   audio can be heard. From a terminal, the permissions are the terminal's.
 - `swift run NoteProbe FILE [soap|dap|birp] [MODEL] [MINUTES]` drafts a
   note from a transcript file, or from the sample session with `sample` in
@@ -265,7 +266,8 @@ check that a model on this Mac is working. It takes about a minute. Give
 the variable a model's name instead of `1` to try that one. The second
 stops and resumes a real 130 MB download. The third listens through the
 call's tap for the tone the app plays itself, as the checks screen does,
-and starts and stops the microphone. From a terminal those need the
+and starts and stops the microphone, plain and through echo cancellation's
+voice processing. From a terminal those need the
 terminal to have the Microphone and System Audio Recording permissions;
 nothing is recorded or heard.
 

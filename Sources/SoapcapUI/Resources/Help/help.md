@@ -14,7 +14,7 @@ The bar across the top says where a session is: **Record**, **Transcript**, **No
 
 ## A session
 
-- Use headphones, so your own voice isn't heard twice, and turn on Do Not Disturb.
+- Use headphones if you can, and turn on Do Not Disturb. Without headphones, **Echo cancellation** keeps the call, as the Mac's own speakers play it, out of your side of the transcript.
 - **Start session** begins transcribing. Nothing is recorded: Soapcap listens, and what it hears becomes text. The last few lines heard from each side show at the foot of the window.
 - **Pause** stops listening and stops the clock; **Resume** carries on in the same session.
 - The session's time shows in the menu bar while it runs, where the call's window can't cover it. Its menu can pause and resume too.
@@ -65,6 +65,7 @@ Open Settings with Cmd-comma.
 - **Speaker labels**: who your microphone is and who the call is. Each transcript line starts with one of them.
 - **Language**: the language to transcribe in, this Mac's unless you choose another.
 - **Note**: the model that drafts, and the session type on the note's first line ("53 minutes, telehealth").
+- **Microphone**: **Echo cancellation**, on to start with. While the Mac's own speakers play, it keeps what they play out of your side of the transcript. It isn't used with headphones or other speakers. Plugging headphones in or out mid-session switches it, and a change of the setting counts from the next session.
 - **Gemma 4 E4B**, **Qwen3.5 9B**, **Bonsai** and **De-identification**: each model says how big it is before it downloads. **Remove** deletes a note model again. **De-identify by default** is here too.
 
 ## Privacy
@@ -78,6 +79,7 @@ Open Settings with Cmd-comma.
 - Choose **Check** in the bar. Each line that isn't green has a button that puts it right.
 - If you allow the microphone in System Settings after refusing it, quit and reopen Soapcap: macOS only tells an app at launch.
 - If Soapcap says it can't find a working microphone, connect one, such as a headset or AirPods, and start again. A Mac mini or Mac Studio has none built in.
+- If your transcripts show problems, such as your words missing or cut short, try turning off **Echo cancellation** in Settings.
 - If a note comes out with a section missing, **Regenerate**, or try the other model.
 - **Help › Report a Problem** shows where to write, with this copy's version and Mac to include. **Open in Mail** starts the email with both filled in; if your mail is in a browser, copy them into a new message. Please describe what happened, but don't include anything from a session.
 

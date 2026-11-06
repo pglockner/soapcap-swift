@@ -10,6 +10,7 @@ struct SessionSettings {
         static let language = "language"
         static let format = "format"
         static let deidentify = "deidentify"
+        static let echoCancellation = "echoCancellation"
         static let noteModel = "noteModel"
         static let sessionType = "sessionType"
         /// The last version whose beta notice was acknowledged.
@@ -47,6 +48,10 @@ struct SessionSettings {
         nonmutating set { defaults.set(newValue, forKey: Key.deidentify) }
     }
 
+    /// Whether the microphone is heard through echo cancellation, which keeps
+    /// what the speakers play out of your side. Read as a session starts.
+    var echoCancellation: Bool { defaults.object(forKey: Key.echoCancellation) as? Bool ?? true }
+
     private func text(_ key: String) -> String {
         (defaults.string(forKey: key) ?? "").trimmingCharacters(in: .whitespaces)
     }
@@ -72,6 +77,7 @@ struct SettingsView: View {
     @AppStorage(SessionSettings.Key.noteModel) private var noteModel = ""
     @AppStorage(SessionSettings.Key.sessionType) private var sessionType = ""
     @AppStorage(SessionSettings.Key.deidentify) private var deidentify = true
+    @AppStorage(SessionSettings.Key.echoCancellation) private var echoCancellation = true
     @State private var languages: [Locale] = []
     /// The note models on this Mac.
     @State private var models: [String] = []
@@ -118,6 +124,14 @@ struct SettingsView: View {
                             .tag(locale.identifier(.bcp47))
                     }
                 }
+            }
+            Section {
+                Toggle("Echo cancellation", isOn: $echoCancellation)
+            } header: {
+                Text("Microphone")
+            } footer: {
+                Text("Keeps the call, when it plays from the Mac's own speakers, out of your side of the transcript. It isn't used with headphones. If your transcripts show problems, such as your words missing or cut short, turn it off. A change counts from the next session.")
+                    .foregroundStyle(.secondary)
             }
             Section {
                 Picker("Draft with", selection: Binding(get: { chosenModel }, set: { noteModel = $0 })) {

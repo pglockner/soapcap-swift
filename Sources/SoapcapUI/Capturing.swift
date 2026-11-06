@@ -6,7 +6,7 @@ import SoapcapCore
 /// a scripted stand-in in tests and previews.
 protocol Capturing: AnyObject {
     var live: AsyncStream<LiveLine> { get }
-    func start(micLabel: String, systemLabel: String, locale: Locale) async throws
+    func start(micLabel: String, systemLabel: String, locale: Locale, echoCancellation: Bool) async throws
     func pause()
     func resume()
     func stop() async -> [Segment]
