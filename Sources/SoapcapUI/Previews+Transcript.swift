@@ -33,22 +33,12 @@ import SwiftUI
     }
 }
 
-#Preview("Transcript, memory short") {
+#Preview("Transcript, Mac short of memory") {
     let defaults = MemoryDefaults()
     defaults.set("bonsai", forKey: SessionSettings.Key.noteModel)
-    let m = SessionModel(settings: SessionSettings(defaults: defaults), memory: { MemoryStatus(totalBytes: 16 << 30, freePercent: 41) })
+    let m = SessionModel(settings: SessionSettings(defaults: defaults), memory: { MemoryStatus(totalBytes: 8 << 30, freePercent: 60) })
     m.phase = .transcript
     m.transcript = previewLines.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n")
-    return ContentView().environmentObject(m).frame(width: 560, height: 420)
-}
-
-#Preview("Transcript, memory very short") {
-    let defaults = MemoryDefaults()
-    defaults.set("bonsai", forKey: SessionSettings.Key.noteModel)
-    let m = SessionModel(settings: SessionSettings(defaults: defaults), memory: { MemoryStatus(totalBytes: 16 << 30, freePercent: 30, swapUsedBytes: 7 << 30, swapTotalBytes: 8 << 30) })
-    m.phase = .transcript
-    m.transcript = previewLines.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n")
-    m.draftIfRoom()
     return ContentView().environmentObject(m).frame(width: 560, height: 420)
 }
 

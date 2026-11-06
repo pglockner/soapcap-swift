@@ -65,9 +65,6 @@ final class SessionModel: ObservableObject {
     @Published var draftTokens: Int?
     /// The format the note on hand was drafted in; the picker may have moved since.
     @Published private(set) var draftedFormat = ""
-    /// Set when a draft was asked for with memory very short: the question
-    /// to put before going ahead. Cleared by the answer.
-    @Published var memoryQuestion: String?
     /// The note model: whether it is working, and the memory in use meanwhile.
     let draftRun: DraftRun
     /// Trying the note model on the sample session, from Settings or the checks screen.
@@ -273,18 +270,10 @@ final class SessionModel: ObservableObject {
                        about: SessionLine.line(minutes: elapsed / 60, type: settings.sessionType))
     }
 
-    /// What to do before drafting when the chosen model won't fit in the
-    /// memory that is free, or nil. Read afresh each time it is asked.
+    /// A note for a Mac with too little memory for the chosen model, or nil.
+    /// Read afresh each time it is asked.
     var memoryAdvice: String? {
         ModelCatalog.memoryAdvice(for: settings.noteModel, memory: readMemory())
-    }
-
-    /// Drafts, unless memory is very short for the chosen model, in which
-    /// case it asks first. Not for drafting again: by then the model is
-    /// loaded and is itself what fills memory.
-    func draftIfRoom() {
-        memoryQuestion = ModelCatalog.memoryQuestion(for: settings.noteModel, memory: readMemory())
-        if memoryQuestion == nil { draft() }
     }
 
     /// Drafts with the chosen model. Another model than the one loaded is
@@ -447,7 +436,7 @@ final class SessionModel: ObservableObject {
         if let capture { Task { _ = await capture.stop() } }
         capture = nil
         draftRun.stop()
-        liveLines = []; transcript = ""; lineTimes = []; pauses = []; transcriptIsDeidentified = false; note = ""; notes = ScreenNotes(); copied = false; memoryQuestion = nil; phase = .idle
+        liveLines = []; transcript = ""; lineTimes = []; pauses = []; transcriptIsDeidentified = false; note = ""; notes = ScreenNotes(); copied = false; phase = .idle
         refreshDeidentify()
     }
 }

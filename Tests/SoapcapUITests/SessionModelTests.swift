@@ -477,24 +477,6 @@ final class SessionModelTests: XCTestCase {
         XCTAssertTrue(ModelSetup.check(isReady: false).detail.contains("Settings"))
     }
 
-    func testAVeryShortMemoryAsksBeforeABonsaiDraft() async {
-        defaults.set("bonsai", forKey: SessionSettings.Key.noteModel)
-        var free = 30
-        let m = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture(hello) }, settings: settings, drafting: drafter, deidentifying: deidentifier,
-                             memory: { MemoryStatus(totalBytes: 16 << 30, freePercent: free, swapUsedBytes: 7 << 30, swapTotalBytes: 8 << 30) })
-        m.start()
-        await waitFor("recording") { m.phase == .recording }
-        m.stop()
-        await waitFor("transcript") { m.phase == .transcript }
-        m.draftIfRoom()
-        XCTAssertTrue(m.memoryQuestion?.contains("About 4 GB") == true, m.memoryQuestion ?? "nil")
-        XCTAssertEqual(m.phase, .transcript)                 // nothing started
-        free = 41                                            // advice only: no question
-        m.draftIfRoom()
-        XCTAssertNil(m.memoryQuestion)
-        await waitFor("note") { m.phase == .note }
-    }
-
     func testStoppingADraftFreesTheModelAndGoesBackToTheTranscript() async {
         let m = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture(hello) }, settings: settings, drafting: drafter, deidentifying: deidentifier)
         m.start()
@@ -523,15 +505,15 @@ final class SessionModelTests: XCTestCase {
         XCTAssertTrue(m.note.contains("format soap"))
     }
 
-    func testClosingAppsIsAdvisedWhenMemoryIsShort() {
-        let short = { MemoryStatus(totalBytes: 16 << 30, freePercent: 41) }
-        let m = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier, memory: short)
+    func testTheTranscriptNotesOnlyAMacWithTooLittleMemoryForTheModel() {
+        let small = { MemoryStatus(totalBytes: 8 << 30, freePercent: 90) }
+        let m = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier, memory: small)
         XCTAssertTrue(m.memoryAdvice?.contains("Gemma 4 E4B takes") == true, m.memoryAdvice ?? "nil")
         defaults.set("bonsai", forKey: SessionSettings.Key.noteModel)
-        XCTAssertTrue(m.memoryAdvice?.contains("Close other apps") == true, m.memoryAdvice ?? "nil")
-        let roomy = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier,
-                                 memory: { MemoryStatus(totalBytes: 16 << 30, freePercent: 68) })
-        XCTAssertNil(roomy.memoryAdvice)
+        XCTAssertTrue(m.memoryAdvice?.contains("Bonsai takes") == true, m.memoryAdvice ?? "nil")
+        let busy = SessionModel(pasteboard: scratch, makeCapture: { FakeCapture() }, settings: settings, drafting: drafter, deidentifying: deidentifier,
+                                memory: { MemoryStatus(totalBytes: 16 << 30, freePercent: 5, swapUsedBytes: 12 << 30, swapTotalBytes: 13 << 30) })
+        XCTAssertNil(busy.memoryAdvice)
     }
 
     // MARK: settings

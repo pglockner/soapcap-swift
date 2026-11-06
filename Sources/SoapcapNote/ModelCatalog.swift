@@ -22,25 +22,19 @@ public enum ModelCatalog {
         NoteModel.named(model)?.memoryNeedGB
     }
 
-    /// What to say before drafting with `model` when memory is short, or nil.
+    /// A quiet note before drafting with `model` on a Mac with too little
+    /// memory for it, or nil.
     public static func memoryAdvice(for model: String, memory: MemoryStatus?) -> String? {
         guard let memory, let need = memoryNeedGB(of: model) else { return nil }
         return memory.advice(beforeLoading: displayName(of: model), needGB: need)
     }
 
-    /// What to ask before drafting with `model` when memory is very short, or nil.
-    public static func memoryQuestion(for model: String, memory: MemoryStatus?) -> String? {
-        guard let memory, let need = memoryNeedGB(of: model) else { return nil }
-        return memory.question(beforeLoading: displayName(of: model), needGB: need)
-    }
-
     /// How much memory this Mac has and has free, as a line for the checks
-    /// screen, with the advice for `model` when it is short.
+    /// screen, with the note for `model` on a Mac with too little.
     public static func memoryCheck(_ memory: MemoryStatus?, model: String) -> Check {
         guard let memory else { return Check("Memory", .warning, "Couldn't read how much memory this Mac has.") }
         let size = String(format: "%.0f GB, about %.0f GB free now.", memory.totalGB, memory.availableGB.rounded(.down))
-        if let advice = memoryAdvice(for: model, memory: memory) { return Check("Memory", .warning, size + " " + advice) }
-        return Check("Memory", .ok, size)
+        return Check("Memory", .ok, [size, memoryAdvice(for: model, memory: memory)].compactMap { $0 }.joined(separator: " "))
     }
 
     /// The app's engine running `model`, or the default model for a name

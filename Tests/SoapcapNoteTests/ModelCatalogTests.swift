@@ -3,8 +3,8 @@ import XCTest
 @testable import SoapcapNote
 
 final class ModelCatalogTests: XCTestCase {
-    private let short = MemoryStatus(totalBytes: 16 << 30, freePercent: 41)
-    private let roomy = MemoryStatus(totalBytes: 16 << 30, freePercent: 68)
+    private let small = MemoryStatus(totalBytes: 8 << 30, freePercent: 90)
+    private let roomy = MemoryStatus(totalBytes: 16 << 30, freePercent: 41)
 
     func testEachModelHasANameOnScreenAndOtherNamesKeepTheirs() {
         XCTAssertEqual(ModelCatalog.displayName(of: "gemma4-e4b"), "Gemma 4 E4B")
@@ -35,28 +35,21 @@ final class ModelCatalogTests: XCTestCase {
         XCTAssertEqual(ModelCatalog.installed { $0 != .qwen }, ["gemma4-e4b", "bonsai"])
     }
 
-    func testMemoryAdviceIsForEveryModel() {
-        XCTAssertTrue(ModelCatalog.memoryAdvice(for: "bonsai", memory: short)?.hasPrefix("About 6 GB of memory is free and Bonsai takes") == true)
-        XCTAssertNil(ModelCatalog.memoryAdvice(for: "bonsai", memory: roomy))
-        XCTAssertTrue(ModelCatalog.memoryAdvice(for: "gemma4-e4b", memory: short)?.hasPrefix("About 6 GB of memory is free and Gemma 4 E4B takes") == true)
-        XCTAssertNil(ModelCatalog.memoryAdvice(for: "gemma4-e4b", memory: roomy))
-        XCTAssertNil(ModelCatalog.memoryAdvice(for: "bonsai", memory: nil))
-        XCTAssertNil(ModelCatalog.memoryAdvice(for: "qwen3:8b", memory: short))      // not offered, so no figure
-    }
-
-    func testAnEightGigabyteMacIsToldDraftingWillBeSlowWithAnyModel() {
-        let small = MemoryStatus(totalBytes: 8 << 30, freePercent: 90)
+    func testAnEightGigabyteMacIsToldDraftingMayTakeLongerWithAnyModel() {
         for model in NoteModel.all.map(\.id) {
             let advice = ModelCatalog.memoryAdvice(for: model, memory: small)
-            XCTAssertTrue(advice?.hasSuffix("this Mac has 8 GB of memory. Expect drafting to be very slow.") == true, advice ?? "nil")
+            XCTAssertTrue(advice?.hasSuffix("this Mac has 8 GB of memory, so drafting may take longer.") == true, advice ?? "nil")
+            XCTAssertNil(ModelCatalog.memoryAdvice(for: model, memory: roomy))
         }
+        XCTAssertNil(ModelCatalog.memoryAdvice(for: "bonsai", memory: nil))
+        XCTAssertNil(ModelCatalog.memoryAdvice(for: "qwen3:8b", memory: small))      // not offered, so no figure
     }
 
-    func testTheMemoryCheckGivesTheFiguresAndWarnsWhenTheModelWontFit() {
-        XCTAssertEqual(ModelCatalog.memoryCheck(roomy, model: "gemma4-e4b"), Check("Memory", .ok, "16 GB, about 10 GB free now."))
-        let tight = ModelCatalog.memoryCheck(short, model: "bonsai")
-        XCTAssertEqual(tight.status, .warning)
-        XCTAssertTrue(tight.detail.hasPrefix("16 GB, about 6 GB free now. About 6 GB of memory is free and Bonsai"), tight.detail)
+    func testTheMemoryCheckGivesTheFiguresAndNeverWarnsAboutSpeed() {
+        XCTAssertEqual(ModelCatalog.memoryCheck(roomy, model: "bonsai"), Check("Memory", .ok, "16 GB, about 6 GB free now."))
+        let noted = ModelCatalog.memoryCheck(small, model: "bonsai")
+        XCTAssertEqual(noted.status, .ok)
+        XCTAssertEqual(noted.detail, "8 GB, about 7 GB free now. Bonsai takes about 8 GB and this Mac has 8 GB of memory, so drafting may take longer.")
         XCTAssertEqual(ModelCatalog.memoryCheck(nil, model: "bonsai").status, .warning)
     }
 }

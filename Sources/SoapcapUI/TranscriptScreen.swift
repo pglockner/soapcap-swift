@@ -33,10 +33,10 @@ struct TranscriptScreen: View {
             WarningBanner(text: m.warning)
             TranscriptView(text: m.transcript, times: m.lineTimes, pauses: m.pauses)
             if !m.notice.isEmpty { Text(m.notice).font(.caption).foregroundStyle(.caution) }
-            // Memory changes as apps open and close, so this is asked again every few seconds.
+            // Settings can change the model, so this is asked again every few seconds.
             TimelineView(.periodic(from: .now, by: 5)) { _ in
                 if let advice = m.memoryAdvice {
-                    Label(advice, systemImage: "memorychip").font(.caption).foregroundStyle(.caution)
+                    Label(advice, systemImage: "memorychip").font(.caption).foregroundStyle(.secondary)
                 }
             }
             HStack {
@@ -44,13 +44,13 @@ struct TranscriptScreen: View {
                     ForEach(SessionModel.formats, id: \.self) { Text($0.uppercased()) }
                 }.pickerStyle(.segmented).fixedSize()
                 Button(m.hasUnkeptNote ? "Draft again" : "Draft note") {
-                    if m.hasUnkeptNote { asksToReplace = true } else { m.draftIfRoom() }
+                    if m.hasUnkeptNote { asksToReplace = true } else { m.draft() }
                 }
                 // Return doesn't draft over a note that hasn't been kept.
                 .keyboardShortcut(m.hasUnkeptNote ? nil : .defaultAction)
                 .alert("Replace the note you haven't kept?", isPresented: $asksToReplace) {
                     Button("Cancel", role: .cancel) {}
-                    Button("Draft again", role: .destructive) { m.draftIfRoom() }
+                    Button("Draft again", role: .destructive) { m.draft() }
                 } message: {
                     Text("Drafting again writes a new note in its place, and the one you have can't be got back. To hold on to it, go to the note and choose Keep first.")
                 }
@@ -58,13 +58,6 @@ struct TranscriptScreen: View {
                 Spacer()
                 LeaveButton(m: m)
             }
-        }
-        .alert("Not enough free memory", isPresented: Binding(get: { m.memoryQuestion != nil }, set: { if !$0 { m.memoryQuestion = nil } })) {
-            // Return should not start a draft the Mac has no room for.
-            Button("Cancel", role: .cancel) {}.keyboardShortcut(.defaultAction)
-            Button("Draft anyway") { m.draft() }
-        } message: {
-            Text(m.memoryQuestion ?? "")
         }
         .fileExporter(isPresented: $savesTranscript, document: m.transcriptFile, contentType: .plainText,
                       defaultFilename: TranscriptFile.name) { result in

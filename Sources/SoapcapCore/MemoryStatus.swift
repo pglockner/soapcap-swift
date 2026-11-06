@@ -22,31 +22,24 @@ public struct MemoryStatus: Equatable, Sendable {
     public var totalGB: Double { Double(totalBytes) / Self.gigabyte }
     public var availableGB: Double { totalGB * Double(freePercent) / 100 }
 
-    /// What to tell someone about to load a model that takes `needGB`, or
-    /// nil when there is room for it with a gigabyte to spare.
+    /// A quiet note for a Mac with too little memory for `model` to stay in
+    /// it beside macOS, or nil. Only the Mac's total memory counts, not what
+    /// is free. Measured on a 16 GB Mac (2026-11-05): no model drafted more
+    /// than about a quarter slower with other programs holding up to 14 GB,
+    /// idle or busy, and 12 GB in swap; and `freePercent` read 87% with
+    /// another program holding 10 GB, so it can't say what is free. Not
+    /// measured on a Mac with less memory.
     public func advice(beforeLoading model: String, needGB: Double) -> String? {
-        if totalGB < needGB * 1.5 {
-            return String(format: "%@ takes about %.0f GB and this Mac has %.0f GB of memory. Expect drafting to be very slow.", model, needGB, totalGB)
-        }
-        guard availableGB < needGB + 1 else { return nil }
-        return String(format: "About %.0f GB of memory is free and %@ takes about %.0f GB. Close other apps before drafting, or it will be slow.",
-                      availableGB.rounded(.down), model, needGB)
+        guard totalGB < needGB * 1.5 else { return nil }
+        return String(format: "%@ takes about %.0f GB and this Mac has %.0f GB of memory, so drafting may take longer.", model, needGB, totalGB)
     }
 
-    /// Swap in use from which making more room gets slow. Below it macOS
-    /// frees memory for a model without much trouble.
+    /// Swap the memory charts show as heavy. A draft went on at its usual
+    /// pace with twice this in swap (see `advice`); it marks where swap is
+    /// worth a look, not where drafting slows.
     public static let heavySwapGB = 6.0
 
     public var swapUsedGB: Double { Double(swapUsedBytes) / Self.gigabyte }
-
-    /// What to ask before loading a model that takes `needGB`, or nil. Only
-    /// when the model is two gigabytes or more short of fitting and swap is
-    /// already heavily used.
-    public func question(beforeLoading model: String, needGB: Double) -> String? {
-        guard availableGB <= needGB - 2, swapUsedGB >= Self.heavySwapGB else { return nil }
-        return String(format: "About %.0f GB of memory is free and %.0f GB is already in swap. %@ takes about %.0f GB. Drafting now will be very slow and may slow the whole Mac. Close other apps first, or choose a lighter model in Settings.",
-                      availableGB.rounded(.down), swapUsedGB.rounded(.down), model, needGB)
-    }
 
     /// Reads the current figures; nil if the system won't say.
     public static func current() -> MemoryStatus? {

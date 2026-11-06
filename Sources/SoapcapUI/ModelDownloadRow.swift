@@ -43,7 +43,7 @@ struct ModelDownloadRow: View {
             // Rounded up: a need that is understated is the one that hurts.
             text += String(format: " It takes about %.0f GB of memory while drafting", needGB.rounded(.up))
             if let memoryGB, memoryGB < needGB * 1.5 {
-                text += String(format: ", and this Mac has %.0f GB, so drafting with it will be very slow.", memoryGB)
+                text += String(format: ", and this Mac has %.0f GB, so drafting with it may take longer.", memoryGB)
             } else {
                 text += "."
             }

@@ -46,7 +46,7 @@ struct ChecksView: View {
                                     }.controlSize(.small).padding(.top, 2)
                                 }
                                 if check.title == "Note model", check.status != .failed {
-                                    // The Memory line below says when memory is short.
+                                    // The Memory line below has the note for a Mac short of memory.
                                     ModelTestView(test: test, model: model, advisesOnMemory: false).controlSize(.small).padding(.top, 2)
                                 }
                             }

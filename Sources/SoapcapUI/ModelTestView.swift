@@ -33,7 +33,7 @@ struct ModelTestView: View {
                 Button("Test \(ModelCatalog.displayName(of: model))") { test.start() }.disabled(!test.canStart)
                 Text(hint).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 if advisesOnMemory, let advice = ModelCatalog.memoryAdvice(for: model, memory: MemoryStatus.current()) {
-                    Text(advice).font(.caption).foregroundStyle(.caution).fixedSize(horizontal: false, vertical: true)
+                    Text(advice).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
