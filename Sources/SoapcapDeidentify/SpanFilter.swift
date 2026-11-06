@@ -8,9 +8,19 @@ public enum SpanFilter {
 
     /// The model's spans worth acting on: not a kept category, and longer
     /// than one character (a one-character span is a stray token, "haven't"
-    /// becoming "haven'[NAME]", never a whole identifier).
+    /// becoming "haven'[NAME]", never a whole identifier). A span that took
+    /// in the sentence's full stop or comma ("Mary." in "It's Mary. Mary.")
+    /// gives it back: replacing it would eat the punctuation, and a repeat
+    /// of the name without it would go unnoticed.
     public static func usable(_ spans: [Span], in text: String) -> [Span] {
-        spans.filter { !kept.contains($0.label) && text[$0.range].unicodeScalars.count > 1 }
+        spans.compactMap { span -> Span? in
+            var end = span.range.upperBound
+            while end > span.range.lowerBound, ".,;:!?".contains(text[text.index(before: end)]) {
+                end = text.index(before: end)
+            }
+            let trimmed = Span(span.range.lowerBound..<end, span.label, confidence: span.confidence)
+            return !kept.contains(span.label) && text[trimmed.range].unicodeScalars.count > 1 ? trimmed : nil
+        }
     }
 
     /// Two overlapping replacements would corrupt the text, so keep the

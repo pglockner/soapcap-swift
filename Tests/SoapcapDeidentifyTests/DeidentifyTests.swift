@@ -89,6 +89,14 @@ final class SpanFilterTests: XCTestCase {
         XCTAssertEqual(SpanFilter.usable([span(text, "t", "FIRST_NAME"), span(text, "Ana", "FIRST_NAME")], in: text).count, 1)
     }
 
+    func testASpanGivesBackTheSentencesPunctuationSoItsRepeatsAreCaught() {
+        let text = "It's Mary. Later Mary said hi."
+        let usable = SpanFilter.usable([span(text, "Mary.", "USERNAME")], in: text)
+        XCTAssertEqual(usable.map { String(text[$0.range]) }, ["Mary"])
+        let all = usable + RepeatNames.spans(in: text, found: usable)
+        XCTAssertEqual(Redactor.redact(text, SpanFilter.removingOverlaps(all)).text, "It's [USERNAME_1]. Later [USERNAME_1] said hi.")
+    }
+
     func testASpanIsSplitAtALineBreak() {
         let text = "at 12 Elm\nStreet today"
         let pieces = SpanFilter.splitAtLineBreaks([span(text, "12 Elm\nStreet", "STREET_ADDRESS")], in: text)
@@ -102,6 +110,14 @@ final class RepeatNamesTests: XCTestCase {
         let found = RepeatNames.spans(in: text, found: [Span(text.range(of: "Sam")!, "FIRST_NAME")])
         XCTAssertEqual(found.map { text.distance(from: text.startIndex, to: $0.range.lowerBound) }, [0, 16])
         XCTAssertEqual(Set(found.map { String(text[$0.range]) }), ["Sam"])
+    }
+
+    func testANameTakenForAUsernameIsCaughtAgainToo() {
+        // From a test session: the model called the first Mary a username and missed the second.
+        let text = "It's Mary. Mary. Okay."
+        let found = RepeatNames.spans(in: text, found: [span(text, "Mary", "USERNAME")])
+        XCTAssertEqual(found.map { text.distance(from: text.startIndex, to: $0.range.lowerBound) }, [5, 11])
+        XCTAssertEqual(Set(found.map(\.label)), ["USERNAME"])
     }
 
     func testOtherCategoriesAreNotRepeated() {
