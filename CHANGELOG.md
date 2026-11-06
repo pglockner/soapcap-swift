@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.14 (2026-10-27 – 2026-11-04)
+## 0.14 (2026-10-27 – 2026-11-05)
 
 - Changed the default note model to Gemma 4 E4B and added Qwen3.5 9B as another choice beside Bonsai. Each is a download from Settings, checked against a fixed checksum, and runs inside the app
 - Removed `llama3.1:8b` and Ollama: a Mac that had chosen `llama3.1:8b` now drafts with Gemma 4 E4B, and the Ollama address setting is gone
@@ -10,6 +10,9 @@
 - Fixed echo removal dropping a therapist's segment when the client repeated a couple of its words
 - Changed the note prompts to keep counts and frequencies in the transcript's own terms ("a couple of nights" stays a couple)
 - Added a caution to Gemma 4 E4B's description and to Help: it now and then gives a client a pronoun from their name, so proofread pronouns, or turn on De-identify by default
+- Fixed a note draft carrying on after its model ran out of GPU memory, which made every later pass of that draft fail with an unhelpful error: the engine is now stopped at once, and the draft says the model ran out of GPU memory and suggests Gemma 4 E4B or closing other apps. A redraft or Objective pass that fails now gives its reason in the note's warnings (0.14.2)
+- Added a warning to the note when the model loaded beyond the GPU memory macOS allows one app, the point past which a draft can fail rather than only slow down. The engine's own log gives the figures (0.14.2)
+- Removed the "Not enough free memory" question before drafting and the advice to close other apps: on a 16 GB Mac every model drafted at close to its usual pace with other apps holding up to 14 GB and 12 GB in swap, and the free-memory figure they went by read 87% free with 10 GB in use. A Mac with too little memory for the model in all still gets a quiet note that drafting may take longer (0.14.2)
 
 ## 0.13 (2026-10-18 – 2026-10-25)
 
