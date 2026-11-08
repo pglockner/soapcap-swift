@@ -10,7 +10,7 @@ implementation: one window that captures, de-identifies and drafts by
 itself.
 
 **Beta.** Everything below works. The app is a signed, notarized download
-from [jukenzie.com](https://jukenzie.com); for a finished command-line
+from [jukenzie.com/soapcap](https://jukenzie.com/soapcap/); for a finished command-line
 tool, use soapcap.
 
 **Not a medical device.** Soapcap drafts notes for a clinician to check; it
@@ -54,7 +54,7 @@ to one.
 
 ## Install
 
-Download the latest version from **[jukenzie.com](https://jukenzie.com)**
+Download the latest version from **[jukenzie.com/soapcap](https://jukenzie.com/soapcap/)**
 (or from this repository's [Releases](https://github.com/pglockner/soapcap-swift/releases/latest)).
 Unzip it, drag **Soapcap** into Applications, and open it from
 there. It is signed and notarized, so macOS asks once whether to open an
@@ -216,8 +216,8 @@ beside the usual one with permissions of its own.
 
 ### Releases and the download page
 
-`docs/` is the download page, served by GitHub Pages at
-[jukenzie.com](https://jukenzie.com). Its Download button links to
+The download page, [jukenzie.com/soapcap](https://jukenzie.com/soapcap/), lives
+in the [jukenzie.com](https://github.com/pglockner/jukenzie.com) repo. Its Download button links to
 `releases/latest/download/Soapcap.zip`, so the page needs no change for a
 new version, but every release must have the notarized zip attached under
 that name:
