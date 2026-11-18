@@ -115,6 +115,12 @@ and note model to include.
 - [ ] Idea, not scoped: note structure from a settings file, so a note's
       sections and their rules can be tailored without editing prompts and
       code
+- [ ] Idea, not scoped: draft a note from a transcript made elsewhere,
+      pasted or opened as a text file, for sessions held in one room and
+      transcribed by another tool. Open: telling the speakers apart when
+      its labels differ or are missing, and how well notes hold up on such
+      transcripts. Such a transcript is outside the app's promise that no
+      audio is recorded and nothing leaves the Mac
 
 ## soapcap and this app
 
